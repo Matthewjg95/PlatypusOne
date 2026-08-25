@@ -60,6 +60,7 @@ see [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) and the
 
 ## Documentation
 
+- [docs/PRODUCT_REQUIREMENTS_BASELINE.md](docs/PRODUCT_REQUIREMENTS_BASELINE.md) — what Platypus One must be and how each requirement is verified
 - [STATUS.md](STATUS.md) — where the project actually is right now
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, diagrams, rationale
 - [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) — C++/Python conventions
