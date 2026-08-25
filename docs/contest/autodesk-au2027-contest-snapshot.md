@@ -29,12 +29,20 @@ with scan/measure/inspect apps) is squarely in this lineage.
 | Date | Milestone |
 |---|---|
 | Jul 28, 2026 12:00 PM | Competition begins (open now) |
-| **Aug 23, 2026 11:59 PM** | **Free hardware application closes** |
-| Sep 18, 2026 5:00 PM | Hardware recipients announced |
+| ~~Aug 23, 2026~~ → **Sep 7, 2026 11:59 PM** | **Free hardware application closes — EXTENDED** |
+| Sep 18, 2026 5:00 PM | Hardware recipients announced — ⚠️ may have moved with the extension, unverified |
 | **Dec 20, 2026 11:59 PM** | **Project submission closes** |
 | Jan 29, 2027 | Winners announced |
 
-## Hardware application (deadline Aug 23)
+> **Update 2026-08-24:** the hardware application window was extended to
+> **Sep 7, 2026** (reported by the owner; confirm against the live page). The
+> Sep 18 announcement and Dec 20 submission dates are carried over from the
+> Aug 4 snapshot and have **not** been re-verified since the extension — if the
+> announcement slipped, the bring-up window in
+> [ACQUISITION_ROADMAP.md](../hardware/ACQUISITION_ROADMAP.md) compresses.
+> Working checklist: [HARDWARE_APPLICATION_CHECKLIST.md](HARDWARE_APPLICATION_CHECKLIST.md).
+
+## Hardware application (deadline Sep 7 — extended)
 
 100 recipients get: Fusion license for the competition + **UNO Q (4G)** +
 **up to $300 PCBWay credit**. A further 200 get an UNO Q (4G) only.
@@ -100,8 +108,12 @@ Keep them current as you build, not retrofitted at the end.
 
 ## Immediate implications for Platypus One
 
-1. **19 days** to the hardware application: need a Hackster project page, a
-   preliminary BOM, and a first-pass Fusion .f3d of the handheld enclosure.
+1. **11 days** to the hardware application (as of 2026-08-24, extended
+   deadline Sep 7): need a Hackster project page, a preliminary BOM, and a
+   first-pass Fusion .f3d of the handheld enclosure. The BOM is ready
+   ([BOM.md](../hardware/BOM.md) rev B); the **.f3d is the critical path** —
+   it is the one required deliverable nobody else can produce. Work it from
+   [HARDWARE_APPLICATION_CHECKLIST.md](HARDWARE_APPLICATION_CHECKLIST.md).
 2. Fusion is a required tool — start the enclosure/electronics design there
    now (free personal license works for the application stage).
 3. Plan the build assuming hardware arrives **after Sep 18** — ~13 weeks from

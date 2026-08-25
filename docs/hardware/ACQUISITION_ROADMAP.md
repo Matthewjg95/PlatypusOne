@@ -10,7 +10,7 @@ gantt
     dateFormat  YYYY-MM-DD
     title Platypus One — road to Dec 20 submission
     section Contest gates
-    Hardware application window   :crit, 2026-08-04, 2026-08-23
+    Hardware application window   :crit, 2026-08-04, 2026-09-07
     Recipients announced          :milestone, 2026-09-18, 0d
     Submission deadline           :milestone, crit, 2026-12-20, 0d
     section Hardware
@@ -30,34 +30,49 @@ gantt
     Submit (buffer before deadline):crit, 2026-12-16, 4d
 ```
 
-## Phase 0 — NOW → Aug 23 (hardware application) 🔴 critical path
+## Phase 0 — NOW → Sep 7 (hardware application) 🔴 critical path
+
+> **Deadline extended from Aug 23 to Sep 7, 2026.** Detailed working document
+> with draft copy, BOM excerpt, and form answers:
+> [HARDWARE_APPLICATION_CHECKLIST.md](../contest/HARDWARE_APPLICATION_CHECKLIST.md).
 
 Goal: submit a strong free-hardware application (UNO Q 4G + $300 PCBWay + Fusion license).
 
 - [ ] Create Hackster account; register as contest participant
 - [ ] Start the Hackster project page: name, description, cover image
+      (**original artwork** — the concept sheets in `docs/media/` are
+      AI-generated references and must not stand in for original work)
 - [ ] Install Autodesk Fusion (free personal license); model first-pass
-      handheld enclosure around UNO Q + 3.2" display footprints; export .f3d
-- [ ] Publish preliminary BOM (adapt [BOM.md](BOM.md)) to the project page —
-      must list the UNO Q and Fusion
+      handheld enclosure around the UNO Q footprint and a **display envelope**
+      — the panel is deliberately unfrozen per
+      [ADR-0001](../adr/0001-dynamic-linked-prototype-display.md); export .f3d
+- [ ] Publish preliminary BOM (adapt [BOM.md](BOM.md) rev B) to the project
+      page — must list the UNO Q and Fusion
 - [ ] Answer all application-form questions; submit via "Apply for hardware"
-      tab **no later than Aug 21** (2-day margin)
-- [ ] Optional de-risk buys (~$45): ILI9341 touch display + BNO055 IMU, so
-      driver work can start on a spare SBC/dev board before the UNO Q arrives
+      tab **no later than Sep 4** (3-day margin)
+- [ ] Confirm on the live page whether the Sep 18 announcement date moved with
+      the extension — everything below is anchored to it
+- [ ] Optional de-risk buy (~$25): BNO055 IMU, so driver work can start on a
+      spare SBC/dev board before the UNO Q arrives. The rev A display de-risk
+      buy is **cancelled** — a linked prototype display is already in hand
 
-## Phase 1 — Aug 24 → Sep 18 (waiting on announcement)
+## Phase 1 — Sep 8 → Sep 18 (waiting on announcement)
 
 - [ ] Refine Fusion model: button placement, camera/ToF windows, battery bay
 - [ ] Start Fusion **Electronics**: carrier-board schematic (I²C hub, buttons,
       power) — targets the Best Fusion Electronics Design prize
-- [ ] Software: display driver (SPI ILI9341) + IMU ISensor driver written
-      against interfaces; STM32 firmware for the MCU bridge protocol
+- [ ] Software: **linked-display driver** against the
+      [presentation link](../protocols/presentation.md) (the panel is unfrozen,
+      so no integrated-panel driver is written yet) + IMU ISensor driver
+      written against interfaces; STM32 firmware for the MCU bridge protocol
 - [ ] Draft the project story on Hackster as work happens (docs = 20 pts)
 
 ## Phase 2 — Sep 18 → mid-Oct (parts + bring-up)
 
-Decision point Sep 18:
-- **Selected:** hardware + credit incoming; order BOM items 2–15, 18–19 same week.
+Decision point Sep 18 (⚠️ confirm this date still holds after the application
+extension):
+- **Selected:** hardware + credit incoming; order [BOM](BOM.md) rev B items
+  2–3, 5–11, 13–17, 20–21 same week. Every ⚖ DECISION line must close first.
 - **Not selected:** buy UNO Q retail (~$59) immediately; self-fund a reduced
   enclosure budget; scope unchanged otherwise.
 
