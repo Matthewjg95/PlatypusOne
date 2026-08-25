@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string_view>
+#include <system_error>  // std::errc, compared against from_chars_result::ec
 #include <thread>
 
 namespace {
