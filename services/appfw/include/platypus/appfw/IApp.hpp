@@ -23,8 +23,10 @@ struct AppManifest {
 };
 
 /// Lifecycle:  onStart -> (onFrame | onTouch | onButton)* -> onStop
-/// Apps must return from every callback quickly; long work belongs on a
-/// worker thread the app owns and joins in onStop.
+/// App callbacks execute on the UI thread. Driver threads hand input through
+/// EventQueue; they never call an app directly. Apps must return from every
+/// callback quickly; long work belongs on a worker thread the app owns and
+/// joins in onStop.
 class IApp {
 public:
     virtual ~IApp() = default;
