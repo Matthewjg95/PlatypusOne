@@ -35,7 +35,8 @@
 - Every public header opens with a purpose comment: what the module is, who
   calls it, and which thread callbacks run on.
 - Every module directory gets a `README.md` once it contains real logic.
-- Architecture-level decisions get an ADR in `docs/adr/` (template TBD).
+- Architecture-level decisions get an ADR in [docs/adr/](adr/README.md) —
+  process and template live there.
 
 ## Testing
 
