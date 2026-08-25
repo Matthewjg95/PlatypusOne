@@ -75,10 +75,12 @@ void test_renderer_geometry() {
 }
 
 void test_app_registry();
+void test_event_queue();
 void test_mcu_framing();
 
 int main() {
     test_app_registry();
+    test_event_queue();
     test_mcu_framing();
     test_renderer();
     test_renderer_geometry();
