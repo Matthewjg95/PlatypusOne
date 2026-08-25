@@ -160,7 +160,7 @@ display as absent — the same `nullptr` degradation described in
 
 Version negotiation: the effective version is `min(host, client)`. A client
 reporting a version the host cannot speak is a hard failure, logged and
-surfaced as `Error::Unsupported`; the link is not used.
+surfaced as `Error::NotSupported`; the link is not used.
 
 ### Display
 
@@ -260,7 +260,7 @@ the measurement may show it is not needed.
 | `IDisplay` member | Link behaviour |
 |---|---|
 | `info()` | Cached from `HelloReply`; valid only after a session is established |
-| `setBacklight(f)` | `Backlight{brightness = f × 0xFFFF}`; `Error::Unsupported` if capability bit 3 is clear |
+| `setBacklight(f)` | `Backlight{brightness = f × 0xFFFF}`; `Error::NotSupported` if capability bit 3 is clear |
 | `present(pixels)` | Diff against the last presented frame → tiles → `FrameBegin`/`Tile`*/`FrameEnd`; blocks until `FrameAck` or timeout |
 | `onTouch(h)` | Handler invoked from the link's receive thread — **not** the shell thread |
 | `onButton(h)` | Same threading caveat |
