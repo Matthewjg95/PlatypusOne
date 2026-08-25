@@ -8,14 +8,17 @@ namespace platypus::sim {
 
 namespace {
 
-/// 320x240 RGB565 display that accepts frames and discards them.
+/// Headless RGB565 display that accepts frames and discards them. Geometry is
+/// injected rather than fixed — see ADR-0001.
 /// TODO(sim): dump to PNG / SDL window for visual debugging.
 class SimDisplay final : public hal::IDisplay {
 public:
-    hal::DisplayInfo info() const noexcept override { return {320, 240, 16}; }
+    explicit SimDisplay(hal::DisplayInfo info) : info_(info) {}
+
+    hal::DisplayInfo info() const noexcept override { return info_; }
     hal::Status setBacklight(float) override { return {}; }
     hal::Status present(std::span<const std::byte> pixels) override {
-        const auto expected = std::size_t{320} * 240 * 2;
+        const auto expected = static_cast<std::size_t>(info_.width) * info_.height * 2;
         return pixels.size() == expected ? hal::Status{}
                                          : hal::Status{hal::Error::InvalidArgument};
     }
@@ -29,6 +32,7 @@ public:
     }
 
 private:
+    hal::DisplayInfo info_;
     std::function<void(const hal::TouchEvent&)> touch_;
     std::function<void(const hal::ButtonEvent&)> button_;
 };
@@ -60,12 +64,12 @@ private:
 
 }  // namespace
 
-HostSimBoard::HostSimBoard()
+HostSimBoard::HostSimBoard(hal::DisplayInfo geometry)
     :
 #ifdef _WIN32
-      display_(std::make_shared<Win32SimDisplay>()),
+      display_(std::make_shared<Win32SimDisplay>(geometry)),
 #else
-      display_(std::make_shared<SimDisplay>()),
+      display_(std::make_shared<SimDisplay>(geometry)),
 #endif
       storage_(std::make_shared<SimStorage>()) {}
 

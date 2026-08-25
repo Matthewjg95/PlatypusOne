@@ -1,5 +1,7 @@
 #include "LauncherApp.hpp"
 
+#include <algorithm>
+
 namespace platypus::launcher {
 
 namespace {
@@ -24,6 +26,11 @@ void LauncherApp::onTouch(const hal::TouchEvent& event) {
 
 void LauncherApp::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
     const auto& apps = registry_.manifests();
+
+    // Rows scale with the panel instead of assuming one (ADR-0001: geometry is
+    // discovered, never assumed). A tenth of the panel height, floored at a
+    // 32 px touch target — which leaves the 320x240 layout exactly as it was.
+    rowHeight_ = std::max(32, static_cast<int>(ctx.renderer.displayInfo().height) / 10);
 
     if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(apps.size())) {
         const auto id = apps[static_cast<std::size_t>(selectedIndex_)].id;

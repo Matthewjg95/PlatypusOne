@@ -13,15 +13,28 @@
 namespace platypus::sim {
 
 namespace {
-constexpr int kWidth = 320;
-constexpr int kHeight = 240;
-constexpr int kScale = 2;
+
 constexpr const wchar_t* kClassName = L"PlatypusSimDisplay";
+
+/// Largest integer scale (max 2) that keeps the simulated panel inside a
+/// typical developer monitor. 320x240 still comes up at 2x as before; an
+/// 800x480 prototype panel comes up 1:1 rather than overflowing the screen.
+int scaleFor(int width, int height) {
+    return (width * 2 <= 1600 && height * 2 <= 900) ? 2 : 1;
+}
+
 }  // namespace
 
 struct Win32SimDisplay::Impl {
+    Impl(int w, int h)
+        : width(w), height(h), scale(scaleFor(w, h)),
+          pixels(static_cast<std::size_t>(w) * static_cast<std::size_t>(h), 0) {}
+
+    int width;
+    int height;
+    int scale;
     HWND hwnd = nullptr;
-    std::vector<std::uint16_t> pixels = std::vector<std::uint16_t>(kWidth * kHeight, 0);
+    std::vector<std::uint16_t> pixels;
     std::function<void(const hal::TouchEvent&)> touch;
     std::function<void(const hal::ButtonEvent&)> button;
     bool mouseDown = false;
@@ -64,9 +77,9 @@ struct Win32SimDisplay::Impl {
 
     void handleMouse(HWND wnd, UINT msg, LPARAM lp) {
         const auto x = static_cast<std::uint16_t>(
-            std::max<int>(0, std::min<int>(kWidth - 1, GET_X_LPARAM(lp) / kScale)));
+            std::max<int>(0, std::min<int>(width - 1, GET_X_LPARAM(lp) / scale)));
         const auto y = static_cast<std::uint16_t>(
-            std::max<int>(0, std::min<int>(kHeight - 1, GET_Y_LPARAM(lp) / kScale)));
+            std::max<int>(0, std::min<int>(height - 1, GET_Y_LPARAM(lp) / scale)));
 
         hal::TouchEvent ev{hal::TouchEvent::Type::Move, x, y};
         if (msg == WM_LBUTTONDOWN) {
@@ -90,16 +103,16 @@ struct Win32SimDisplay::Impl {
             DWORD masks[3];
         } bmi{};
         bmi.h.biSize = sizeof(BITMAPINFOHEADER);
-        bmi.h.biWidth = kWidth;
-        bmi.h.biHeight = -kHeight;  // top-down
+        bmi.h.biWidth = width;
+        bmi.h.biHeight = -height;  // top-down
         bmi.h.biPlanes = 1;
         bmi.h.biBitCount = 16;
         bmi.h.biCompression = BI_BITFIELDS;
         bmi.masks[0] = 0xF800;
         bmi.masks[1] = 0x07E0;
         bmi.masks[2] = 0x001F;
-        StretchDIBits(dc, 0, 0, kWidth * kScale, kHeight * kScale,
-                      0, 0, kWidth, kHeight, pixels.data(),
+        StretchDIBits(dc, 0, 0, width * scale, height * scale,
+                      0, 0, width, height, pixels.data(),
                       reinterpret_cast<const BITMAPINFO*>(&bmi),
                       DIB_RGB_COLORS, SRCCOPY);
     }
@@ -113,7 +126,9 @@ struct Win32SimDisplay::Impl {
     }
 };
 
-Win32SimDisplay::Win32SimDisplay() : impl_(std::make_unique<Impl>()) {
+Win32SimDisplay::Win32SimDisplay(hal::DisplayInfo geometry)
+    : impl_(std::make_unique<Impl>(static_cast<int>(geometry.width),
+                                   static_cast<int>(geometry.height))) {
     WNDCLASSW wc{};
     wc.lpfnWndProc = &Impl::wndProc;
     wc.hInstance = GetModuleHandleW(nullptr);
@@ -121,7 +136,7 @@ Win32SimDisplay::Win32SimDisplay() : impl_(std::make_unique<Impl>()) {
     wc.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));  // IDC_ARROW
     RegisterClassW(&wc);  // idempotent enough: second registration fails harmlessly
 
-    RECT rect{0, 0, kWidth * kScale, kHeight * kScale};
+    RECT rect{0, 0, impl_->width * impl_->scale, impl_->height * impl_->scale};
     AdjustWindowRect(&rect, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, FALSE);
     impl_->hwnd = CreateWindowExW(
         0, kClassName, L"PlatypusOS Simulator",
@@ -136,13 +151,15 @@ Win32SimDisplay::~Win32SimDisplay() {
 }
 
 hal::DisplayInfo Win32SimDisplay::info() const noexcept {
-    return {kWidth, kHeight, 16};
+    return {static_cast<std::uint16_t>(impl_->width),
+            static_cast<std::uint16_t>(impl_->height), 16};
 }
 
 hal::Status Win32SimDisplay::setBacklight(float) { return {}; }
 
 hal::Status Win32SimDisplay::present(std::span<const std::byte> pixels) {
-    const auto expected = static_cast<std::size_t>(kWidth) * kHeight * 2;
+    const auto expected =
+        static_cast<std::size_t>(impl_->width) * static_cast<std::size_t>(impl_->height) * 2;
     if (pixels.size() != expected) return hal::Error::InvalidArgument;
 
     std::memcpy(impl_->pixels.data(), pixels.data(), expected);

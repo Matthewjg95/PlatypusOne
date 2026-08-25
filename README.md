@@ -46,10 +46,17 @@ cmake -B build -DPLATYPUS_TARGET_HOST=ON
 cmake --build build
 ctest --test-dir build
 ./build/apps/launcher/platypus_launcher
+./build/apps/launcher/platypus_launcher --geometry 800x480
 ```
 
 Requires CMake ≥ 3.22 and a C++20 compiler (GCC 12+, Clang 15+, MSVC 19.3+).
 Every subsystem is an independent CMake target and compiles on its own.
+
+`--geometry WxH` simulates a different panel (default 320×240). No resolution
+is compiled in: the display target is deliberately dynamic while the production
+panel is undecided, and prototyping runs against a linked external display —
+see [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) and the
+[presentation link protocol](docs/protocols/presentation.md).
 
 ## Documentation
 

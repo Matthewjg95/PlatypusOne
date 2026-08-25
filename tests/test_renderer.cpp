@@ -12,7 +12,9 @@ using namespace platypus;
 
 class FakeDisplay final : public hal::IDisplay {
 public:
-    hal::DisplayInfo info() const noexcept override { return {8, 8, 16}; }
+    explicit FakeDisplay(hal::DisplayInfo info = {8, 8, 16}) : info_(info) {}
+
+    hal::DisplayInfo info() const noexcept override { return info_; }
     hal::Status setBacklight(float) override { return {}; }
     hal::Status present(std::span<const std::byte> pixels) override {
         lastFrame_.assign(pixels.begin(), pixels.end());
@@ -24,6 +26,9 @@ public:
 
     std::vector<std::byte> lastFrame_;
     int presentCount_ = 0;
+
+private:
+    hal::DisplayInfo info_;
 };
 
 }  // namespace
@@ -44,6 +49,31 @@ void test_renderer() {
     std::puts("test_renderer: OK");
 }
 
+// ADR-0001: display geometry is discovered at runtime, so the renderer must
+// track whatever the panel reports — including a linked prototype display at
+// 800x480 — with no resolution compiled in anywhere.
+void test_renderer_geometry() {
+    auto display = std::make_shared<FakeDisplay>(hal::DisplayInfo{800, 480, 16});
+    renderer::Renderer r(display);
+
+    assert(r.displayInfo().width == 800);
+    assert(r.displayInfo().height == 480);
+
+    r.clear({0, 0, 0});
+    // Drawing past the old 320x240 bounds must land in the framebuffer, and
+    // drawing past the real bounds must clip rather than corrupt memory.
+    r.fillRect({700, 400, 200, 200}, {0, 0, 255});
+    assert(r.present().ok());
+    assert(display->lastFrame_.size() == 800u * 480u * 2u);
+
+    // Blue is 0x001F; check the pixel at (799, 479), the far corner.
+    const auto corner = (479u * 800u + 799u) * 2u;
+    assert(display->lastFrame_[corner] == std::byte{0x1F});
+    assert(display->lastFrame_[corner + 1] == std::byte{0x00});
+
+    std::puts("test_renderer_geometry: OK");
+}
+
 void test_app_registry();
 void test_mcu_framing();
 
@@ -51,6 +81,7 @@ int main() {
     test_app_registry();
     test_mcu_framing();
     test_renderer();
+    test_renderer_geometry();
     std::puts("All tests passed.");
     return 0;
 }

@@ -13,23 +13,60 @@
 #include <platypus/renderer/Renderer.hpp>
 
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <csignal>
+#include <cstdint>
 #include <cstdio>
+#include <string_view>
 #include <thread>
 
 namespace {
 std::atomic<bool> g_running{true};  // signal-handler flag; sole permitted "global"
 void handleSignal(int) { g_running = false; }
+
+bool parseDimension(std::string_view text, std::uint16_t& out) {
+    unsigned value = 0;
+    const auto* const last = text.data() + text.size();
+    const auto [end, ec] = std::from_chars(text.data(), last, value);
+    if (ec != std::errc{} || end != last) return false;
+    if (value == 0 || value > 4096) return false;  // sanity bounds, not a policy
+    out = static_cast<std::uint16_t>(value);
+    return true;
+}
+
+/// Parses "WIDTHxHEIGHT" (e.g. "800x480"), returning `fallback` unchanged if
+/// the spec is malformed. ADR-0001 keeps the panel dynamic, so the simulated
+/// geometry is a runtime choice rather than a compiled-in constant.
+platypus::hal::DisplayInfo parseGeometry(std::string_view spec,
+                                         platypus::hal::DisplayInfo fallback) {
+    const auto separator = spec.find('x');
+    if (separator == std::string_view::npos) return fallback;
+
+    auto parsed = fallback;
+    if (!parseDimension(spec.substr(0, separator), parsed.width) ||
+        !parseDimension(spec.substr(separator + 1), parsed.height))
+        return fallback;
+    return parsed;
+}
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
     std::signal(SIGINT, handleSignal);
     std::signal(SIGTERM, handleSignal);
 
     // --- Hardware -----------------------------------------------------------
     // TODO(board-bringup): select UnoQBoard vs HostSimBoard from build config.
-    platypus::sim::HostSimBoard board;
+    //
+    // --geometry WxH simulates whichever prototype panel is on the bench (the
+    // linked display of ADR-0001). Nothing downstream sees this value: apps and
+    // the renderer read geometry back from IDisplay::info().
+    auto geometry = platypus::sim::kDefaultSimGeometry;
+    for (int i = 1; i + 1 < argc; ++i) {
+        if (std::string_view(argv[i]) == "--geometry")
+            geometry = parseGeometry(argv[i + 1], geometry);
+    }
+    platypus::sim::HostSimBoard board(geometry);
 
     // --- Services -----------------------------------------------------------
     platypus::renderer::Renderer renderer(board.display());

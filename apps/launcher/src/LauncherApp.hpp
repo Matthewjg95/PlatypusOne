@@ -25,7 +25,7 @@ private:
     const appfw::AppRegistry& registry_;
     appfw::AppManifest manifest_;
     int selectedIndex_ = -1;   ///< set by onTouch, consumed by onFrame
-    int rowHeight_ = 32;
+    int rowHeight_ = 32;       ///< recomputed from panel height each onFrame
 };
 
 }  // namespace platypus::launcher

@@ -12,9 +12,16 @@
 
 namespace platypus::sim {
 
+/// Geometry the simulator falls back to when the caller names none. This is a
+/// convenience default, NOT a product decision: ADR-0001 keeps the panel
+/// deliberately dynamic, so nothing may treat this as "the" resolution.
+inline constexpr hal::DisplayInfo kDefaultSimGeometry{320, 240, 16};
+
 class HostSimBoard final : public hal::IBoard {
 public:
-    HostSimBoard();
+    /// @param geometry panel size to simulate — pass whichever prototype
+    ///        display is on the bench (see --geometry in main.cpp).
+    explicit HostSimBoard(hal::DisplayInfo geometry = kDefaultSimGeometry);
 
     [[nodiscard]] std::string_view id() const noexcept override { return "host-sim"; }
 
