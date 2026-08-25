@@ -14,8 +14,14 @@ bool EventQueue::post(const hal::TouchEvent& event) { return postEvent(event); }
 bool EventQueue::post(const hal::ButtonEvent& event) { return postEvent(event); }
 
 std::size_t EventQueue::dispatchPending(IApp& app) {
+    const auto pending = size();
     std::size_t dispatched = 0;
-    while (auto event = tryPop()) {
+    while (dispatched < pending) {
+        auto event = tryPop();
+        if (!event) {
+            break;
+        }
+
         std::visit(
             [&app](const auto& value) {
                 using EventType = std::decay_t<decltype(value)>;
