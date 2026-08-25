@@ -1,4 +1,8 @@
-# Platypus One BOM v0.1
+# Platypus One BOM v0.1 — packaging envelopes
+
+> Canonical parts BOM (with alternates + acquisition tracking):
+> [docs/hardware/BOM.md](../../docs/hardware/BOM.md). This file tracks
+> **packaging envelopes only** until vendor STEP models replace them.
 
 | Component | Candidate | Envelope (mm) |
 | --- | --- | --- |

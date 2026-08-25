@@ -105,9 +105,9 @@ bill orange would be on-brand).
 
 ## Open questions
 
-- [ ] Final display size: 3.2" (current BOM/renderer target) vs the 6–7"
-      drawn in the sheets — bigger LCD = new BOM line, battery, and renderer
-      resolution work. Decide before the Fusion model firms up.
+- [ ] Final display: options + recommendation consolidated in
+      [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md) (2026-08-24). Decide
+      before the Fusion model firms up — it drives aperture, depth, battery.
 - [ ] Trigger: mechanical microswitch (via MCU GPIO) vs capacitive.
 - [ ] Expansion port connector selection (24-pin high-density is drawn).
 - [ ] Kickstand: magnetic folding (drawn) vs simple flip — PCBWay printability.

@@ -1,92 +1,102 @@
-# Platypus One — Bill of Materials (rev A, planning)
+# Platypus One — Bill of Materials (rev B, planning — merged)
 
-Status date: **2026-08-04**. Nothing has been acquired yet; every line is
-`PLANNED`. Prices are indicative USD from typical distributors (Arduino Store,
-Adafruit, DigiKey, Amazon) — refresh at order time. This BOM doubles as the
-"beginning of BOM" required for the Hackster hardware application.
+Status date: **2026-08-24**. Merges the original planning BOM with the
+envelope BOM from `industrial_design/bounding_boxes/BOM_v0_1.md` (which stays
+as the packaging-envelope tracker). **Alternates are kept deliberately** —
+selection analysis is pending; do not delete an option without a decision
+note. Prices are indicative USD; refresh at order time.
 
-Legend: ACQ column = PLANNED → ORDERED → RECEIVED → TESTED.
+Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candidate.
 
 ## Core compute
 
-| # | Item | Qty | Est. | Source | Notes | ACQ |
-|---|---|---|---|---|---|---|
-| 1 | **Arduino UNO Q (4G RAM)** | 1 | $59 (or free) | Contest hardware / store.arduino.cc | QRB2210 Linux MPU + STM32U585. Apply for contest hardware first; buy only if not selected (announced Sep 18) | PLANNED |
-| 2 | microSD card, 32 GB A1, industrial preferred | 1 | $12 | Amazon/DigiKey | OS image + PlatypusOS data partition | PLANNED |
-| 3 | USB-C PD power supply 5V/3A + short USB-C cable | 1 | $15 | Amazon | Bench power during bring-up | PLANNED |
+| # | Item | Qty | Est. | Envelope (mm) | Source | Notes | ACQ |
+|---|---|---|---|---|---|---|---|
+| 1 | **Arduino UNO Q (4G)** ✦ | 1 | $59 (or free) | 85×54×20 | Contest hw / store.arduino.cc | Required by contest. Hardware recipients announced Sep 18 | PLANNED |
+| 2 | microSD 32 GB A1 | 1 | $12 | — | Amazon/DigiKey | OS + data partition | PLANNED |
+| 3 | USB-C PD supply 5V/3A + cable | 1 | $15 | — | Amazon | Bench power | PLANNED |
 
-## Display & input
+## Display — DECISION PENDING, see [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md)
 
-| # | Item | Qty | Est. | Source | Notes | ACQ |
-|---|---|---|---|---|---|---|
-| 4 | 3.2" ILI9341 320×240 SPI TFT **with resistive touch (XPT2046)** | 1 | $16 | Adafruit 1743 / Waveshare | Matches renderer's 320×240 RGB565 target exactly | PLANNED |
-| 5 | Tactile buttons, 6×6 mm | 4 | $2 | DigiKey | Power/home/function keys (sim maps to number keys) | PLANNED |
+| # | Option | Est. | Envelope (mm) | Notes | ACQ |
+|---|---|---|---|---|---|
+| 4a | **4.3–5" MIPI-DSI 800×480 capacitive** ✦ | $30–45 | ~120×75×5 (4.3") / 165×100×8 (5") | Product path — native Linux DSI, USB-C stays free for charging. Panel sourcing = open item | PLANNED |
+| 4b | 4.3" parallel-RGB 800×480 cap. (SUB3-class, ST7262E43 + GT1151) + ESP32-S3 bridge | ~$35+bridge | ~121×76×7 | Fallback if no DSI panel sources; bridge = display co-processor architecture | PLANNED |
+| 4c | 3.2" ILI9341 320×240 SPI, resistive (XPT2046) | $16 | ~90×55×10 | Descope safety net; matches current renderer/sim as built | PLANNED |
+| 4d | USB-C/HDMI portable monitor or Waveshare 5" HDMI (H) | $40 | dev only | Prototyping fixture, never the product (consumes USB-C) | PLANNED |
 
-## Sensing (ShadowScan + measurement apps)
+## Input
 
-| # | Item | Qty | Est. | Source | Notes | ACQ |
-|---|---|---|---|---|---|---|
-| 6 | Camera: USB UVC module, OV5640-class autofocus | 1 | $25 | Amazon/AliExpress-alt | UVC keeps the Linux driver path simple (V4L2); MIPI is a stretch goal | PLANNED |
-| 7 | VL53L1X time-of-flight distance sensor breakout | 1 | $12 | Pololu 3415 / Adafruit | Distance/level measurement app; I²C via MCU | PLANNED |
-| 8 | BNO055 (or ICM-20948) 9-DoF IMU breakout | 1 | $25 | Adafruit 2472 | Angle/level measurement; first ISensor driver | PLANNED |
-| 9 | TCS34725 color sensor breakout | 1 | $8 | Adafruit 1334 | Color-measure feature (multi-measure lineage) | PLANNED |
-| 10 | White LED, high-CRI + driver transistor | 2 | $2 | DigiKey | Controlled shadow casting for ShadowScan + camera illumination | PLANNED |
+| # | Item | Qty | Est. | Envelope (mm) | Source | Notes | ACQ |
+|---|---|---|---|---|---|---|---|
+| 5 | Rotary encoder, EC11-style w/ push | 1 | $3 | 24×24×30 | DigiKey | Primary nav control, at left thumb per ID doc | PLANNED |
+| 6 | Tactile buttons 6×6 mm | 4 | $2 | — | DigiKey | Trigger + function keys | PLANNED |
 
-## Power (handheld operation)
+## Sensing (alternates kept — analysis pending)
 
-| # | Item | Qty | Est. | Source | Notes | ACQ |
-|---|---|---|---|---|---|---|
-| 11 | LiPo battery 3.7 V 2500 mAh with protection | 1 | $15 | Adafruit 328 | Confirm carry-on legality (<100 Wh: fine) | PLANNED |
-| 12 | USB-C LiPo charge/boost board, 5 V 3 A out (e.g. PowerBoost-class) | 1 | $20 | Adafruit/DigiKey | UNO Q wants stable 5 V under Linux load | PLANNED |
-| 13 | Power switch, SPDT slide | 1 | $1 | DigiKey | | PLANNED |
+| # | Item | Qty | Est. | Envelope (mm) | Source | Notes | ACQ |
+|---|---|---|---|---|---|---|---|
+| 7a | Camera: USB UVC OV5640-class autofocus ✦ | 1 | $25 | 25×25×10 | Amazon | Simplest Linux path (V4L2) | PLANNED |
+| 7b | Camera: 13 MP autofocus module | 1 | $40 | 25×25×10 | TBD | Higher fidelity for ShadowScan; confirm UVC or MIPI-CSI availability on UNO Q before choosing | PLANNED |
+| 8a | ToF: VL53L1X (single-zone, 4 m) ✦ | 1 | $12 | 13×18×2 (breakout) | Pololu/Adafruit | Proven, cheap, fine for distance app | PLANNED |
+| 8b | ToF: VL53L8CX (8×8 multizone) | 1 | $20 | 6×6×3 | ST/Sparkfun | Coarse depth grid — assists ShadowScan; more driver work | PLANNED |
+| 9a | IMU: BNO055 (fused orientation on-chip) ✦ | 1 | $25 | 20×27×4 (breakout) | Adafruit | No sensor-fusion code needed — fastest to a working level/angle app | PLANNED |
+| 9b | IMU: BMI270 | 1 | $8 | 10×10×3 | DigiKey | Cheaper/smaller; fusion runs on our side | PLANNED |
+| 10 | Color: TCS34725 | 1 | $8 | 20×20×3 | Adafruit | Multi-measure lineage feature | PLANNED |
+| 11 | Radar: Grove BGT24LTR11 Doppler | 1 | $30 | 40×20×12 | Seeed | **V2 candidate** (machine-health app per utilities roadmap) — envelope reserved, not in Rev A build | DEFERRED |
+| 12 | White LED high-CRI + driver | 2 | $2 | — | DigiKey | Controlled shadow casting + illumination | PLANNED |
+
+## Power
+
+| # | Item | Qty | Est. | Envelope (mm) | Source | Notes | ACQ |
+|---|---|---|---|---|---|---|---|
+| 13 | Flat Li-ion/LiPo 3.7 V ~2500 mAh protected ✦ | 1 | $15 | 100×60×8 | Adafruit | Flat pack per packaging direction; exact cell TBD after display decision (display dominates power budget) | PLANNED |
+| 14 | USB-C charge/boost board 5 V 3 A | 1 | $20 | ~30×20×6 | Adafruit/DigiKey | Stable 5 V under Linux load; port exits grip base | PLANNED |
+| 15 | Power switch SPDT slide | 1 | $1 | — | DigiKey | | PLANNED |
 
 ## Audio & feedback
 
 | # | Item | Qty | Est. | Source | Notes | ACQ |
 |---|---|---|---|---|---|---|
-| 14 | Piezo buzzer or 1 W speaker + PAM8302 amp | 1 | $6 | Adafruit | UI feedback per IAudioOutput | PLANNED |
-| 15 | Vibration motor disc (optional) | 1 | $2 | Adafruit 1201 | Haptic feedback, stretch | PLANNED |
+| 16 | Piezo buzzer or 1 W speaker + PAM8302 | 1 | $6 | Adafruit | IAudioOutput | PLANNED |
+| 17 | Vibration motor disc (optional) | 1 | $2 | Adafruit | Haptics stretch | PLANNED |
 
-## Enclosure & interconnect (PCBWay scope — $300 contest credit)
+## Enclosure & interconnect (PCBWay scope — $300 credit if selected)
 
 | # | Item | Qty | Est. | Source | Notes | ACQ |
 |---|---|---|---|---|---|---|
-| 16 | Custom carrier/breakout PCB (sensor I²C hub, buttons, power routing) | 1 | ~$60 assembled | **PCBWay** | Designed in **Fusion Electronics** — targets "Best Fusion Electronics Design" prize | PLANNED |
-| 17 | Enclosure, 3D-printed resin or CNC | 1 set | ~$120 | **PCBWay** | Modeled in Fusion (.f3d is a required deliverable) | PLANNED |
-| 18 | JST-SH/Qwiic cables, headers, M2/M2.5 standoffs + screws kit | — | $15 | Adafruit/Amazon | | PLANNED |
-| 19 | Hookup wire, heat-shrink assortment | — | $10 | Amazon | | PLANNED |
+| 18 | Carrier/breakout PCB (I²C hub, buttons, encoder, power) | 1 | ~$60 asm | **PCBWay** | Fusion Electronics design; freeze gate Nov 10 | PLANNED |
+| 19 | Enclosure: CNC alu barrel + printed polymer grip (hybrid per [INDUSTRIAL_DESIGN.md](INDUSTRIAL_DESIGN.md)) | 1 set | ~$120–250 | **PCBWay** | Metal barrel likely $150–250 alone — quote early; RF window required | PLANNED |
+| 20 | JST-SH/Qwiic cables, headers, M2/M2.5 standoffs kit | — | $15 | Adafruit/Amazon | | PLANNED |
+| 21 | Hookup wire, heat-shrink | — | $10 | Amazon | | PLANNED |
 
-## Tools (if not already owned)
+## Tools (if not owned)
 
-| # | Item | Est. | Notes | ACQ |
-|---|---|---|---|---|
-| T1 | Soldering iron (temp-controlled) + solder + flux | $40 | | PLANNED |
-| T2 | Multimeter | $25 | Power bring-up requires it | PLANNED |
-| T3 | USB-UART adapter, 3.3 V (FTDI/CP2102) | $10 | Serial console / MCU debug | PLANNED |
-| T4 | Calipers, digital | $20 | Enclosure fit checks | PLANNED |
+| # | Item | Est. | ACQ |
+|---|---|---|---|
+| T1 | Soldering iron + solder + flux | $40 | PLANNED |
+| T2 | Multimeter | $25 | PLANNED |
+| T3 | USB-UART 3.3 V adapter | $10 | PLANNED |
+| T4 | Digital calipers | $20 | PLANNED |
 
-## Software (BOM per contest rubric — tools count)
+## Software (rubric: tools count)
 
 | Item | Cost | Notes |
 |---|---|---|
 | Autodesk Fusion (+ Electronics) | Free personal / contest license | Enclosure + carrier PCB + schematics |
-| PlatypusOS (this repo) | — | C++20, CMake; own work |
-| Arduino App Lab / UNO Q Linux image | Free | Board OS |
-| KiCad not used — Fusion Electronics only | — | Keeps rubric points concentrated |
+| PlatypusOS (this repo) | — | C++20/CMake, own work |
+| Arduino App Lab / UNO Q image | Free | Board OS |
 
-## Totals (excluding tools, excluding contest-provided items)
+## Totals (primary candidates only, excl. tools & contest-provided)
 
-- If awarded contest hardware + $300 PCBWay credit: **≈ $190 out of pocket**
-- Fully self-funded worst case: **≈ $430 + tools**
+- With contest hardware + $300 PCBWay credit: **≈ $200–230 out of pocket**
+- Fully self-funded worst case: **≈ $450–500 + tools**
 
-## Ordering strategy
+## Pending decisions blocking ordering
 
-1. **Now (before Aug 23):** order nothing except optionally the display (#4)
-   and IMU (#8) — cheap, long-lead-independent, and enough to de-risk the two
-   hardest drivers. Everything else waits on the Sep 18 hardware announcement.
-2. **Sep 18, if selected:** UNO Q + PCBWay credit arrive via contest; order
-   items 2–15, 18–19 immediately (1-week lead).
-3. **Sep 18, if not selected:** buy UNO Q retail same day; PCBWay enclosure
-   self-funded — trim #17 to FDM-quality budget (~$60).
-4. **Oct:** PCBWay carrier PCB order (after breadboard validation) — allow two
-   spins; second spin no later than **Nov 10** to hold the Dec 20 deadline.
+1. **Display option (4a/4b/4c)** — see DISPLAY_COMPARISON.md. Blocks battery
+   sizing, enclosure, renderer target.
+2. Camera 7a vs 7b — blocked on confirming UNO Q camera input paths.
+3. ToF 8a vs 8b and IMU 9a vs 9b — Matthew's analysis pending; both pairs are
+   I²C and carrier-PCB-compatible either way, so these do NOT block the PCB
+   schematic start, only the final placement.
