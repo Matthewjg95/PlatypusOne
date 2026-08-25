@@ -13,7 +13,7 @@ if this file disagrees with the code, the code wins and this file is stale.
 | **Critical path** | The Fusion `.f3d` first pass. Owner-only work; nothing else in the application is blocked |
 | **Hardware in hand** | M5Stack Tab5 (prototype display fixture). No UNO Q, no sensors |
 | **Software state** | Builds and runs host-side; no hardware drivers exercised |
-| **Display** | Deliberately unfrozen — [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) |
+| **Display** | **Decided:** MIPI-DSI production panel — [ADR-0002](docs/adr/0002-dsi-production-display.md); geometry still runtime-dynamic per [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) |
 
 ## Milestones
 
@@ -34,12 +34,13 @@ Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
 | ADR | Decision |
 |---|---|
 | [0001](docs/adr/0001-dynamic-linked-prototype-display.md) | Display target stays dynamic; prototype on a linked external display; geometry discovered at runtime |
+| [0002](docs/adr/0002-dsi-production-display.md) | Production display = 4.3–5″ MIPI-DSI 800×480-class capacitive, native Linux drive; bridge demoted to fallback (gate: Sep 30) |
 
 ## Open decisions blocking work
 
 | Decision | Blocks | Notes |
 |---|---|---|
-| Production panel | Enclosure depth, carrier PCB, `display/driver` | Deliberately deferred by ADR-0001 |
+| ~~Production panel~~ | — | **Decided 2026-08-24** ([ADR-0002](docs/adr/0002-dsi-production-display.md)): DSI. Open sub-item: which exact panel — see TARS task below |
 | ToF: VL53L1X vs VL53L8CX | Carrier PCB freeze | ⚖ in [BOM](docs/hardware/BOM.md) |
 | IMU: BNO055 vs BMI270 | Carrier PCB freeze, first sensor driver | BNO055 recommended on schedule grounds |
 | Camera: UVC OV5640-class vs 13 MP module | Camera driver path | UVC recommended (V4L2 is the simple path) |
@@ -71,12 +72,20 @@ commit message. Current such changes:
 
 | Commit | Change | Status |
 |---|---|---|
-| `feat(sim): make simulated display geometry a runtime choice` | Sim display geometry injection, `--geometry`, launcher row scaling, new geometry test | **Unverified — needs `cmake --build` + `ctest`** |
+| `feat(sim): make simulated display geometry a runtime choice` | Sim display geometry injection, `--geometry`, launcher row scaling, new geometry test | ✅ **Verified 2026-08-24** on the MSVC machine: clean build, all tests pass, `--geometry 800x480` sim window smoke-tested |
 
-Please run the host build and tests when convenient and record the result here.
+Verification protocol: the MSVC machine session runs build+tests on pull and
+updates this table; TARS marks new code changes `NOT COMPILED` until then.
 
 ## Next up
 
+0. **[TARS] DSI panel research** — blocking follow-up from
+   [ADR-0002](docs/adr/0002-dsi-production-display.md): UNO Q DSI connector
+   part/pinout, ≥2 purchasable 4.3–5″ 800×480 DSI capacitive panels with
+   Linux driver plausibility (price, lead time, FPC, active area), and the
+   Debian image's device-tree overlay mechanism. Deliverable:
+   `docs/hardware/DSI_PANEL_CANDIDATES.md`. Gate: fall back to the ESP32-S3
+   bridge if nothing viable by **Sep 30**.
 1. **[owner]** Fusion `.f3d` first pass →
    [application checklist](docs/contest/HARDWARE_APPLICATION_CHECKLIST.md) §6.
 2. **[owner]** Confirm on the live contest page whether the Sep 18 recipients

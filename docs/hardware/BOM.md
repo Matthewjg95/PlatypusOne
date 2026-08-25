@@ -16,13 +16,13 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 | 2 | microSD 32 GB A1 | 1 | $12 | — | Amazon/DigiKey | OS + data partition | PLANNED |
 | 3 | USB-C PD supply 5V/3A + cable | 1 | $15 | — | Amazon | Bench power | PLANNED |
 
-## Display — DECISION PENDING, see [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md)
+## Display — **DECIDED: 4a (DSI)** per [ADR-0002](../adr/0002-dsi-production-display.md); analysis in [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md)
 
 | # | Option | Est. | Envelope (mm) | Notes | ACQ |
 |---|---|---|---|---|---|
-| 4a | **4.3–5" MIPI-DSI 800×480 capacitive** ✦ | $30–45 | ~120×75×5 (4.3") / 165×100×8 (5") | Product path — native Linux DSI, USB-C stays free for charging. Panel sourcing = open item | PLANNED |
-| 4b | 4.3" parallel-RGB 800×480 cap. (SUB3-class, ST7262E43 + GT1151) + ESP32-S3 bridge | ~$35+bridge | ~121×76×7 | Fallback if no DSI panel sources; bridge = display co-processor architecture | PLANNED |
-| 4c | 3.2" ILI9341 320×240 SPI, resistive (XPT2046) | $16 | ~90×55×10 | Descope safety net; matches current renderer/sim as built | PLANNED |
+| 4a | **4.3–5" MIPI-DSI 800×480 capacitive** ✅ SELECTED | $30–45 | ~120×75×5 (4.3") / 165×100×8 (5") | Product path — native Linux DSI, USB-C stays free for charging. Exact panel: TARS research due, gate Sep 30 | PLANNED |
+| 4b | 4.3" parallel-RGB 800×480 cap. (SUB3-class, ST7262E43 + GT1151) + ESP32-S3 bridge | ~$35+bridge | ~121×76×7 | FALLBACK ONLY (activated if 4a sourcing fails by Sep 30) | HOLD |
+| 4c | 3.2" ILI9341 320×240 SPI, resistive (XPT2046) | $16 | ~90×55×10 | DESCOPE NET only; matches current renderer/sim as built | HOLD |
 | 4d | USB-C/HDMI portable monitor or Waveshare 5" HDMI (H) | $40 | dev only | Prototyping fixture, never the product (consumes USB-C) | PLANNED |
 
 ## Input

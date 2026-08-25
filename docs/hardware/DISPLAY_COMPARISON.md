@@ -1,5 +1,10 @@
 # Platypus One — Display Decision Comparison
 
+> **DECIDED 2026-08-24: Option B (MIPI-DSI panel)** — recorded in
+> [ADR-0002](../adr/0002-dsi-production-display.md). Option C is fallback
+> (gate Sep 30), Option A descope net, Option D dev fixture. This document is
+> retained as the analysis behind the decision.
+
 Status date: **2026-08-24**. Decision owner: Matthew. This consolidates the
 three display directions currently in the repo (3.2" SPI in
 [BOM.md](BOM.md), 4.3" 800×480 in the
