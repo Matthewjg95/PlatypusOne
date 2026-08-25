@@ -4,11 +4,17 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 
 > **Contest context:** this project targets the Hackster "Build the Autodesk
 > University 2027 Product" contest (submission due **Dec 20, 2026**; hardware
-> application due **Aug 23, 2026**). See
+> application due **Sep 7, 2026**, extended from Aug 23). See
 > [contest snapshot](contest/autodesk-au2027-contest-snapshot.md),
+> [application checklist](contest/HARDWARE_APPLICATION_CHECKLIST.md),
 > [hardware BOM](hardware/BOM.md),
 > [test checklists](hardware/TEST_CHECKLISTS.md), and the
 > [acquisition roadmap](hardware/ACQUISITION_ROADMAP.md).
+>
+> **Display:** deliberately dynamic — prototyping runs against a linked
+> external display until the production panel is chosen
+> ([ADR-0001](adr/0001-dynamic-linked-prototype-display.md),
+> [presentation link](protocols/presentation.md)).
 
 ## M0 — Foundation (this commit)
 
@@ -28,7 +34,13 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 - [x] `board/mcu-bridge` — framing codec + Linux SerialMcuBridge driver;
       protocol spec in docs/protocols/mcu-bridge.md
 - [ ] `board/mcu-firmware` — STM32-side counterpart implementing the spec
-- [ ] `display/driver` — panel driver (SPI/DSI per final hardware) + touch
+- [ ] `display/linked` — `LinkedDisplay` over the
+      [presentation link](protocols/presentation.md) + client firmware; the
+      prototype display path per ADR-0001. **Blocked on** `appfw/event-queue`
+      (input arrives on the link thread) and gated by `renderer/dirty-rects`
+      for usable frame rates
+- [ ] `display/driver` — integrated panel driver + touch. **Deferred** until a
+      production panel is selected; do not start before ADR-0001 is superseded
 - [ ] `camera/libcamera` — libcamera/V4L2 backend for ICamera
 - [ ] `sensors/imu` — first real ISensor driver via the MCU bridge
 - [ ] `infra/cross-compile` — aarch64 toolchain file + CI build
@@ -38,11 +50,20 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 ## M2 — Runtime maturity
 
 - [ ] `renderer/font-atlas` — real bitmap font, text metrics, scaling
-- [ ] `renderer/dirty-rects` — partial present for SPI panel bandwidth
-- [ ] `appfw/event-queue` — thread-safe event handoff from driver threads
+- [ ] `renderer/dirty-rects` — partial present. **Prerequisite, not an
+      optimization:** a full 800×480 frame is 768 kB and a USB CDC link carries
+      roughly one per second (bandwidth table in
+      [presentation.md](protocols/presentation.md))
+- [ ] `appfw/event-queue` — thread-safe event handoff from driver threads.
+      Hard dependency of `display/linked`
 - [ ] `appfw/lifecycle` — pause/resume, low-memory notifications
 - [x] `sim/window` — native Win32 window backend for HostSimBoard (mouse =
       touch, number keys = buttons); SDL/X11 backend still open for POSIX hosts
+- [x] `sim/geometry` — simulated panel size chosen at runtime
+      (`--geometry WxH`), no resolution compiled in (ADR-0001)
+- [ ] `appfw/encoder-input` — HAL representation for the rotary encoder, the
+      primary navigation control. The presentation link already reserves a
+      message for it; `hal::IDisplay` has no event type yet
 - [ ] `filesystem/settings-store` — typed key/value settings persistence
 - [ ] `services/export` — STL/OBJ/PLY writers over geometry::Mesh
 

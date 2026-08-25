@@ -60,9 +60,12 @@ see [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) and the
 
 ## Documentation
 
+- [STATUS.md](STATUS.md) — where the project actually is right now
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, diagrams, rationale
 - [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) — C++/Python conventions
 - [docs/ROADMAP.md](docs/ROADMAP.md) — prioritized TODO roadmap
+- [docs/adr/](docs/adr/README.md) — architecture decision records
+- [docs/protocols/](docs/protocols/) — wire protocols (MCU bridge, presentation link)
 - Per-module headers carry interface documentation inline.
 
 ## Repository layout
