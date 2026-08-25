@@ -7,8 +7,9 @@
 #include "LauncherApp.hpp"
 
 #include <platypus/appfw/AppContext.hpp>
-#include <platypus/apps/SettingsApp.hpp>
 #include <platypus/appfw/AppRegistry.hpp>
+#include <platypus/appfw/EventQueue.hpp>
+#include <platypus/apps/SettingsApp.hpp>
 #include <platypus/filesystem/ProjectStore.hpp>
 #include <platypus/renderer/Renderer.hpp>
 
@@ -67,6 +68,9 @@ int main(int argc, char** argv) {
         if (std::string_view(argv[i]) == "--geometry")
             geometry = parseGeometry(argv[i + 1], geometry);
     }
+    // Declared before the board so the queue outlives every registered driver
+    // callback during shutdown.
+    platypus::appfw::EventQueue eventQueue;
     platypus::sim::HostSimBoard board(geometry);
 
     // --- Services -----------------------------------------------------------
@@ -94,11 +98,17 @@ int main(int argc, char** argv) {
     std::unique_ptr<platypus::appfw::IApp> activeOwned;
     active->onStart(ctx);
 
-    // Route input to whichever app is active. `active` is captured by
-    // reference so app switches retarget input automatically.
+    // Driver callbacks may execute on transport threads. Copy events into the
+    // bounded queue; the UI loop below is the only place that calls an app.
     if (auto display = board.display()) {
-        display->onTouch([&active](const platypus::hal::TouchEvent& e) { active->onTouch(e); });
-        display->onButton([&active](const platypus::hal::ButtonEvent& e) { active->onButton(e); });
+        display->onTouch(
+            [&eventQueue](const platypus::hal::TouchEvent& event) {
+                (void)eventQueue.post(event);
+            });
+        display->onButton(
+            [&eventQueue](const platypus::hal::ButtonEvent& event) {
+                (void)eventQueue.post(event);
+            });
     }
 
     auto last = std::chrono::steady_clock::now();
@@ -107,6 +117,7 @@ int main(int argc, char** argv) {
         const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(now - last);
         last = now;
 
+        (void)eventQueue.dispatchPending(*active);
         active->onFrame(ctx, dt);
 
         if (!pendingLaunch.empty()) {
