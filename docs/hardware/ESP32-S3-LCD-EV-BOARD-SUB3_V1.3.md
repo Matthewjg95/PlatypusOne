@@ -98,6 +98,15 @@ Suggested decision gate:
 
 > If the 4.3-inch mechanical envelope is acceptable for PlatypusOne, adopt **800×480 capacitive touch** as the reference UI target and prototype on the SUB3 v1.3.
 
+**Gate outcome (2026-08-24):** partially taken in
+[ADR-0001](../adr/0001-dynamic-linked-prototype-display.md). 800×480 is adopted
+as the **UI design reference**, and this panel is one of two linked-prototype
+candidates — but no production panel is selected, and the software targets
+whatever geometry the display reports at runtime rather than this resolution
+specifically. The owner refers to the second candidate as the
+"ESP32-S3-Korvo-1" 4.3-inch LCD; confirming whether that is this SUB3 carrier
+or a different Espressif board is an open item in the ADR.
+
 ## References
 
 - Espressif ESP32-S3-LCD-EV-Board documentation / user guide

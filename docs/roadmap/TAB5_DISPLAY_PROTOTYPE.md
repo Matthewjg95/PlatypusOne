@@ -33,6 +33,14 @@ Create a transport-independent interface between the UNO Q application/services 
 
 ## First protocol
 
+> **Specified.** The transport-independent seam sketched below is now written
+> up as [docs/protocols/presentation.md](../protocols/presentation.md), and the
+> decision it implements is recorded in
+> [ADR-0001](../adr/0001-dynamic-linked-prototype-display.md). Read those
+> first: the spec resolves how the messages below relate to the framebuffer
+> path (short version — the panel is a dumb `IDisplay`, and semantic messages
+> are an optional offload that no app may depend on).
+
 Start with the lowest-friction reliable transport available during bring-up (USB serial is preferred for the first proof if practical). Define messages rather than sharing application internals.
 
 Suggested early messages:
