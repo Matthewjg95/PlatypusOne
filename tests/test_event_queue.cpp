@@ -13,7 +13,7 @@ namespace {
 using namespace platypus;
 
 class RecordingApp final : public appfw::IApp {
-public:
+   public:
     const appfw::AppManifest& manifest() const noexcept override { return manifest_; }
     void onStart(appfw::AppContext&) override {}
     void onStop() override {}
@@ -33,7 +33,7 @@ public:
     std::size_t touchCount_ = 0;
     std::size_t buttonCount_ = 0;
 
-private:
+   private:
     appfw::AppManifest manifest_{"test.events", "Events", "1.0.0", false, false};
 };
 
