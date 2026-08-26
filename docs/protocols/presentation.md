@@ -269,10 +269,9 @@ the measurement may show it is not needed.
 
 **Threading.** Input handlers run on the link receive thread, while
 [ARCHITECTURE.md](../ARCHITECTURE.md) §7 requires `IApp` callbacks to run on the
-shell thread. `LinkedDisplay` must therefore hand events across a queue rather
-than calling app handlers directly — which makes `appfw/event-queue` (ROADMAP
-M2) a hard dependency of this driver, not a nicety. Until that queue exists,
-`LinkedDisplay` is not safe to wire into the composition root.
+shell thread. `LinkedDisplay` therefore invokes only the handlers registered by the
+composition root; those handlers post into the bounded `appfw::EventQueue` for
+UI-thread dispatch. Driver code never calls an app directly.
 
 ## 10. Versioning
 
