@@ -9,9 +9,13 @@ namespace platypus::appfw {
 
 EventQueue::EventQueue(std::size_t capacity) : capacity_(capacity) {}
 
-bool EventQueue::post(const hal::TouchEvent& event) { return postEvent(event); }
+bool EventQueue::post(const hal::TouchEvent& event) {
+    return postEvent(event);
+}
 
-bool EventQueue::post(const hal::ButtonEvent& event) { return postEvent(event); }
+bool EventQueue::post(const hal::ButtonEvent& event) {
+    return postEvent(event);
+}
 
 std::size_t EventQueue::dispatchPending(IApp& app) {
     const auto pending = size();
