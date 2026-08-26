@@ -15,9 +15,9 @@
 namespace platypus::appfw {
 
 struct AppManifest {
-    std::string id;          ///< reverse-dns unique id, e.g. "one.platypus.shadowscan"
-    std::string name;        ///< display name
-    std::string version;     ///< semver
+    std::string id;       ///< reverse-dns unique id, e.g. "one.platypus.shadowscan"
+    std::string name;     ///< display name
+    std::string version;  ///< semver
     bool requiresCamera = false;
     bool requiresSensors = false;
 };
@@ -28,7 +28,7 @@ struct AppManifest {
 /// callback quickly; long work belongs on a worker thread the app owns and
 /// joins in onStop.
 class IApp {
-public:
+   public:
     virtual ~IApp() = default;
 
     [[nodiscard]] virtual const AppManifest& manifest() const noexcept = 0;
