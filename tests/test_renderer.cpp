@@ -11,7 +11,7 @@ namespace {
 using namespace platypus;
 
 class FakeDisplay final : public hal::IDisplay {
-public:
+   public:
     explicit FakeDisplay(hal::DisplayInfo info = {8, 8, 16}) : info_(info) {}
 
     hal::DisplayInfo info() const noexcept override { return info_; }
@@ -27,7 +27,7 @@ public:
     std::vector<std::byte> lastFrame_;
     int presentCount_ = 0;
 
-private:
+   private:
     hal::DisplayInfo info_;
 };
 
