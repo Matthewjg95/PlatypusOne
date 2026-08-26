@@ -18,7 +18,7 @@ namespace platypus::appfw {
 class IApp;
 
 class EventQueue {
-public:
+   public:
     explicit EventQueue(std::size_t capacity = 128);
 
     EventQueue(const EventQueue&) = delete;
@@ -37,7 +37,7 @@ public:
     [[nodiscard]] std::size_t size() const;
     [[nodiscard]] std::size_t droppedCount() const;
 
-private:
+   private:
     using Event = std::variant<hal::TouchEvent, hal::ButtonEvent>;
 
     [[nodiscard]] bool postEvent(Event event);
