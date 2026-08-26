@@ -11,7 +11,7 @@ namespace {
 using namespace platypus;
 
 class FakeDisplay final : public hal::IDisplay {
-public:
+   public:
     explicit FakeDisplay(hal::DisplayInfo info = {8, 8, 16}) : info_(info) {}
 
     hal::DisplayInfo info() const noexcept override { return info_; }
@@ -21,13 +21,26 @@ public:
         ++presentCount_;
         return {};
     }
+    hal::Status presentRegion(std::span<const std::byte> pixels,
+                              const hal::DisplayRegion& region) override {
+        lastRegion_ = region;
+        ++regionAttemptCount_;
+        if (failNextRegion_) {
+            failNextRegion_ = false;
+            return hal::Error::IoFailure;
+        }
+        return present(pixels);
+    }
     hal::Status onTouch(std::function<void(const hal::TouchEvent&)>) override { return {}; }
     hal::Status onButton(std::function<void(const hal::ButtonEvent&)>) override { return {}; }
 
     std::vector<std::byte> lastFrame_;
     int presentCount_ = 0;
+    int regionAttemptCount_ = 0;
+    bool failNextRegion_ = false;
+    hal::DisplayRegion lastRegion_{};
 
-private:
+   private:
     hal::DisplayInfo info_;
 };
 
@@ -41,10 +54,45 @@ void test_renderer() {
     assert(r.present().ok());
     assert(display->presentCount_ == 1);
     assert(display->lastFrame_.size() == 8u * 8u * 2u);
+    assert(display->lastRegion_.width == 8);
+    assert(display->lastRegion_.height == 8);
 
     // Red in RGB565 is 0xF800 (little-endian: 0x00 0xF8).
     assert(display->lastFrame_[0] == std::byte{0x00});
     assert(display->lastFrame_[1] == std::byte{0xF8});
+
+    // No drawing means no transport work on the next present.
+    assert(r.present().ok());
+    assert(display->presentCount_ == 1);
+
+    r.fillRect({2, 3, 3, 2}, {0, 255, 0});
+    assert(r.present().ok());
+    assert(display->presentCount_ == 2);
+    assert(display->lastRegion_.x == 2);
+    assert(display->lastRegion_.y == 3);
+    assert(display->lastRegion_.width == 3);
+    assert(display->lastRegion_.height == 2);
+
+    // A failed transport must retain the dirty region for retry.
+    r.fillRect({1, 5, 2, 2}, {0, 0, 255});
+    display->failNextRegion_ = true;
+    assert(!r.present().ok());
+    assert(display->presentCount_ == 2);
+    assert(r.present().ok());
+    assert(display->presentCount_ == 3);
+    assert(display->lastRegion_.x == 1);
+    assert(display->lastRegion_.y == 5);
+    assert(display->lastRegion_.width == 2);
+    assert(display->lastRegion_.height == 2);
+
+    // Dirty regions clip to the display and merge across draw calls.
+    r.fillRect({-2, 4, 4, 10}, {0, 0, 255});
+    r.fillRect({6, -2, 4, 4}, {0, 0, 255});
+    assert(r.present().ok());
+    assert(display->lastRegion_.x == 0);
+    assert(display->lastRegion_.y == 0);
+    assert(display->lastRegion_.width == 8);
+    assert(display->lastRegion_.height == 8);
 
     std::puts("test_renderer: OK");
 }
