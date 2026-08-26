@@ -4,9 +4,10 @@ Wire protocol between PlatypusOS (Linux MPU, Qualcomm QRB2210) and an
 **external display client** — a physically separate device that owns a panel,
 its touch controller, and its buttons.
 
-Status: **draft, unimplemented.** Nothing in this repository speaks it yet. It
-is specified before the code so the first bring-up sprint has a contract to
-build against rather than a serial link invented at the bench. Per
+Status: **draft, framing implemented.** The shared byte-level codec is in place;
+the session, tile encoder, transport, and display-client implementations remain.
+The protocol was specified first so bring-up follows a reviewed contract rather
+than a serial link invented at the bench. Per
 [ADR-0001](../adr/0001-dynamic-linked-prototype-display.md), a linked external
 display is the prototype display path while the production panel is undecided.
 
@@ -75,9 +76,9 @@ highlight or a changing measurement readout is well under 10 % of the panel:
 Numbers above are **calculated, not measured**. Replace them with bench figures
 during bring-up (see [open items](#11-open-items)).
 
-This is what promotes `renderer/dirty-rects` (ROADMAP M2) from an optimization
-to a prerequisite: until the renderer reports which rectangles changed,
-`LinkedDisplay` must send whole frames and the link runs at ~1 fps. Optional
+This is what made `renderer/dirty-rects` (ROADMAP M2) a prerequisite rather
+than an optimization. The renderer now supplies changed bounds; `LinkedDisplay`
+will split those bounds into protocol-sized tiles. Optional
 RLE (§6) buys another large factor on the flat-fill UI the renderer produces
 today, but it does not remove the need for dirty rects.
 
@@ -261,7 +262,8 @@ the measurement may show it is not needed.
 |---|---|
 | `info()` | Cached from `HelloReply`; valid only after a session is established |
 | `setBacklight(f)` | `Backlight{brightness = f × 0xFFFF}`; `Error::NotSupported` if capability bit 3 is clear |
-| `present(pixels)` | Diff against the last presented frame → tiles → `FrameBegin`/`Tile`*/`FrameEnd`; blocks until `FrameAck` or timeout |
+| `present(pixels)` | Full-frame fallback → bounded tiles → `FrameBegin`/`Tile`*/`FrameEnd`; blocks until `FrameAck` or timeout |
+| `presentRegion(pixels, region)` | Split the renderer-provided dirty region into bounded tiles; same ack behavior |
 | `onTouch(h)` | Handler invoked from the link's receive thread — **not** the shell thread |
 | `onButton(h)` | Same threading caveat |
 
@@ -289,7 +291,7 @@ transcripts that omit it are unreadable six weeks later.
 - [ ] Reference implementation: `LinkedDisplay` under `platform/display/src/linked/`,
       plus a host-side loopback fake so the codec is testable with no hardware
       (the [CODING_STANDARDS](../CODING_STANDARDS.md) testing rule).
-- [ ] Shared framing codec header (`platypus/hal/link/Framing.hpp`), used
+- [x] Shared framing codec header (`platypus/hal/link/Framing.hpp`), used
       verbatim by driver, client firmware, and unit tests — the pattern
       [mcu-bridge](mcu-bridge.md) already follows.
 - [ ] Client firmware for the first target (Tab5), in its own repository or
@@ -297,8 +299,8 @@ transcripts that omit it are unreadable six weeks later.
 - [ ] **Measure and replace the §2 estimates** with bench numbers for USB CDC
       and TCP, at both 320×240 and 800×480.
 - [ ] Decide encoder representation in the HAL (ADR-0001 open item).
-- [ ] Confirm `appfw/event-queue` lands before `LinkedDisplay` is wired into
-      the composition root.
+- [x] `appfw/event-queue` is ready before `LinkedDisplay` is wired into the
+      composition root.
 - [ ] Consider a `Hello` field for physical panel dimensions (mm), so DPI-aware
       layout and touch-target sizing become possible across a 3.2" and a 4.3"
       panel of similar pixel counts.
