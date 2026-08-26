@@ -25,7 +25,9 @@
 
 namespace {
 std::atomic<bool> g_running{true};  // signal-handler flag; sole permitted "global"
-void handleSignal(int) { g_running = false; }
+void handleSignal(int) {
+    g_running = false;
+}
 
 bool parseDimension(std::string_view text, std::uint16_t& out) {
     unsigned value = 0;
@@ -81,8 +83,7 @@ int main(int argc, char** argv) {
     platypus::appfw::AppRegistry registry;
     // Built-in apps register here. shadowscan/viewer/measurement/inspection/
     // documentation follow the same pattern as settings (see apps/settings).
-    registry.add(platypus::apps::SettingsApp().manifest(),
-                 &platypus::apps::SettingsApp::create);
+    registry.add(platypus::apps::SettingsApp().manifest(), &platypus::apps::SettingsApp::create);
 
     // The launcher needs the registry, so it is constructed directly rather
     // than through a factory.
@@ -91,8 +92,7 @@ int main(int argc, char** argv) {
     // --- Shell loop ---------------------------------------------------------
     std::string pendingLaunch;
     platypus::appfw::AppContext ctx{
-        board, renderer, projects,
-        [&pendingLaunch](const std::string& id) { pendingLaunch = id; }};
+        board, renderer, projects, [&pendingLaunch](const std::string& id) { pendingLaunch = id; }};
 
     platypus::appfw::IApp* active = &launcher;
     std::unique_ptr<platypus::appfw::IApp> activeOwned;
@@ -101,14 +101,12 @@ int main(int argc, char** argv) {
     // Driver callbacks may execute on transport threads. Copy events into the
     // bounded queue; the UI loop below is the only place that calls an app.
     if (auto display = board.display()) {
-        display->onTouch(
-            [&eventQueue](const platypus::hal::TouchEvent& event) {
-                (void)eventQueue.post(event);
-            });
-        display->onButton(
-            [&eventQueue](const platypus::hal::ButtonEvent& event) {
-                (void)eventQueue.post(event);
-            });
+        display->onTouch([&eventQueue](const platypus::hal::TouchEvent& event) {
+            (void)eventQueue.post(event);
+        });
+        display->onButton([&eventQueue](const platypus::hal::ButtonEvent& event) {
+            (void)eventQueue.post(event);
+        });
     }
 
     auto last = std::chrono::steady_clock::now();
