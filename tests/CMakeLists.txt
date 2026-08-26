@@ -4,6 +4,7 @@ add_executable(platypus_tests
     test_app_registry.cpp
     test_event_queue.cpp
     test_mcu_framing.cpp
+    test_presentation_framing.cpp
     test_renderer.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
