@@ -37,20 +37,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           $base = $env:BASE_SHA
-          if (-not $base -or $base -match '^0+
-          cmake
-          -S .
-          -B build
-          -DPLATYPUS_TARGET_HOST=ON
-          -DPLATYPUS_BUILD_APPS=ON
-          -DPLATYPUS_BUILD_TESTS=ON
-
-      - name: Build
-        run: cmake --build build --config Release --parallel
-
-      - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure
-) {
+          if (-not $base -or $base -match '^0+$') {
               $base = 'HEAD^'
           }
 
