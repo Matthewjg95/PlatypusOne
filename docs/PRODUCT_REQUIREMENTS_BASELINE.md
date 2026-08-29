@@ -99,6 +99,13 @@ Automatic SketchAsset creation is **Deferred** from contest Rev A. The
 requirements now are that Platypus One preserve enough provenance and units for
 a future adapter, and that it not lock evidence to one CAD backend.
 
+The cross-repository boundary and its BOM consequences are defined in
+[MESH2CAD_HANDOFF_AND_BOM.md](MESH2CAD_HANDOFF_AND_BOM.md). PlatypusOne captures,
+previews and exports calibrated evidence; Mesh2CAD performs the heavier
+design-intent recovery, optimization, CAD-kernel validation and discrepancy
+analysis on a workstation. Rev A does not require a dedicated reconstruction
+accelerator.
+
 ## 4. Functional requirements
 
 ### 4.1 Application platform
@@ -125,6 +132,10 @@ a future adapter, and that it not lock evidence to one CAD backend.
 | DATA-006 | Export SHALL use documented, user-owned formats and SHALL NOT require a Platypus cloud account. | Offline export test | Locked |
 | DATA-007 | Saving or exporting SHALL avoid silently overwriting an existing artifact. | Filesystem test | Target |
 | DATA-008 | Local project data SHALL remain available after an ordinary restart or loss of network connectivity. | Restart/offline test | Target |
+| DATA-009 | A geometry-capture export SHALL use a versioned evidence manifest that identifies raw views, units, device/software revision, calibration references, derived artifacts, transformations and known limitations. | Schema + export test | Target |
+| DATA-010 | Raw images SHALL remain immutable and source-linked when silhouettes, edge maps, point clouds, meshes or intent hypotheses are derived from them. | Provenance test | Locked |
+| DATA-011 | Available camera state, ToF range, IMU orientation and illumination state SHALL be timestamped and associated with the deliberate capture that produced each view; missing capabilities SHALL be explicit. | Capture-bundle test | Target |
+| DATA-012 | User-confirmed dimensions and relationships SHALL be exported as explicit locked constraints with units and source context, not silently merged into derived geometry. | Schema + round-trip test | Target |
 
 ### 4.3 Measurement and capture
 
@@ -137,6 +148,10 @@ a future adapter, and that it not lock evidence to one CAD backend.
 | CAP-005 | Accuracy and repeatability claims SHALL be based on recorded calibration and test data; no numeric accuracy is baselined yet. | Test report review | Open |
 | CAP-006 | The user SHALL be able to review a captured artifact before it is accepted into the project record. | Workflow test | Target |
 | CAP-007 | Controlled illumination SHALL be available to supported camera/ShadowScan workflows. | Hardware test | Target |
+| CAP-008 | The geometry-capture workflow SHOULD guide at least three deliberate views suitable for standardized multi-view reconstruction, while allowing equivalent views when the part cannot be oriented conventionally. | Workflow test | Target |
+| CAP-009 | Camera focus and exposure SHALL be lockable across a capture set or their effective state SHALL be recorded reproducibly with each view. | Camera integration test | Target |
+| CAP-010 | At least one known-scale method—fiducial target, confirmed physical dimension or calibrated range—SHALL accompany a geometry evidence bundle. | Capture/export test | Target |
+| CAP-011 | Multizone ToF data MAY improve coarse depth confidence but SHALL NOT be presented as dimensional ground truth beyond measured accuracy and calibration. | UI/report inspection | Locked |
 
 ## 5. Human factors and industrial design
 
@@ -168,6 +183,7 @@ prototype testing rather than copied from an AI concept sheet.
 | HW-003 | STM32-side work SHALL own deterministic I/O and sensor sampling through the documented MCU bridge. | Bridge integration test | Locked |
 | HW-004 | The enclosure SHALL reserve at least the UNO Q planning envelope of 85 × 54 × 20 mm until an exact board model supersedes it. | Fusion interference check | Target |
 | HW-005 | Exact vendor STEP models SHALL replace planning envelopes before carrier PCB/enclosure freeze. | CAD review | Target |
+| HW-006 | Rev A SHALL NOT require a dedicated GPU/NPU solely for Mesh2CAD reconstruction; the handheld SHALL remain useful as a calibrated evidence-capture endpoint with workstation processing. | BOM + architecture inspection | Locked |
 
 ### 6.2 Display
 
@@ -190,6 +206,9 @@ prototype testing rather than copied from an AI concept sheet.
 | MECH-005 | Thermal coupling between hot compute components and any aluminum heat-spreading feature SHALL be intentional and electrically safe. | Thermal design review | Target |
 | MECH-006 | Surface temperature, sustained compute load, and throttling limits SHALL be measured before claiming passive-heatsink performance. | Thermal test | Open |
 | MECH-007 | Service access SHALL permit assembly and replacement of the battery, compute board, display, and carrier without destructive enclosure work. | Assembly trial | Target |
+| MECH-008 | Camera, ToF and controlled illumination SHALL share a rigid, documented mounting datum so their calibrated relative geometry survives ordinary handling and service. | Fusion inspection + repeat calibration test | Target |
+| MECH-009 | Rev A SHOULD provide a stable support through a 1/4-20 insert and/or kickstand for repeatable multi-view capture. | CAD + physical fit test | Target |
+| MECH-010 | A printed fiducial/checkerboard scale target SHALL be included as a traceable capture accessory even if it is not electrically connected. | BOM + capture test | Target |
 
 ### 6.4 Planning envelopes
 
@@ -304,7 +323,7 @@ following are true:
 | Exact DSI panel, FPC, touch controller, and Linux support | 2026-09-30 gate | aperture, display driver, enclosure depth |
 | ToF: VL53L1X vs VL53L8CX | carrier freeze | placement, first ranging driver |
 | IMU: BNO055 vs BMI270 | carrier freeze | placement, first IMU driver |
-| Camera: UVC OV5640-class vs higher-resolution module | camera-path confirmation | barrel window, driver |
+| Camera: UVC OV5640-class vs higher-resolution module | camera-path plus calibration/control proof | barrel window, driver, Mesh2CAD evidence quality |
 | Trigger switch technology | carrier/enclosure freeze | control placement |
 | Expansion connector and reserved module envelope | carrier/enclosure freeze or explicit descope | module dock |
 | Exact battery and validated power budget | enclosure freeze | grip volume, runtime |
@@ -321,6 +340,7 @@ This baseline consolidates, but does not replace:
 - [Roadmap](ROADMAP.md)
 - [Industrial design notes](hardware/INDUSTRIAL_DESIGN.md)
 - [Hardware BOM](hardware/BOM.md)
+- [Mesh2CAD handoff and BOM traceability](MESH2CAD_HANDOFF_AND_BOM.md)
 - [Hardware acquisition roadmap](hardware/ACQUISITION_ROADMAP.md)
 - [Hardware application checklist](contest/HARDWARE_APPLICATION_CHECKLIST.md)
 - [ADR-0001: dynamic linked prototype display](adr/0001-dynamic-linked-prototype-display.md)
