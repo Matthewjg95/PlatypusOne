@@ -78,3 +78,9 @@ see [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) and the
 | `third_party/` | Vendored dependencies (currently none — kept dependency-free) |
 | `docs/` | Architecture, standards, diagrams, roadmap |
 | `tests/` | Unit tests (run on host, no hardware needed) |
+
+## License
+
+PlatypusOS is licensed under the [Apache License 2.0](LICENSE). This permits
+commercial use, modification, and distribution subject to the license terms.
+The license does not grant rights to project names or trademarks.
