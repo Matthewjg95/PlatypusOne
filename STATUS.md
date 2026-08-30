@@ -51,13 +51,9 @@ Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Known gaps
 
-- **No LICENSE file.** The contest requires citing licences for third-party
-  code. The repository is currently **private** (checked 2026-08-30, renamed
-  `Matthewjg95/PlatypusOne`) — it needs a LICENSE and then to go public before
-  the repo link goes on the Hackster page.
-- **No CI.** Nothing catches a broken host build between commits.
-- **No `.clang-format` / ruff config**, though the coding standards reference
-  both (ROADMAP `infra/format`).
+- **Repository is private** (checked 2026-08-30, renamed
+  `Matthewjg95/PlatypusOne`) — LICENSE landed (Apache-2.0, PR #3); it still
+  needs to go **public** before the repo link goes on the Hackster page.
 - **`platypus_board_unoq` compiles on UNIX only** and is linked by no
   executable, so the UNO Q board path is unbuilt on the Windows dev machine and
   unreachable from the composition root.
@@ -94,8 +90,10 @@ updates this table; TARS marks new code changes `NOT COMPILED` until then.
    Sep 25, 2026 5:00 PM PDT** (Sep 7 close and Dec 20 submission confirmed
    unchanged). ACQUISITION_ROADMAP's bring-up window loses a week.
 3. **[owner]** Run the host build and tests to clear the verification table.
-4. `infra/format` + CI + LICENSE — cheap, and they protect the host-sim path
-   while attention moves to hardware.
+4. ~~`infra/format` + CI + LICENSE~~ **Done 2026-08-30:** PRs #3 (Apache-2.0 +
+   MSVC host CI) and #4 (clang-format/ruff policy + CI format checks) merged;
+   PRs #1 (requirements baseline, status Proposed) and #2 (DSI panel research)
+   merged alongside.
 5. `appfw/event-queue`, then `renderer/dirty-rects` — in that order, since
    `display/linked` needs both before it can be wired into the composition root.
 6. STM32 firmware implementing [mcu-bridge v1](docs/protocols/mcu-bridge.md):
