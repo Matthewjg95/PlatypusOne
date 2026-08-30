@@ -30,7 +30,7 @@ with scan/measure/inspect apps) is squarely in this lineage.
 |---|---|
 | Jul 28, 2026 12:00 PM | Competition begins (open now) |
 | ~~Aug 23, 2026~~ → **Sep 7, 2026 11:59 PM** | **Free hardware application closes — EXTENDED** |
-| Sep 18, 2026 5:00 PM | Hardware recipients announced — ⚠️ may have moved with the extension, unverified |
+| ~~Sep 18~~ → **Sep 25, 2026 5:00 PM** | Hardware recipients announced — **moved with the extension** (verified on the live page 2026-08-30) |
 | **Dec 20, 2026 11:59 PM** | **Project submission closes** |
 | Jan 29, 2027 | Winners announced |
 
@@ -41,6 +41,14 @@ with scan/measure/inspect apps) is squarely in this lineage.
 > announcement slipped, the bring-up window in
 > [ACQUISITION_ROADMAP.md](../hardware/ACQUISITION_ROADMAP.md) compresses.
 > Working checklist: [HARDWARE_APPLICATION_CHECKLIST.md](HARDWARE_APPLICATION_CHECKLIST.md).
+
+> **Update 2026-08-30:** all dates re-verified against the live contest page.
+> Sep 7 application close and Dec 20 submission close are confirmed in writing
+> on the page; the recipients announcement **moved Sep 18 → Sep 25, 2026
+> 5:00 PM PDT** — the bring-up window anchored in
+> [ACQUISITION_ROADMAP.md](../hardware/ACQUISITION_ROADMAP.md) loses a week
+> (~12 weeks from hardware arrival to Dec 20). Winners announced by Jan 29,
+> 2027. Application requirements on the overview page are unchanged.
 
 ## Hardware application (deadline Sep 7 — extended)
 

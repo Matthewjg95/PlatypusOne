@@ -15,15 +15,21 @@ As of 2026-08-24 that is **11 days out**.
 
 ## 1. Verify before anything else **[owner]**
 
-- [ ] Open the live contest page and confirm the extended deadline
-      (**Sep 7, 2026, 11:59 PM PT**) in writing on the page itself
-- [ ] Confirm whether the **Sep 18 recipients-announcement** date moved with
-      the extension — the downstream plan in
+- [x] Open the live contest page and confirm the extended deadline
+      (**Sep 7, 2026, 11:59 PM PT**) in writing on the page itself —
+      ✅ verified 2026-08-30: "September 7, 2026 at 11:59 PM PDT"
+- [x] Confirm whether the **Sep 18 recipients-announcement** date moved with
+      the extension — ✅ verified 2026-08-30: **it moved, to Sep 25, 2026
+      5:00 PM PDT**. The downstream plan in
       [ACQUISITION_ROADMAP.md](../hardware/ACQUISITION_ROADMAP.md) is anchored
-      to it, and a shift compresses the bring-up window
-- [ ] Confirm the submission deadline is still **Dec 20, 2026**
-- [ ] Re-read the "Apply for hardware" tab for any changed requirements
-- [ ] Update the snapshot doc with anything that differs
+      to Sep 18 and needs a one-week compression pass
+- [x] Confirm the submission deadline is still **Dec 20, 2026** —
+      ✅ verified 2026-08-30: "December 20, 2026 at 11:59 PM PST"
+- [ ] Re-read the "Apply for hardware" tab for any changed requirements —
+      overview-page requirements verified unchanged 2026-08-30 (started
+      project link + BOM with UNO Q and Fusion + `.f3d` + application
+      questions); the tab's own form questions still need a logged-in look
+- [x] Update the snapshot doc with anything that differs — done 2026-08-30
 
 ## 2. Required application contents
 
