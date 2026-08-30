@@ -21,12 +21,13 @@
 - **Naming:** `PascalCase` types, `camelCase` functions/methods,
   `snake_case_` no — members use `camelCase_` trailing underscore,
   `kPascalCase` constants.
-- **Formatting:** clang-format (Google-derived, 100 cols) — `.clang-format`
-  to be committed (ROADMAP: infra/format).
+- **Formatting:** clang-format 18 (Google-derived, 4-space indent, 100 cols) —
+  repository policy is defined in [`.clang-format`](../.clang-format).
 
 ## Python (services/ai, services/vision prototyping only)
 
-- Python 3.11+, `ruff` + `mypy --strict`, type hints mandatory.
+- Python 3.11+, `ruff` + `mypy --strict`, type hints mandatory. Ruff lint and
+  formatting policy is defined in [`pyproject.toml`](../pyproject.toml).
 - Modules expose a narrow functional API consumed via the C++ boundary; no
   Python code imports hardware directly.
 
