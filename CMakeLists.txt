@@ -40,6 +40,8 @@ if(PLATYPUS_BUILD_APPS)
     add_subdirectory(apps/settings)
 endif()
 
+add_subdirectory(tools/engineering_scout_capture)
+
 if(PLATYPUS_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)

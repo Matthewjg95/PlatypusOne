@@ -12,7 +12,7 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 
 | # | Item | Qty | Est. | Envelope (mm) | Source | Notes | ACQ |
 |---|---|---|---|---|---|---|---|
-| 1 | **Arduino UNO Q (4G)** ✦ | 1 | $59 (or free) | 85×54×20 | Contest hw / store.arduino.cc | Required by contest. Hardware recipients announced Sep 18 | PLANNED |
+| 1 | **Arduino UNO Q (4G)** ✦ | 1 | $59 (or free) | 68.58×53.34 board outline; 3D clearance TBD from official STEP | Contest hw / store.arduino.cc | Required by contest. Hardware recipients announced Sep 18 | PLANNED |
 | 2 | microSD 32 GB A1 | 1 | $12 | — | Amazon/DigiKey | OS + data partition | PLANNED |
 | 3 | USB-C PD supply 5V/3A + cable | 1 | $15 | — | Amazon | Bench power | PLANNED |
 
