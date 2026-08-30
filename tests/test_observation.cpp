@@ -102,6 +102,29 @@ void test_validation_rules() {
     auto dup = scoutExample();
     dup.inferred[0].id = "drv-diameter";
     assert(!validate(dup).empty());
+
+    // timestamp_utc is part of the contract's minimal record.
+    auto noTime = scoutExample();
+    noTime.timestampUtc.clear();
+    const auto timeViolations = validate(noTime);
+    assert(timeViolations.size() == 1 && timeViolations[0] == "timestamp_utc is empty");
+}
+
+void test_source_key_uniqueness() {
+    auto record = scoutExample();
+    record.source.emplace_back("app", "shadow-copy");  // duplicate key
+
+    // validate() reports the duplicate...
+    const auto violations = validate(record);
+    assert(violations.size() == 1 && violations[0] == "duplicate source key: app");
+
+    // ...and toJson() must still emit a document fromJson() accepts, keeping
+    // the first occurrence.
+    const auto decoded = fromJson(toJson(record));
+    assert(decoded.ok());
+    assert(decoded.record->source.size() == 2);
+    assert(decoded.record->source[0] ==
+           (std::pair<std::string, std::string>{"app", "engineering_scout"}));
 }
 
 void test_string_escaping() {
@@ -154,6 +177,7 @@ void test_forward_compatibility() {
 void test_observation() {
     test_roundtrip();
     test_validation_rules();
+    test_source_key_uniqueness();
     test_string_escaping();
     test_parser_strictness();
     test_forward_compatibility();

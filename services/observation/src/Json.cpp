@@ -1,9 +1,12 @@
 #include "platypus/observation/Json.hpp"
 
+// NOTE: no <format> — libstdc++ ships std::format from GCC 13, and the repo
+// compiler floor is GCC 12 (the UNO Q image). std::to_chars covers both the
+// shortest-round-trip doubles and the escape hex below on every supported
+// toolchain.
 #include <charconv>
 #include <cstdint>
 #include <cstdio>
-#include <format>
 
 namespace platypus::observation::json {
 
@@ -25,7 +28,12 @@ void appendEscaped(std::string& out, const std::string& s) {
             case '\t': out += "\\t"; break;
             default:
                 if (static_cast<unsigned char>(c) < 0x20) {
-                    out += std::format("\\u{:04x}", static_cast<unsigned char>(c));
+                    // Controls are always \u00XX.
+                    constexpr char hex[] = "0123456789abcdef";
+                    const auto byte = static_cast<unsigned char>(c);
+                    out += "\\u00";
+                    out += hex[(byte >> 4) & 0xF];
+                    out += hex[byte & 0xF];
                 } else {
                     out += c;  // UTF-8 bytes pass through unescaped
                 }
@@ -35,14 +43,17 @@ void appendEscaped(std::string& out, const std::string& s) {
 }
 
 void appendNumber(std::string& out, double d) {
-    // std::format("{}") yields the shortest representation that round-trips.
-    // JSON has no Inf/NaN; the contract never produces them, but clamp to
-    // null rather than emitting invalid JSON if one slips through.
+    // std::to_chars with no precision yields the shortest representation
+    // that round-trips. JSON has no Inf/NaN; the contract never produces
+    // them, but emit null rather than invalid JSON if one slips through.
     if (d != d || d > 1.7976931348623157e308 || d < -1.7976931348623157e308) {
         out += "null";
         return;
     }
-    out += std::format("{}", d);
+    char buf[32];
+    const auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), d);
+    if (ec != std::errc{}) { out += "null"; return; }  // cannot happen at this size
+    out.append(buf, end);
 }
 
 void serializeInto(std::string& out, const Value& v, int indent, int depth) {

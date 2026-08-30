@@ -78,7 +78,9 @@ struct EngineeringObservation {
     std::string timestampUtc;              ///< ISO 8601; producer supplies the clock
     /// Producer identity + device metadata, e.g. {"app","engineering_scout"},
     /// {"camera","uvc0"}. Kept as open key/value pairs: the contract is
-    /// sensor-agnostic and sources differ per app.
+    /// sensor-agnostic and sources differ per app. Keys must be unique —
+    /// validate() reports duplicates, and toJson() keeps only the first
+    /// occurrence so serialized output always re-parses.
     std::vector<std::pair<std::string, std::string>> source;
     std::vector<Artifact> artifacts;
     std::vector<Claim> observed;
@@ -101,7 +103,9 @@ struct DecodeOutcome {
 
 /// Strict on structure it understands, tolerant of unknown fields (forward
 /// compatibility, mirroring the MCU-bridge "ignore unknown topics" rule).
-/// observation_id is the only hard-required field.
+/// observation_id is the only decode-required field: decoding stays tolerant
+/// so a draft/damaged record can be loaded for repair, while contract
+/// completeness (timestamp_utc present, etc.) is validate()'s job.
 [[nodiscard]] DecodeOutcome fromJson(std::string_view text);
 
 /// Returns every contract violation found (empty = valid). Violations are

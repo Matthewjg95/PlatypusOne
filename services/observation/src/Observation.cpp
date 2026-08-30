@@ -132,8 +132,15 @@ std::string toJson(const EngineeringObservation& record) {
     root.emplace_back("observation_id", record.observationId);
     root.emplace_back("timestamp_utc", record.timestampUtc);
 
+    // First occurrence wins on duplicate source keys: JSON objects cannot
+    // carry duplicates and our parser rejects them, so toJson must never
+    // emit a document fromJson refuses. validate() reports the duplicates.
     json::Object source;
-    for (const auto& [key, value] : record.source) source.emplace_back(key, value);
+    for (const auto& [key, value] : record.source) {
+        const bool seen = std::any_of(source.begin(), source.end(),
+                                      [&](const auto& kv) { return kv.first == key; });
+        if (!seen) source.emplace_back(key, value);
+    }
     root.emplace_back("source", std::move(source));
 
     json::Array artifacts;
@@ -306,6 +313,14 @@ std::vector<std::string> validate(const EngineeringObservation& record) {
 
     if (record.observationId.empty())
         violations.push_back("observation_id is empty");
+    // timestamp_utc is part of the contract's minimal record.
+    if (record.timestampUtc.empty())
+        violations.push_back("timestamp_utc is empty");
+
+    std::unordered_set<std::string> sourceKeys;
+    for (const auto& [key, value] : record.source)
+        if (!sourceKeys.insert(key).second)
+            violations.push_back("duplicate source key: " + key);
 
     std::unordered_set<std::string> claimIds;
     std::unordered_set<std::string> artifactIds;
