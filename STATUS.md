@@ -3,7 +3,7 @@
 Rolling snapshot of where Platypus One actually is. Updated as work lands —
 if this file disagrees with the code, the code wins and this file is stale.
 
-**Last updated: 2026-08-24**
+**Last updated: 2026-08-30**
 
 ## Right now
 
@@ -52,8 +52,9 @@ Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
 ## Known gaps
 
 - **No LICENSE file.** The contest requires citing licences for third-party
-  code, and the repository is public. Needed before the repo link goes on the
-  Hackster page.
+  code. The repository is currently **private** (checked 2026-08-30, renamed
+  `Matthewjg95/PlatypusOne`) — it needs a LICENSE and then to go public before
+  the repo link goes on the Hackster page.
 - **No CI.** Nothing catches a broken host build between commits.
 - **No `.clang-format` / ruff config**, though the coding standards reference
   both (ROADMAP `infra/format`).
@@ -90,8 +91,10 @@ updates this table; TARS marks new code changes `NOT COMPILED` until then.
    bridge if nothing viable by **Sep 30**.
 1. **[owner]** Fusion `.f3d` first pass →
    [application checklist](docs/contest/HARDWARE_APPLICATION_CHECKLIST.md) §6.
-2. **[owner]** Confirm on the live contest page whether the Sep 18 recipients
-   date moved with the extension.
+2. ~~Confirm on the live contest page whether the Sep 18 recipients date moved
+   with the extension.~~ **Done 2026-08-30: it moved — recipients announced
+   Sep 25, 2026 5:00 PM PDT** (Sep 7 close and Dec 20 submission confirmed
+   unchanged). ACQUISITION_ROADMAP's bring-up window loses a week.
 3. **[owner]** Run the host build and tests to clear the verification table.
 4. `infra/format` + CI + LICENSE — cheap, and they protect the host-sim path
    while attention moves to hardware.
