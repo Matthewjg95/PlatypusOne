@@ -13,7 +13,7 @@ if this file disagrees with the code, the code wins and this file is stale.
 | **Critical path** | The Fusion `.f3d` first pass. Owner-only work; nothing else in the application is blocked |
 | **Hardware in hand** | M5Stack Tab5 (prototype display fixture). No UNO Q, no sensors |
 | **Software state** | Builds and runs host-side; no hardware drivers exercised. Engineering Observation contract v0.1 merged (PR #10, review-corrected): `services/observation` with JSON round-trip + contract validation, GCC-12-safe |
-| **Display** | **Decided:** MIPI-DSI production panel — [ADR-0002](docs/adr/0002-dsi-production-display.md); geometry still runtime-dynamic per [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) |
+| **Display** | **Conditional:** MIPI-DSI via UNO Media Carrier + Waveshare 5-DSI-TOUCH-A; hardware proof pending — [candidate research](docs/hardware/DSI_PANEL_CANDIDATES.md). Geometry remains runtime-dynamic per [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) |
 
 ## Milestones
 
@@ -42,7 +42,7 @@ Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 | Decision | Blocks | Notes |
 |---|---|---|
-| ~~Production panel~~ | — | **Decided 2026-08-24** ([ADR-0002](docs/adr/0002-dsi-production-display.md)): DSI. Open sub-item: which exact panel — see TARS task below |
+| Production panel proof | Enclosure freeze, final battery sizing | **Conditional recommendation:** Waveshare 5-DSI-TOUCH-A through UNO Media Carrier. Carrier was not orderable and hardware was not tested as of 2026-08-25; see [candidate research](docs/hardware/DSI_PANEL_CANDIDATES.md) |
 | ToF: VL53L1X vs VL53L8CX | Carrier PCB freeze | ⚖ in [BOM](docs/hardware/BOM.md) |
 | IMU: BNO055 vs BMI270 | Carrier PCB freeze, first sensor driver | BNO055 recommended on schedule grounds |
 | Camera: UVC OV5640-class vs 13 MP module | Camera driver path | UVC recommended (V4L2 is the simple path) |
@@ -82,13 +82,11 @@ updates this table; TARS marks new code changes `NOT COMPILED` until then.
 
 ## Next up
 
-0. **[TARS] DSI panel research** — blocking follow-up from
-   [ADR-0002](docs/adr/0002-dsi-production-display.md): UNO Q DSI connector
-   part/pinout, ≥2 purchasable 4.3–5″ 800×480 DSI capacitive panels with
-   Linux driver plausibility (price, lead time, FPC, active area), and the
-   Debian image's device-tree overlay mechanism. Deliverable:
-   `docs/hardware/DSI_PANEL_CANDIDATES.md`. Gate: fall back to the ESP32-S3
-   bridge if nothing viable by **Sep 30**.
+0. **[owner/procurement] DSI proof-of-life** — research complete:
+   [DSI_PANEL_CANDIDATES.md](docs/hardware/DSI_PANEL_CANDIDATES.md).
+   Acquire the UNO Media Carrier + Waveshare 5-DSI-TOUCH-A when the carrier is
+   available, then run the documented display/touch/rotation test. Keep the
+   **Sep 30** ESP32-S3 fallback gate.
 1. **[owner]** Fusion `.f3d` first pass →
    [application checklist](docs/contest/HARDWARE_APPLICATION_CHECKLIST.md) §6.
 2. ~~Confirm on the live contest page whether the Sep 18 recipients date moved
