@@ -12,7 +12,7 @@ if this file disagrees with the code, the code wins and this file is stale.
 | **Deadline in focus** | Hackster hardware application, **Sep 7, 2026** (extended from Aug 23) — target submit **Sep 4** |
 | **Critical path** | The Fusion `.f3d` first pass. Owner-only work; nothing else in the application is blocked |
 | **Hardware in hand** | M5Stack Tab5 (prototype display fixture). No UNO Q, no sensors |
-| **Software state** | Builds and runs host-side; no hardware drivers exercised |
+| **Software state** | Builds and runs host-side; no hardware drivers exercised. Engineering Observation contract v0.1 merged (PR #10, review-corrected): `services/observation` with JSON round-trip + contract validation, GCC-12-safe |
 | **Display** | **Decided:** MIPI-DSI production panel — [ADR-0002](docs/adr/0002-dsi-production-display.md); geometry still runtime-dynamic per [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) |
 
 ## Milestones
@@ -25,6 +25,8 @@ if this file disagrees with the code, the code wins and this file is stale.
 - **M2 Runtime maturity** — started. Win32 simulator window and runtime
   geometry landed; dirty rects, event queue, settings store outstanding.
 - **M3 Flagship apps** — not started. Six app directories hold READMEs only.
+  Engineering Scout Q (issue #9) groundwork underway: evidence contract merged;
+  camera→artifact→record capture slice is the next chunk in flight.
 - **M4 Platform opening** — not started.
 
 Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
