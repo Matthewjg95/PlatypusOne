@@ -11,13 +11,13 @@ gantt
     title Platypus One — road to Dec 20 submission
     section Contest gates
     Hardware application window   :crit, 2026-08-04, 2026-09-07
-    Recipients announced          :milestone, 2026-09-18, 0d
+    Recipients announced          :milestone, 2026-09-25, 0d
     Submission deadline           :milestone, crit, 2026-12-20, 0d
     section Hardware
     Fusion enclosure first pass   :2026-08-05, 12d
     Early de-risk parts (display, IMU) :2026-08-10, 10d
-    Main parts order + UNO Q      :2026-09-18, 10d
-    Bring-up (checklists 1–7)     :2026-09-28, 21d
+    Main parts order + UNO Q      :2026-09-25, 10d
+    Bring-up (checklists 1–7)     :2026-10-05, 21d
     Carrier PCB spin 1 (PCBWay)   :2026-10-19, 14d
     Enclosure print (PCBWay)      :2026-10-26, 14d
     PCB/enclosure respin buffer   :2026-11-10, 14d
@@ -50,13 +50,16 @@ Goal: submit a strong free-hardware application (UNO Q 4G + $300 PCBWay + Fusion
       page — must list the UNO Q and Fusion
 - [ ] Answer all application-form questions; submit via "Apply for hardware"
       tab **no later than Sep 4** (3-day margin)
-- [ ] Confirm on the live page whether the Sep 18 announcement date moved with
-      the extension — everything below is anchored to it
+- [x] Confirm on the live page whether the Sep 18 announcement date moved with
+      the extension — ✅ verified 2026-08-30: **moved to Sep 25, 2026 5:00 PM
+      PDT**. All Sep 18 anchors below are re-dated; bring-up now overlaps the
+      Oct 19 PCB spin-1 order, so breadboard validation of carrier-PCB-relevant
+      sensors must front-load into the first two weeks after parts arrive
 - [ ] Optional de-risk buy (~$25): BNO055 IMU, so driver work can start on a
       spare SBC/dev board before the UNO Q arrives. The rev A display de-risk
       buy is **cancelled** — a linked prototype display is already in hand
 
-## Phase 1 — Sep 8 → Sep 18 (waiting on announcement)
+## Phase 1 — Sep 8 → Sep 25 (waiting on announcement)
 
 - [ ] Refine Fusion model: button placement, camera/ToF windows, battery bay
 - [ ] Start Fusion **Electronics**: carrier-board schematic (I²C hub, buttons,
@@ -67,10 +70,9 @@ Goal: submit a strong free-hardware application (UNO Q 4G + $300 PCBWay + Fusion
       written against interfaces; STM32 firmware for the MCU bridge protocol
 - [ ] Draft the project story on Hackster as work happens (docs = 20 pts)
 
-## Phase 2 — Sep 18 → mid-Oct (parts + bring-up)
+## Phase 2 — Sep 25 → mid-Oct (parts + bring-up)
 
-Decision point Sep 18 (⚠️ confirm this date still holds after the application
-extension):
+Decision point Sep 25 (verified on the live page 2026-08-30; was Sep 18):
 - **Selected:** hardware + credit incoming; order [BOM](BOM.md) rev B items
   2–3, 5–11, 13–17, 20–21 same week. Every ⚖ DECISION line must close first.
 - **Not selected:** buy UNO Q retail (~$59) immediately; self-fund a reduced
@@ -101,8 +103,8 @@ extension):
 
 | Risk | Mitigation |
 |---|---|
-| Not selected for free hardware (announced Sep 18) | Budget reserves $430 self-fund path; scope trims pre-planned (FDM enclosure, drop haptics) |
+| Not selected for free hardware (announced Sep 25) | Budget reserves $430 self-fund path; scope trims pre-planned (FDM enclosure, drop haptics) |
 | UNO Q display path harder than expected (SPI from Linux vs MCU) | Fall back to driving panel from STM32 side over the bridge; renderer already targets dumb-framebuffer present() |
 | PCBWay turnaround eats December | Spin-1 order by Oct 19; respin gate Nov 10; enclosure printable locally as emergency fallback |
-| Single point of failure: one UNO Q | Handle with care; no live rewiring; consider second board if budget allows after Sep 18 |
+| Single point of failure: one UNO Q | Handle with care; no live rewiring; consider second board if budget allows after Sep 25 |
 | Docs crunch at deadline | Write the Hackster story continuously from Phase 1 (it's also 50/100 rubric points) |

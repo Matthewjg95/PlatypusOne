@@ -72,9 +72,13 @@ commit message. Current such changes:
 | Commit | Change | Status |
 |---|---|---|
 | `feat(sim): make simulated display geometry a runtime choice` | Sim display geometry injection, `--geometry`, launcher row scaling, new geometry test | ✅ **Verified 2026-08-24** on the MSVC machine: clean build, all tests pass, `--geometry 800x480` sim window smoke-tested |
+| main @ merge of PRs #1–#4 (incl. observation contract v0.1, PR #10) | Full host target | ✅ **Verified 2026-08-30** on the new dev machine (VS 2022 Build Tools, MSVC 14.44, CMake 4.4.3): fresh configure, clean Release build, 100% tests pass |
 
 Verification protocol: the MSVC machine session runs build+tests on pull and
 updates this table; TARS marks new code changes `NOT COMPILED` until then.
+As of 2026-08-30 the MSVC machine is the new Windows 11 dev box, and **Host CI
+(PR #3) now builds and tests every push/PR on windows-latest** — CI green is
+the primary signal; this table records local hardware-adjacent verification.
 
 ## Next up
 
@@ -89,7 +93,9 @@ updates this table; TARS marks new code changes `NOT COMPILED` until then.
    with the extension.~~ **Done 2026-08-30: it moved — recipients announced
    Sep 25, 2026 5:00 PM PDT** (Sep 7 close and Dec 20 submission confirmed
    unchanged). ACQUISITION_ROADMAP's bring-up window loses a week.
-3. **[owner]** Run the host build and tests to clear the verification table.
+3. ~~Run the host build and tests to clear the verification table.~~ **Done
+   2026-08-30** — see Verification status; local MSVC toolchain restored on the
+   new machine.
 4. ~~`infra/format` + CI + LICENSE~~ **Done 2026-08-30:** PRs #3 (Apache-2.0 +
    MSVC host CI) and #4 (clang-format/ruff policy + CI format checks) merged;
    PRs #1 (requirements baseline, status Proposed) and #2 (DSI panel research)
