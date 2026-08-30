@@ -1,6 +1,6 @@
 # Platypus One — Bill of Materials (rev B, planning — merged)
 
-Status date: **2026-08-24**. Merges the original planning BOM with the
+Status date: **2026-08-25**. Merges the original planning BOM with the
 envelope BOM from `industrial_design/bounding_boxes/BOM_v0_1.md` (which stays
 as the packaging-envelope tracker). **Alternates are kept deliberately** —
 selection analysis is pending; do not delete an option without a decision
@@ -20,7 +20,7 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 
 | # | Option | Est. | Envelope (mm) | Notes | ACQ |
 |---|---|---|---|---|---|
-| 4a | **4.3–5" MIPI-DSI 800×480 capacitive** ✅ SELECTED | $30–45 | ~120×75×5 (4.3") / 165×100×8 (5") | Product path — native Linux DSI, USB-C stays free for charging. Exact panel: TARS research due, gate Sep 30 | PLANNED |
+| 4a | **Waveshare 5-DSI-TOUCH-A + UNO Media Carrier** ◐ CONDITIONAL | Panel $34.95–36.99 + carrier €19.89 | Panel CAD TBD; carrier 68.58×53.34 | Only 4.3–5″ panel with a shipped UNO Q profile; 720×1280 native portrait. Carrier was Coming Soon / sold out on 2026-08-25. Proof plan: [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md) | PLANNED |
 | 4b | 4.3" parallel-RGB 800×480 cap. (SUB3-class, ST7262E43 + GT1151) + ESP32-S3 bridge | ~$35+bridge | ~121×76×7 | FALLBACK ONLY (activated if 4a sourcing fails by Sep 30) | HOLD |
 | 4c | 3.2" ILI9341 320×240 SPI, resistive (XPT2046) | $16 | ~90×55×10 | DESCOPE NET only; matches current renderer/sim as built | HOLD |
 | 4d | USB-C/HDMI portable monitor or Waveshare 5" HDMI (H) | $40 | dev only | Prototyping fixture, never the product (consumes USB-C) | PLANNED |
@@ -94,8 +94,10 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 
 ## Pending decisions blocking ordering
 
-1. **Display option (4a/4b/4c)** — see DISPLAY_COMPARISON.md. Blocks battery
-   sizing, enclosure, renderer target.
+1. **Display proof (4a)** — architecture is decided, but final selection awaits
+   the UNO Media Carrier + 5-DSI-TOUCH-A bench test in
+   [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md). Blocks battery sizing
+   and enclosure freeze; renderer geometry remains runtime-dynamic.
 2. Camera 7a vs 7b — blocked on confirming UNO Q camera input paths.
 3. ToF 8a vs 8b and IMU 9a vs 9b — Matthew's analysis pending; both pairs are
    I²C and carrier-PCB-compatible either way, so these do NOT block the PCB
