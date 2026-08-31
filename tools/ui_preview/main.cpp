@@ -11,6 +11,7 @@
 // bolt scene so the card shows a genuine end-to-end record.
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
+#include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/renderer/Renderer.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
 
@@ -143,37 +144,20 @@ int renderScoutCard(const std::string& jsonPath, const std::string& outPath) {
     return renderCard(*outcome.record, outPath);
 }
 
-int renderScoutCardDemo(const std::string& outPath) {
-    // Synthetic calibrated bolt scene, identical in spirit to the test suite:
-    // 40 px / 20 mm reference square + a 240x24 px rod at 30 degrees.
-    constexpr std::uint16_t kW = 640;
-    constexpr std::uint16_t kH = 480;
-    auto pixels =
-        std::make_shared<std::vector<std::byte>>(static_cast<std::size_t>(kW) * kH, std::byte{235});
-    const auto darken = [&](int x, int y) {
-        if (x >= 0 && y >= 0 && x < kW && y < kH)
-            (*pixels)[static_cast<std::size_t>(y) * kW + static_cast<std::size_t>(x)] =
-                std::byte{20};
-    };
-    for (int dy = 0; dy < 40; ++dy)
-        for (int dx = 0; dx < 40; ++dx)
-            darken(50 + dx, 50 + dy);
-    const double angle = 30.0 * 3.14159265358979 / 180.0;
-    const double c = std::cos(angle);
-    const double s = std::sin(angle);
-    for (int y = 0; y < kH; ++y)
-        for (int x = 0; x < kW; ++x) {
-            const double dx = x - 400.0;
-            const double dy = y - 280.0;
-            const double u = c * dx + s * dy;
-            const double v = -s * dx + c * dy;
-            if (std::abs(u) <= 120.0 && std::abs(v) <= 12.0) darken(x, y);
-        }
+int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
+    // Synthetic calibrated scenes via the shared builder: a 20 mm reference
+    // square at 0.5 mm/px plus either an M12-class rod or an M6 nut.
+    hal::testing::SyntheticScene scene;
+    scene.addSquare(50, 50, 40);
+    if (kind == "nut") {
+        scene.addHexagon(400.0, 280.0, 20.0, 15.0 * 3.14159265358979 / 180.0);
+        scene.addBore(400.0, 280.0, 5.0);
+    } else {
+        scene.addRect(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0);
+    }
 
-    const hal::Frame frame({kW, kH, hal::PixelFormat::Gray8, 30.0f}, pixels,
-                           std::chrono::steady_clock::time_point{});
     const vision::CalibrationSpec spec{20.0};
-    const auto analyzed = vision::analyzeFrame(frame, spec);
+    const auto analyzed = vision::analyzeFrame(scene.frame(), spec);
     if (!analyzed.ok()) {
         std::fprintf(stderr, "error: demo analysis failed: %.*s\n",
                      static_cast<int>(vision::to_string(analyzed.error).size()),
@@ -182,7 +166,7 @@ int renderScoutCardDemo(const std::string& outPath) {
     }
 
     observation::EngineeringObservation record;
-    record.observationId = "scan-0007";
+    record.observationId = kind == "nut" ? "scan-0008" : "scan-0007";
     record.timestampUtc = "2026-08-31T09:41:00Z";
     record.source = {{"app", "ui_preview"}, {"camera", "synthetic"}};
     record.artifacts.push_back({"source-image", "image/x-portable-graymap", "source.pgm"});
@@ -197,10 +181,11 @@ int main(int argc, char** argv) {
     const std::vector<std::string> args(argv + 1, argv + argc);
     if (args.size() == 2 && args[0] == "--font-specimen") return renderFontSpecimen(args[1]);
     if (args.size() == 3 && args[0] == "--scout-card") return renderScoutCard(args[1], args[2]);
-    if (args.size() == 2 && args[0] == "--scout-card-demo") return renderScoutCardDemo(args[1]);
+    if (args.size() >= 2 && args.size() <= 3 && args[0] == "--scout-card-demo")
+        return renderScoutCardDemo(args[1], args.size() == 3 ? args[2] : "bolt");
     std::fprintf(stderr,
                  "usage: ui_preview --font-specimen OUT.ppm\n"
                  "       ui_preview --scout-card RECORD.json OUT.ppm\n"
-                 "       ui_preview --scout-card-demo OUT.ppm\n");
+                 "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n");
     return 2;
 }
