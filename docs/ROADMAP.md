@@ -65,7 +65,9 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 - [ ] `appfw/encoder-input` — HAL representation for the rotary encoder, the
       primary navigation control. The presentation link already reserves a
       message for it; `hal::IDisplay` has no event type yet
-- [ ] `filesystem/settings-store` — typed key/value settings persistence
+- [x] `filesystem/settings-store` — typed key/value persistence: line-oriented
+      `name=type:value` file, atomic save (temp + rename), typed getters with
+      defaults, malformed lines degrade key-by-key
 - [ ] `services/export` — STL/OBJ/PLY writers over geometry::Mesh
 
 ## M3 — Flagship apps

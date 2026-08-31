@@ -22,9 +22,10 @@ if this file disagrees with the code, the code wins and this file is stale.
 - **M1 Board bring-up** — partial. MCU bridge protocol and Linux driver written
   (untested against hardware); STM32 firmware, camera, sensors, cross-compile,
   and CI outstanding.
-- **M2 Runtime maturity** — well underway. Win32 simulator window, runtime
-  geometry, bounded input event queue (PR #5), and dirty-region present
-  (PR #6) landed; settings store outstanding.
+- **M2 Runtime maturity** — **complete** (2026-08-31). Win32 simulator window,
+  runtime geometry, bounded input event queue (PR #5), dirty-region present
+  (PR #6), real 5×7 bitmap font, and the typed settings store
+  (`filesystem/settings-store`) all landed.
 - **M3 Flagship apps** — not started. Six app directories hold READMEs only.
   Engineering Scout Q (issue #9): evidence contract merged; **capture slice
   merged (PR #11, 2026-08-30)** — `CaptureService` (frame → artifact + valid
