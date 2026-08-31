@@ -1,5 +1,8 @@
+find_package(Threads REQUIRED)
+
 add_library(platypus_appfw STATIC
-    src/AppRegistry.cpp)
+    src/AppRegistry.cpp
+    src/EventQueue.cpp)
 add_library(platypus::appfw ALIAS platypus_appfw)
 
 target_include_directories(platypus_appfw PUBLIC
@@ -8,6 +11,7 @@ target_include_directories(platypus_appfw PUBLIC
 target_link_libraries(platypus_appfw PUBLIC
     platypus::hal
     platypus::renderer
-    platypus::filesystem)
+    platypus::filesystem
+    Threads::Threads)
 
 platypus_set_warnings(platypus_appfw)
