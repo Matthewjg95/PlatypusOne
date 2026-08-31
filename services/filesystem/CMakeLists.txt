@@ -1,5 +1,6 @@
 add_library(platypus_filesystem STATIC
-    src/ProjectStore.cpp)
+    src/ProjectStore.cpp
+    src/SettingsStore.cpp)
 add_library(platypus::filesystem ALIAS platypus_filesystem)
 
 target_include_directories(platypus_filesystem PUBLIC

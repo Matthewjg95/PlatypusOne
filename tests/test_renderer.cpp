@@ -132,6 +132,7 @@ void test_scout_analyzer();
 void test_scout_capture();
 void test_scout_card();
 void test_scout_validation();
+void test_settings_store();
 
 int main() {
     test_app_registry();
@@ -146,6 +147,7 @@ int main() {
     test_scout_capture();
     test_scout_card();
     test_scout_validation();
+    test_settings_store();
     std::puts("All tests passed.");
     return 0;
 }

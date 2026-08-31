@@ -11,7 +11,8 @@ add_executable(platypus_tests
     test_scout_analyzer.cpp
     test_scout_capture.cpp
     test_scout_card.cpp
-    test_scout_validation.cpp)
+    test_scout_validation.cpp
+    test_settings_store.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
     platypus::ai
