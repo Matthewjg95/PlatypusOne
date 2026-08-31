@@ -107,8 +107,9 @@ may use exceptions internally but must not leak them into HAL callbacks.
 ## 7. Threading model
 
 - The shell loop is single-threaded; all `IApp` callbacks run on it.
-- Camera streaming and sensor callbacks arrive on driver threads; handlers must
-  be brief and hand data to the UI thread (queue pattern; helper TBD).
+- Driver callbacks never invoke apps directly. Touch and button input enters the
+  bounded `appfw::EventQueue`, then the shell dispatches a fixed snapshot on the
+  UI thread each tick. Camera and sensor payload queues follow the same rule.
 - Long computations (mesh reconstruction, AI inference) run on app-owned worker
   threads joined in `onStop()`.
 

@@ -36,9 +36,8 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 - [ ] `board/mcu-firmware` — STM32-side counterpart implementing the spec
 - [ ] `display/linked` — `LinkedDisplay` over the
       [presentation link](protocols/presentation.md) + client firmware; the
-      prototype display path per ADR-0001. **Blocked on** `appfw/event-queue`
-      (input arrives on the link thread) and gated by `renderer/dirty-rects`
-      for usable frame rates
+      prototype display path per ADR-0001. Its `appfw/event-queue` and
+      `renderer/dirty-rects` prerequisites are complete
 - [ ] `display/driver` — integrated panel driver + touch. **Deferred** until a
       production panel is selected; do not start before ADR-0001 is superseded
 - [ ] `camera/libcamera` — libcamera/V4L2 backend for ICamera
@@ -50,7 +49,9 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 ## M2 — Runtime maturity
 
 - [ ] `renderer/font-atlas` — real bitmap font, text metrics, scaling
-- [ ] `renderer/dirty-rects` — partial present. **Prerequisite, not an
+- [x] `renderer/dirty-rects` — bounded dirty-region tracking with no-op clean
+      frames, retry after transport failure, and a full-frame fallback for
+      drivers without partial-update support. **Prerequisite, not an
       optimization:** a full 800×480 frame is 768 kB and a USB CDC link carries
       roughly one per second (bandwidth table in
       [presentation.md](protocols/presentation.md))
