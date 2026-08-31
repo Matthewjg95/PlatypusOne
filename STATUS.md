@@ -36,7 +36,14 @@ if this file disagrees with the code, the code wins and this file is stale.
   measurement in mm; emits OBSERVED/DERIVED claims with provenance chains,
   UNRESOLVED classification, and one recommended next observation. Scene
   faults (no reference, ambiguous reference, no subject) are typed errors for
-  the future Scout UI. Classification/nominal matching is the next chunk.
+  the future Scout UI. **MVP step 4 landed host-side (2026-08-30):**
+  `services/ai` FastenerClassifier — rule-based bolt_or_screw / nut_or_washer
+  from aspect + bore count (vision now counts enclosed holes), nominal-size
+  match against ISO 262 shaft / ISO 4032 across-flats tables (shaft-only for
+  rods: the tables overlap at 12/13 mm), INFERRED claims always carrying
+  confidence + provenance + method, capped at 0.9. Bolt-vs-screw and
+  nut-vs-washer stay UNRESOLVED with concrete next-observation
+  recommendations. Next chunk: Scout result UI (step 5).
 - **M4 Platform opening** — not started.
 
 Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -86,6 +93,7 @@ commit message. Current such changes:
 | main @ merge of PRs #5–#7 | Event queue, dirty regions, link framing | ✅ **Verified 2026-08-30** locally: clean Release build, all 7 test suites pass **with live asserts** — note Release configs previously compiled `assert` out (`NDEBUG`), so earlier Release test runs verified nothing; fixed in `fix(tests): undefine NDEBUG` |
 | main @ merge of PR #11 | Scout capture slice | ✅ **Verified 2026-08-30** locally: all 8 suites pass; harness smoke (`--fake`) produced `scan-0001/source.ppm` + valid `observation.json`. `V4l2Camera` is Linux-only — **not** compiled by Windows CI/local; bench-verify on UNO Q per TEST_CHECKLISTS §4 |
 | `services/vision` ScoutAnalyzer | Calibration + deterministic measurement | ✅ **Verified 2026-08-30** locally: all 9 suites pass with live asserts — exact 0.5 mm/px scale on the synthetic reference, rotated-rod extents within 1.5 mm, all five scene/input error paths, evidence validates + JSON round-trips |
+| `services/ai` FastenerClassifier + vision hole counting | Classification + nominal matching | ✅ **Verified 2026-08-30** locally: all 10 suites pass — M12 rod and M6 nut classified with correct nominals, off-table and holeless cases honestly unknown/unmatched, inferred claims satisfy the contract's confidence/provenance/method rules, JSON round-trips |
 
 Verification protocol: the MSVC machine session runs build+tests on pull and
 updates this table; TARS marks new code changes `NOT COMPILED` until then.

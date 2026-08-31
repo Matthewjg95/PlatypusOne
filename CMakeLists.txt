@@ -34,6 +34,7 @@ add_subdirectory(services/geometry)
 add_subdirectory(services/filesystem)
 add_subdirectory(services/observation)
 add_subdirectory(services/vision)
+add_subdirectory(services/ai)
 add_subdirectory(services/appfw)
 
 if(PLATYPUS_BUILD_APPS)

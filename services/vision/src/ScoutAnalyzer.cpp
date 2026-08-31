@@ -166,6 +166,71 @@ std::vector<LabeledBlob> labelComponents(const std::vector<std::uint8_t>& gray,
     return blobs;
 }
 
+/// Counts enclosed background regions ("holes") per blob label. Background
+/// 4-connected to the frame border is outside; any other background region is
+/// a hole in the blob that surrounds it (attributed to the first adjacent
+/// foreground label in scan order — deterministic).
+std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std::int32_t width,
+                                    std::int32_t height, std::size_t blobCount) {
+    std::vector<std::uint8_t> visited(labels.size(), 0);
+    std::vector<std::size_t> stack;
+
+    const auto tryPush = [&](std::int32_t x, std::int32_t y) {
+        if (x < 0 || y < 0 || x >= width || y >= height) return;
+        const std::size_t index = static_cast<std::size_t>(y) * static_cast<std::size_t>(width) +
+                                  static_cast<std::size_t>(x);
+        if (labels[index] != -1 || visited[index]) return;
+        visited[index] = 1;
+        stack.push_back(index);
+    };
+    const auto drain = [&](std::int32_t* owner) {
+        while (!stack.empty()) {
+            const std::size_t index = stack.back();
+            stack.pop_back();
+            const auto x = static_cast<std::int32_t>(index % static_cast<std::size_t>(width));
+            const auto y = static_cast<std::int32_t>(index / static_cast<std::size_t>(width));
+            const std::array<std::pair<std::int32_t, std::int32_t>, 4> neighbours{
+                {{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}}};
+            for (const auto& [nx, ny] : neighbours) {
+                if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+                const std::size_t neighbour =
+                    static_cast<std::size_t>(ny) * static_cast<std::size_t>(width) +
+                    static_cast<std::size_t>(nx);
+                if (labels[neighbour] == -1) {
+                    if (!visited[neighbour]) {
+                        visited[neighbour] = 1;
+                        stack.push_back(neighbour);
+                    }
+                } else if (owner && *owner == -1) {
+                    *owner = labels[neighbour];
+                }
+            }
+        }
+    };
+
+    for (std::int32_t x = 0; x < width; ++x) {
+        tryPush(x, 0);
+        tryPush(x, height - 1);
+    }
+    for (std::int32_t y = 0; y < height; ++y) {
+        tryPush(0, y);
+        tryPush(width - 1, y);
+    }
+    drain(nullptr);
+
+    std::vector<std::size_t> holes(blobCount, 0);
+    for (std::size_t seed = 0; seed < labels.size(); ++seed) {
+        if (labels[seed] != -1 || visited[seed]) continue;
+        std::int32_t owner = -1;
+        visited[seed] = 1;
+        stack.push_back(seed);
+        drain(&owner);
+        if (owner >= 0 && static_cast<std::size_t>(owner) < blobCount)
+            ++holes[static_cast<std::size_t>(owner)];
+    }
+    return holes;
+}
+
 /// Principal-axis extents from the labeled pixels: second central moments give
 /// the axis angle; projecting every pixel onto the axes gives exact extents.
 void measurePrincipalExtents(const std::vector<std::int32_t>& labels, std::int32_t width,
@@ -254,6 +319,9 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
 
     std::vector<std::int32_t> labels;
     auto blobs = labelComponents(gray, threshold, mode.width, mode.height, labels);
+    const auto holes = countHoles(labels, mode.width, mode.height, blobs.size());
+    for (auto& blob : blobs)
+        blob.stats.holeCount = holes[static_cast<std::size_t>(blob.label)];
     std::erase_if(blobs,
                   [](const LabeledBlob& blob) { return blob.stats.areaPx < kMinBlobAreaPx; });
     if (blobs.empty()) return {std::nullopt, AnalyzeError::NoReferenceTarget};
@@ -322,6 +390,8 @@ void appendEvidence(observation::EngineeringObservation& record, const ScoutAnal
     observed("sa-subj-width-px", "subject_width", analysis.subject.widthPx, "px");
     observed("sa-subj-axis-rad", "subject_major_axis_angle", analysis.subject.majorAxisAngleRad,
              "rad");
+    observed("sa-subj-holes", "subject_hole_count", static_cast<double>(analysis.subject.holeCount),
+             std::nullopt);
 
     record.derived.push_back(observation::Claim{
         "sa-mm-per-px",

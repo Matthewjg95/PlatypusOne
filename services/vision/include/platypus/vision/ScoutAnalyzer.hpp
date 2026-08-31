@@ -41,6 +41,7 @@ struct BlobStats {
     double centroidX = 0.0;
     double centroidY = 0.0;
     double fillRatio = 0.0;          ///< areaPx / bounding-box area
+    std::size_t holeCount = 0;       ///< enclosed background regions (nut/washer bores)
     double majorAxisAngleRad = 0.0;  ///< principal axis vs +x, [-pi/2, pi/2)
     double lengthPx = 0.0;           ///< extent along the major principal axis
     double widthPx = 0.0;            ///< extent along the minor principal axis
