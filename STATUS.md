@@ -22,8 +22,9 @@ if this file disagrees with the code, the code wins and this file is stale.
 - **M1 Board bring-up** — partial. MCU bridge protocol and Linux driver written
   (untested against hardware); STM32 firmware, camera, sensors, cross-compile,
   and CI outstanding.
-- **M2 Runtime maturity** — started. Win32 simulator window and runtime
-  geometry landed; dirty rects, event queue, settings store outstanding.
+- **M2 Runtime maturity** — well underway. Win32 simulator window, runtime
+  geometry, bounded input event queue (PR #5), and dirty-region present
+  (PR #6) landed; settings store outstanding.
 - **M3 Flagship apps** — not started. Six app directories hold READMEs only.
   Engineering Scout Q (issue #9) groundwork underway: evidence contract merged;
   camera→artifact→record capture slice is the next chunk in flight.
@@ -73,6 +74,7 @@ commit message. Current such changes:
 |---|---|---|
 | `feat(sim): make simulated display geometry a runtime choice` | Sim display geometry injection, `--geometry`, launcher row scaling, new geometry test | ✅ **Verified 2026-08-24** on the MSVC machine: clean build, all tests pass, `--geometry 800x480` sim window smoke-tested |
 | main @ merge of PRs #1–#4 (incl. observation contract v0.1, PR #10) | Full host target | ✅ **Verified 2026-08-30** on the new dev machine (VS 2022 Build Tools, MSVC 14.44, CMake 4.4.3): fresh configure, clean Release build, 100% tests pass |
+| main @ merge of PRs #5–#7 | Event queue, dirty regions, link framing | ✅ **Verified 2026-08-30** locally: clean Release build, all 7 test suites pass **with live asserts** — note Release configs previously compiled `assert` out (`NDEBUG`), so earlier Release test runs verified nothing; fixed in `fix(tests): undefine NDEBUG` |
 
 Verification protocol: the MSVC machine session runs build+tests on pull and
 updates this table; TARS marks new code changes `NOT COMPILED` until then.
@@ -100,8 +102,10 @@ the primary signal; this table records local hardware-adjacent verification.
    MSVC host CI) and #4 (clang-format/ruff policy + CI format checks) merged;
    PRs #1 (requirements baseline, status Proposed) and #2 (DSI panel research)
    merged alongside.
-5. `appfw/event-queue`, then `renderer/dirty-rects` — in that order, since
-   `display/linked` needs both before it can be wired into the composition root.
+5. ~~`appfw/event-queue`, then `renderer/dirty-rects`~~ **Done 2026-08-30:**
+   PRs #5, #6, and #7 (presentation-link framing codec, shared with future
+   firmware) reviewed and merged in order; `display/linked` is now unblocked
+   for wiring into the composition root.
 6. STM32 firmware implementing [mcu-bridge v1](docs/protocols/mcu-bridge.md):
    Ping/Pong plus GPIO loopback is the smallest proof of the dual-brain
    architecture, and [checklist §2](docs/hardware/TEST_CHECKLISTS.md) is already
