@@ -46,6 +46,7 @@ if(PLATYPUS_BUILD_APPS)
 endif()
 
 add_subdirectory(tools/engineering_scout_capture)
+add_subdirectory(tools/scout_validation)
 add_subdirectory(tools/ui_preview)
 
 if(PLATYPUS_BUILD_TESTS)

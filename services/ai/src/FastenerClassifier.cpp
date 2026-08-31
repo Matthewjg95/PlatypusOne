@@ -23,7 +23,7 @@ std::string_view to_string(FastenerClass value) noexcept {
 
 namespace {
 
-constexpr std::string_view kMethod = "ai.fastener_classifier.v1";
+constexpr std::string_view kMethod = "ai.fastener_classifier.v2";
 
 /// Rod-like at or above this length/width ratio.
 constexpr double kMinRodAspect = 2.5;
@@ -66,22 +66,27 @@ std::string formatMm(double value) {
 std::optional<NominalMatch> bestMatch(double measuredMm, std::span<const TableEntry> table,
                                       std::string basis) {
     if (measuredMm <= 0.0) return std::nullopt;
+    // Nearest by ABSOLUTE distance: relative-error selection biases upward
+    // between entries (16.99 mm would pick 18 over 16 because the larger
+    // denominator forgives more). The gate and confidence stay relative.
     const TableEntry* best = nullptr;
-    double bestError = 0.0;
+    double bestAbs = 0.0;
     for (const auto& entry : table) {
-        const double error = std::abs(measuredMm - entry.mm) / entry.mm;
-        if (!best || error < bestError) {
+        const double error = std::abs(measuredMm - entry.mm);
+        if (!best || error < bestAbs) {
             best = &entry;
-            bestError = error;
+            bestAbs = error;
         }
     }
-    if (!best || bestError > kMaxNominalFitError) return std::nullopt;
+    if (!best) return std::nullopt;
+    const double relative = bestAbs / best->mm;
+    if (relative > kMaxNominalFitError) return std::nullopt;
     NominalMatch match;
     match.designation = best->designation;
     match.referenceMm = best->mm;
-    match.fitError = bestError;
+    match.fitError = relative;
     match.basis = std::move(basis);
-    match.confidence = std::min(kMaxConfidence, 1.0 - bestError / kMaxNominalFitError);
+    match.confidence = std::min(kMaxConfidence, 1.0 - relative / kMaxNominalFitError);
     return match;
 }
 

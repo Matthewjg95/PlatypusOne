@@ -10,7 +10,8 @@ add_executable(platypus_tests
     test_renderer.cpp
     test_scout_analyzer.cpp
     test_scout_capture.cpp
-    test_scout_card.cpp)
+    test_scout_card.cpp
+    test_scout_validation.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
     platypus::ai
@@ -18,6 +19,7 @@ target_link_libraries(platypus_tests PRIVATE
     platypus::appfw
     platypus::observation
     platypus::renderer
+    platypus::scout_validation
     platypus::vision)
 
 platypus_set_warnings(platypus_tests)
