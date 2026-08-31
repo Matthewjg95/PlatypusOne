@@ -2,13 +2,14 @@
 //
 // Owns a CPU framebuffer (RGB565) and flushes it to an injected IDisplay.
 // Apps draw through this API only; they never see the display driver.
-// Future work: dirty-rect tracking, font atlas, GPU path on the MPU.
+// Future work: font atlas, GPU path on the MPU.
 #pragma once
 
 #include <platypus/hal/IDisplay.hpp>
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -26,7 +27,7 @@ struct Rect {
 };
 
 class Renderer {
-public:
+   public:
     /// The renderer does not own the display's lifetime policy; it holds a
     /// shared_ptr injected by the composition root.
     explicit Renderer(std::shared_ptr<hal::IDisplay> display);
@@ -36,8 +37,7 @@ public:
     void clear(Color color);
     void fillRect(const Rect& rect, Color color);
     void drawRect(const Rect& rect, Color color);
-    void drawLine(std::int32_t x0, std::int32_t y0,
-                  std::int32_t x1, std::int32_t y1, Color color);
+    void drawLine(std::int32_t x0, std::int32_t y0, std::int32_t x1, std::int32_t y1, Color color);
 
     /// Built-in 6x8 bitmap font (TODO: font atlas + scaling).
     void drawText(std::int32_t x, std::int32_t y, std::string_view text, Color color);
@@ -45,12 +45,14 @@ public:
     /// Push the framebuffer to hardware.
     hal::Status present();
 
-private:
+   private:
     void setPixel(std::int32_t x, std::int32_t y, std::uint16_t rgb565);
+    void markDirty(const Rect& rect);
 
     std::shared_ptr<hal::IDisplay> display_;
     hal::DisplayInfo info_;
     std::vector<std::uint16_t> framebuffer_;
+    std::optional<Rect> dirtyRect_;
 };
 
 }  // namespace platypus::renderer

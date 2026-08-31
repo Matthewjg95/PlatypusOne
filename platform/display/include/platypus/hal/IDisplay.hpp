@@ -30,8 +30,18 @@ struct ButtonEvent {
     bool pressed = false;
 };
 
+/// Rectangle within the full framebuffer that changed since the last
+/// successful present. Pixels passed to presentRegion remain laid out as a
+/// full framebuffer; the driver may transmit only this region.
+struct DisplayRegion {
+    std::uint16_t x = 0;
+    std::uint16_t y = 0;
+    std::uint16_t width = 0;
+    std::uint16_t height = 0;
+};
+
 class IDisplay {
-public:
+   public:
     virtual ~IDisplay() = default;
 
     [[nodiscard]] virtual DisplayInfo info() const noexcept = 0;
@@ -41,6 +51,14 @@ public:
     /// Present one full frame. `pixels` size must equal
     /// width * height * bitsPerPixel / 8; format matches info().
     virtual Status present(std::span<const std::byte> pixels) = 0;
+
+    /// Present a changed region from a full-frame pixel buffer. Drivers that
+    /// do not support partial updates retain correct behavior through this
+    /// full-frame fallback.
+    virtual Status presentRegion(std::span<const std::byte> pixels, const DisplayRegion& region) {
+        (void)region;
+        return present(pixels);
+    }
 
     virtual Status onTouch(std::function<void(const TouchEvent&)> handler) = 0;
     virtual Status onButton(std::function<void(const ButtonEvent&)> handler) = 0;
