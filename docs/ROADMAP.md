@@ -54,8 +54,8 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
       optimization:** a full 800×480 frame is 768 kB and a USB CDC link carries
       roughly one per second (bandwidth table in
       [presentation.md](protocols/presentation.md))
-- [ ] `appfw/event-queue` — thread-safe event handoff from driver threads.
-      Hard dependency of `display/linked`
+- [x] `appfw/event-queue` — bounded, thread-safe touch/button handoff from
+      driver threads to UI-thread app callbacks
 - [ ] `appfw/lifecycle` — pause/resume, low-memory notifications
 - [x] `sim/window` — native Win32 window backend for HostSimBoard (mouse =
       touch, number keys = buttons); SDL/X11 backend still open for POSIX hosts

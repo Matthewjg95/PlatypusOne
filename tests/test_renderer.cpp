@@ -11,7 +11,7 @@ namespace {
 using namespace platypus;
 
 class FakeDisplay final : public hal::IDisplay {
-public:
+   public:
     explicit FakeDisplay(hal::DisplayInfo info = {8, 8, 16}) : info_(info) {}
 
     hal::DisplayInfo info() const noexcept override { return info_; }
@@ -27,7 +27,7 @@ public:
     std::vector<std::byte> lastFrame_;
     int presentCount_ = 0;
 
-private:
+   private:
     hal::DisplayInfo info_;
 };
 
@@ -75,11 +75,13 @@ void test_renderer_geometry() {
 }
 
 void test_app_registry();
+void test_event_queue();
 void test_mcu_framing();
 void test_observation();
 
 int main() {
     test_app_registry();
+    test_event_queue();
     test_mcu_framing();
     test_observation();
     test_renderer();
