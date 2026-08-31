@@ -80,6 +80,21 @@ class SyntheticScene {
                      pixels_, std::chrono::steady_clock::time_point{});
     }
 
+    /// The same scene as RGB888 (gray value replicated per channel) — for
+    /// exercising color-input paths against identical geometry.
+    [[nodiscard]] Frame rgbFrame() const {
+        auto rgb = std::make_shared<std::vector<std::byte>>();
+        rgb->reserve(pixels_->size() * 3);
+        for (const auto value : *pixels_) {
+            rgb->push_back(value);
+            rgb->push_back(value);
+            rgb->push_back(value);
+        }
+        return Frame({static_cast<std::uint16_t>(width_), static_cast<std::uint16_t>(height_),
+                      PixelFormat::RGB888, 30.0f},
+                     std::move(rgb), std::chrono::steady_clock::time_point{});
+    }
+
    private:
     void fillCircle(double cx, double cy, double radius, std::uint8_t value) {
         for (std::int32_t y = 0; y < height_; ++y)
