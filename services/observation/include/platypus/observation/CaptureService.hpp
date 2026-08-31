@@ -26,8 +26,8 @@
 namespace platypus::observation {
 
 struct CaptureConfig {
-    std::string observationId;      ///< directory name; use nextObservationId()
-    std::string timestampUtc;       ///< caller's clock (see currentUtcTimestamp())
+    std::string observationId;  ///< directory name; use nextObservationId()
+    std::string timestampUtc;   ///< caller's clock (see currentUtcTimestamp())
     /// App/device/camera identity for the record's source block, e.g.
     /// {"app","engineering_scout"}, {"camera","/dev/video0"}. The service
     /// appends frame_width / frame_height / pixel_format from the real frame.
@@ -43,7 +43,7 @@ struct CaptureResult {
 };
 
 class CaptureService {
-public:
+   public:
     explicit CaptureService(std::filesystem::path observationsRoot);
 
     /// Camera must already be open. On any failure the observations root is
@@ -61,7 +61,7 @@ public:
     /// helper (not called internally) so tests can inject fixed timestamps.
     [[nodiscard]] static std::string currentUtcTimestamp();
 
-private:
+   private:
     std::filesystem::path root_;
 };
 

@@ -13,24 +13,36 @@ using hal::PixelFormat;
 
 std::string_view imageExtensionFor(PixelFormat format) noexcept {
     switch (format) {
-        case PixelFormat::MJPEG:  return ".jpg";
-        case PixelFormat::RGB888: return ".ppm";
-        case PixelFormat::Gray8:  return ".pgm";
-        case PixelFormat::YUYV:   return ".yuyv";
-        case PixelFormat::NV12:   return ".nv12";
-        case PixelFormat::Unknown: break;
+        case PixelFormat::MJPEG:
+            return ".jpg";
+        case PixelFormat::RGB888:
+            return ".ppm";
+        case PixelFormat::Gray8:
+            return ".pgm";
+        case PixelFormat::YUYV:
+            return ".yuyv";
+        case PixelFormat::NV12:
+            return ".nv12";
+        case PixelFormat::Unknown:
+            break;
     }
     return ".bin";
 }
 
 std::string_view imageKindFor(PixelFormat format) noexcept {
     switch (format) {
-        case PixelFormat::MJPEG:  return "image/jpeg";
-        case PixelFormat::RGB888: return "image/x-portable-pixmap";
-        case PixelFormat::Gray8:  return "image/x-portable-graymap";
-        case PixelFormat::YUYV:   return "application/x-raw-yuyv";
-        case PixelFormat::NV12:   return "application/x-raw-nv12";
-        case PixelFormat::Unknown: break;
+        case PixelFormat::MJPEG:
+            return "image/jpeg";
+        case PixelFormat::RGB888:
+            return "image/x-portable-pixmap";
+        case PixelFormat::Gray8:
+            return "image/x-portable-graymap";
+        case PixelFormat::YUYV:
+            return "application/x-raw-yuyv";
+        case PixelFormat::NV12:
+            return "application/x-raw-nv12";
+        case PixelFormat::Unknown:
+            break;
     }
     return "application/octet-stream";
 }
@@ -39,12 +51,18 @@ namespace {
 
 std::string_view pixelFormatName(PixelFormat format) noexcept {
     switch (format) {
-        case PixelFormat::Gray8:  return "gray8";
-        case PixelFormat::RGB888: return "rgb888";
-        case PixelFormat::YUYV:   return "yuyv";
-        case PixelFormat::MJPEG:  return "mjpeg";
-        case PixelFormat::NV12:   return "nv12";
-        case PixelFormat::Unknown: break;
+        case PixelFormat::Gray8:
+            return "gray8";
+        case PixelFormat::RGB888:
+            return "rgb888";
+        case PixelFormat::YUYV:
+            return "yuyv";
+        case PixelFormat::MJPEG:
+            return "mjpeg";
+        case PixelFormat::NV12:
+            return "nv12";
+        case PixelFormat::Unknown:
+            break;
     }
     return "unknown";
 }
@@ -57,8 +75,8 @@ bool writeImage(const fs::path& path, const hal::Frame& frame) {
 
     const auto& mode = frame.mode();
     if (mode.format == PixelFormat::RGB888 || mode.format == PixelFormat::Gray8) {
-        out << (mode.format == PixelFormat::RGB888 ? "P6\n" : "P5\n")
-            << mode.width << ' ' << mode.height << "\n255\n";
+        out << (mode.format == PixelFormat::RGB888 ? "P6\n" : "P5\n") << mode.width << ' '
+            << mode.height << "\n255\n";
     }
     const auto pixels = frame.pixels();
     out.write(reinterpret_cast<const char*>(pixels.data()),
@@ -66,12 +84,13 @@ bool writeImage(const fs::path& path, const hal::Frame& frame) {
     return out.good();
 }
 
-std::string decimal(unsigned value) { return std::to_string(value); }
+std::string decimal(unsigned value) {
+    return std::to_string(value);
+}
 
 }  // namespace
 
-CaptureService::CaptureService(fs::path observationsRoot)
-    : root_(std::move(observationsRoot)) {}
+CaptureService::CaptureService(fs::path observationsRoot) : root_(std::move(observationsRoot)) {}
 
 std::string CaptureService::nextObservationId() const {
     for (unsigned n = 1; n <= 9999; ++n) {
@@ -125,8 +144,7 @@ hal::Result<CaptureResult> CaptureService::capture(hal::ICamera& camera,
     record.source.emplace_back("frame_width", decimal(mode.width));
     record.source.emplace_back("frame_height", decimal(mode.height));
     record.source.emplace_back("pixel_format", std::string(pixelFormatName(mode.format)));
-    record.artifacts.push_back(
-        {"source-image", std::string(imageKindFor(mode.format)), imageName});
+    record.artifacts.push_back({"source-image", std::string(imageKindFor(mode.format)), imageName});
 
     if (!validate(record).empty()) return Error::InvalidArgument;
 

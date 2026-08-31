@@ -17,7 +17,7 @@
 namespace platypus::hal::testing {
 
 class FakeCamera final : public ICamera {
-public:
+   public:
     static constexpr CameraMode kFixtureMode{640, 480, PixelFormat::RGB888, 30.0f};
 
     /// Failure injection for tests: refuse open(), or fail capture().
@@ -28,9 +28,7 @@ public:
 
     explicit FakeCamera(Behavior behavior = {}) : behavior_(behavior) {}
 
-    [[nodiscard]] std::vector<CameraMode> supportedModes() const override {
-        return {kFixtureMode};
-    }
+    [[nodiscard]] std::vector<CameraMode> supportedModes() const override { return {kFixtureMode}; }
 
     Status open(const CameraMode& mode) override {
         if (behavior_.failOpen) return Error::HardwareFault;
@@ -77,8 +75,7 @@ public:
     /// band across the top rows (edges for future detector tests).
     static std::shared_ptr<const std::vector<std::byte>> fixturePixels() {
         auto pixels = std::make_shared<std::vector<std::byte>>();
-        pixels->reserve(static_cast<std::size_t>(kFixtureMode.width) *
-                        kFixtureMode.height * 3);
+        pixels->reserve(static_cast<std::size_t>(kFixtureMode.width) * kFixtureMode.height * 3);
         for (int y = 0; y < kFixtureMode.height; ++y) {
             for (int x = 0; x < kFixtureMode.width; ++x) {
                 std::uint8_t r, g, b;
@@ -98,7 +95,7 @@ public:
         return pixels;
     }
 
-private:
+   private:
     Behavior behavior_;
     bool open_ = false;
     int captureCount_ = 0;

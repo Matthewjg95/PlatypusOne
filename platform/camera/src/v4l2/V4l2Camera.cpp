@@ -34,24 +34,36 @@ int xioctl(int fd, unsigned long request, void* arg) {
 
 std::uint32_t toV4l2(PixelFormat format) {
     switch (format) {
-        case PixelFormat::Gray8:  return V4L2_PIX_FMT_GREY;
-        case PixelFormat::RGB888: return V4L2_PIX_FMT_RGB24;
-        case PixelFormat::YUYV:   return V4L2_PIX_FMT_YUYV;
-        case PixelFormat::MJPEG:  return V4L2_PIX_FMT_MJPEG;
-        case PixelFormat::NV12:   return V4L2_PIX_FMT_NV12;
-        case PixelFormat::Unknown: break;
+        case PixelFormat::Gray8:
+            return V4L2_PIX_FMT_GREY;
+        case PixelFormat::RGB888:
+            return V4L2_PIX_FMT_RGB24;
+        case PixelFormat::YUYV:
+            return V4L2_PIX_FMT_YUYV;
+        case PixelFormat::MJPEG:
+            return V4L2_PIX_FMT_MJPEG;
+        case PixelFormat::NV12:
+            return V4L2_PIX_FMT_NV12;
+        case PixelFormat::Unknown:
+            break;
     }
     return 0;
 }
 
 PixelFormat fromV4l2(std::uint32_t fourcc) {
     switch (fourcc) {
-        case V4L2_PIX_FMT_GREY:  return PixelFormat::Gray8;
-        case V4L2_PIX_FMT_RGB24: return PixelFormat::RGB888;
-        case V4L2_PIX_FMT_YUYV:  return PixelFormat::YUYV;
-        case V4L2_PIX_FMT_MJPEG: return PixelFormat::MJPEG;
-        case V4L2_PIX_FMT_NV12:  return PixelFormat::NV12;
-        default:                 return PixelFormat::Unknown;
+        case V4L2_PIX_FMT_GREY:
+            return PixelFormat::Gray8;
+        case V4L2_PIX_FMT_RGB24:
+            return PixelFormat::RGB888;
+        case V4L2_PIX_FMT_YUYV:
+            return PixelFormat::YUYV;
+        case V4L2_PIX_FMT_MJPEG:
+            return PixelFormat::MJPEG;
+        case V4L2_PIX_FMT_NV12:
+            return PixelFormat::NV12;
+        default:
+            return PixelFormat::Unknown;
     }
 }
 
@@ -59,7 +71,9 @@ PixelFormat fromV4l2(std::uint32_t fourcc) {
 
 V4l2Camera::V4l2Camera(std::string devicePath) : devicePath_(std::move(devicePath)) {}
 
-V4l2Camera::~V4l2Camera() { close(); }
+V4l2Camera::~V4l2Camera() {
+    close();
+}
 
 std::string V4l2Camera::deviceIdentity() const {
     // Probe with a transient fd so identity works before open().
@@ -111,8 +125,7 @@ Status V4l2Camera::open(const CameraMode& mode) {
     if (fd_ < 0) return Error::IoFailure;
 
     v4l2_capability cap{};
-    if (xioctl(fd_, VIDIOC_QUERYCAP, &cap) == -1 ||
-        !(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) ||
+    if (xioctl(fd_, VIDIOC_QUERYCAP, &cap) == -1 || !(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) ||
         !(cap.capabilities & V4L2_CAP_STREAMING)) {
         close();
         return Error::NotSupported;
@@ -158,8 +171,8 @@ Status V4l2Camera::open(const CameraMode& mode) {
         }
         MappedBuffer mapped;
         mapped.length = buf.length;
-        mapped.start = ::mmap(nullptr, buf.length, PROT_READ | PROT_WRITE,
-                              MAP_SHARED, fd_, buf.m.offset);
+        mapped.start =
+            ::mmap(nullptr, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, buf.m.offset);
         if (mapped.start == MAP_FAILED) {
             close();
             return Error::IoFailure;
@@ -201,7 +214,9 @@ Status V4l2Camera::close() {
     return {};
 }
 
-bool V4l2Camera::isOpen() const noexcept { return fd_ >= 0 && streaming_; }
+bool V4l2Camera::isOpen() const noexcept {
+    return fd_ >= 0 && streaming_;
+}
 
 Status V4l2Camera::setControls(const hal::CameraControls&) {
     // Exposure/gain/focus mapping to V4L2 CIDs is deliberately deferred until
@@ -252,8 +267,10 @@ Status V4l2Camera::startStream(std::function<void(const Frame&)> onFrame) {
     streamThread_ = std::thread([this, onFrame = std::move(onFrame)] {
         while (streamRunning_) {
             auto frame = dequeueFrame(std::chrono::milliseconds(500));
-            if (frame) onFrame(frame.value());
-            else if (frame.error() != Error::Timeout) break;  // device gone
+            if (frame)
+                onFrame(frame.value());
+            else if (frame.error() != Error::Timeout)
+                break;  // device gone
         }
     });
     return {};
