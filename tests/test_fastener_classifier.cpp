@@ -2,6 +2,7 @@
 // the full analyzer → classifier path, proving the class rules, the nominal
 // tables, the confidence gates, and the inferred-evidence contract rules.
 #include <platypus/ai/FastenerClassifier.hpp>
+#include <platypus/hal/testing/SyntheticScene.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -13,76 +14,10 @@ namespace {
 
 using namespace platypus;
 using ai::FastenerClass;
+using Scene = hal::testing::SyntheticScene;
 using vision::CalibrationSpec;
 
-constexpr std::uint16_t kWidth = 640;
-constexpr std::uint16_t kHeight = 480;
 constexpr double kPi = 3.14159265358979;
-
-/// Gray8 scene builder: light canvas, dark shapes, optional erasing for bores.
-class Scene {
-   public:
-    Scene() : pixels_(std::make_shared<std::vector<std::byte>>()) {
-        pixels_->assign(static_cast<std::size_t>(kWidth) * kHeight, std::byte{235});
-    }
-
-    void addSquare(int x, int y, int side) {
-        for (int dy = 0; dy < side; ++dy)
-            for (int dx = 0; dx < side; ++dx)
-                set(x + dx, y + dy, std::byte{20});
-    }
-
-    void addRect(double cx, double cy, double length, double width, double angleRad) {
-        const double c = std::cos(angleRad);
-        const double s = std::sin(angleRad);
-        for (int y = 0; y < kHeight; ++y)
-            for (int x = 0; x < kWidth; ++x) {
-                const double dx = x - cx;
-                const double dy = y - cy;
-                const double u = c * dx + s * dy;
-                const double v = -s * dx + c * dy;
-                if (std::abs(u) <= length / 2.0 && std::abs(v) <= width / 2.0)
-                    set(x, y, std::byte{20});
-            }
-    }
-
-    /// Regular flat-top hexagon: intersection of three slabs at 0/60/120°.
-    void addHexagon(double cx, double cy, double acrossFlats) {
-        const double half = acrossFlats / 2.0;
-        const double root3 = std::sqrt(3.0);
-        for (int y = 0; y < kHeight; ++y)
-            for (int x = 0; x < kWidth; ++x) {
-                const double dx = x - cx;
-                const double dy = y - cy;
-                if (std::abs(dy) <= half && std::abs(root3 * dx + dy) <= 2.0 * half &&
-                    std::abs(root3 * dx - dy) <= 2.0 * half)
-                    set(x, y, std::byte{20});
-            }
-    }
-
-    /// Erase a disc back to background (a bore).
-    void addBore(double cx, double cy, double radius) {
-        for (int y = 0; y < kHeight; ++y)
-            for (int x = 0; x < kWidth; ++x) {
-                const double dx = x - cx;
-                const double dy = y - cy;
-                if (dx * dx + dy * dy <= radius * radius) set(x, y, std::byte{235});
-            }
-    }
-
-    [[nodiscard]] hal::Frame frame() const {
-        return hal::Frame({kWidth, kHeight, hal::PixelFormat::Gray8, 30.0f}, pixels_,
-                          std::chrono::steady_clock::time_point{});
-    }
-
-   private:
-    void set(int x, int y, std::byte value) {
-        if (x < 0 || y < 0 || x >= kWidth || y >= kHeight) return;
-        (*pixels_)[static_cast<std::size_t>(y) * kWidth + static_cast<std::size_t>(x)] = value;
-    }
-
-    std::shared_ptr<std::vector<std::byte>> pixels_;
-};
 
 /// 40 px reference square at 20 mm spec: exactly 0.5 mm/px.
 Scene calibratedScene() {

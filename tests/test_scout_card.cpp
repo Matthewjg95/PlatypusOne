@@ -3,6 +3,7 @@
 // holds up. Rendering goes through the real Renderer into a fake display.
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
+#include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
 
 #include <cassert>
@@ -44,34 +45,12 @@ std::size_t countColor(const std::vector<std::byte>& frame, renderer::Color colo
 
 /// The same synthetic bolt record the analyzer/classifier tests use.
 observation::EngineeringObservation boltRecord() {
-    constexpr std::uint16_t kW = 640;
-    constexpr std::uint16_t kH = 480;
-    auto pixels =
-        std::make_shared<std::vector<std::byte>>(static_cast<std::size_t>(kW) * kH, std::byte{235});
-    const auto darken = [&](int x, int y) {
-        if (x >= 0 && y >= 0 && x < kW && y < kH)
-            (*pixels)[static_cast<std::size_t>(y) * kW + static_cast<std::size_t>(x)] =
-                std::byte{20};
-    };
-    for (int dy = 0; dy < 40; ++dy)
-        for (int dx = 0; dx < 40; ++dx)
-            darken(50 + dx, 50 + dy);
-    const double angle = 30.0 * 3.14159265358979 / 180.0;
-    const double c = std::cos(angle);
-    const double s = std::sin(angle);
-    for (int y = 0; y < kH; ++y)
-        for (int x = 0; x < kW; ++x) {
-            const double dx = x - 400.0;
-            const double dy = y - 280.0;
-            const double u = c * dx + s * dy;
-            const double v = -s * dx + c * dy;
-            if (std::abs(u) <= 120.0 && std::abs(v) <= 12.0) darken(x, y);
-        }
+    hal::testing::SyntheticScene scene;
+    scene.addSquare(50, 50, 40);
+    scene.addRect(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0);
 
-    const hal::Frame frame({kW, kH, hal::PixelFormat::Gray8, 30.0f}, pixels,
-                           std::chrono::steady_clock::time_point{});
     const vision::CalibrationSpec spec{20.0};
-    const auto analyzed = vision::analyzeFrame(frame, spec);
+    const auto analyzed = vision::analyzeFrame(scene.frame(), spec);
     assert(analyzed.ok());
 
     observation::EngineeringObservation record;
