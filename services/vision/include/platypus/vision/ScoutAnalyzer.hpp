@@ -6,7 +6,7 @@
 // reference and measure the subject's principal-axis extents in millimetres.
 //
 // Everything here is deterministic geometry — Otsu binarization, connected
-// components, second-moment principal axes. No ML, no external dependencies;
+// components, minimum-support-width measurement. No ML, no external dependencies;
 // classification is a later Scout chunk and is reported as UNRESOLVED, never
 // guessed (contract rule: inference must not masquerade as measurement).
 //
@@ -42,9 +42,10 @@ struct BlobStats {
     double centroidY = 0.0;
     double fillRatio = 0.0;          ///< areaPx / bounding-box area
     std::size_t holeCount = 0;       ///< enclosed background regions (nut/washer bores)
-    double majorAxisAngleRad = 0.0;  ///< principal axis vs +x, [-pi/2, pi/2)
-    double lengthPx = 0.0;           ///< extent along the major principal axis
-    double widthPx = 0.0;            ///< extent along the minor principal axis
+    double majorAxisAngleRad = 0.0;  ///< length axis vs +x, [-pi/2, pi/2)
+    double lengthPx = 0.0;           ///< support extent along the length axis
+    double widthPx = 0.0;            ///< MINIMUM support width over a 1-deg sweep —
+                                     ///< rotation-invariant (hexagon: across-flats)
 };
 
 /// Everything measured from one frame. Pixel facts are OBSERVED evidence;

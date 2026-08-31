@@ -3,7 +3,7 @@
 Rolling snapshot of where Platypus One actually is. Updated as work lands —
 if this file disagrees with the code, the code wins and this file is stale.
 
-**Last updated: 2026-08-30**
+**Last updated: 2026-08-31**
 
 ## Right now
 
@@ -43,7 +43,17 @@ if this file disagrees with the code, the code wins and this file is stale.
   rods: the tables overlap at 12/13 mm), INFERRED claims always carrying
   confidence + provenance + method, capped at 0.9. Bolt-vs-screw and
   nut-vs-washer stay UNRESOLVED with concrete next-observation
-  recommendations. Next chunk: Scout result UI (step 5).
+  recommendations. **Steps 5 + 8 landed host-side (2026-08-31):** single-card
+  Scout result UI (`apps/engineering_scout`, registered in the launcher) on a
+  real 5×7 bitmap font (`renderer/font-atlas` done); 21-case CI-gated
+  validation battery with committed
+  [report](docs/contest/VALIDATION_REPORT.md) — 100% class/nominal hit rate,
+  ≤0.5 mm max dimensional error. The battery's first run caught and fixed two
+  real defects: extent-based width overestimating rotated hexagons (now
+  minimum-support-width, `vision.scout_analyzer.v2`) and relative-error
+  nominal matching biasing upward (now absolute-distance,
+  `ai.fastener_classifier.v2`). Remaining Scout work is hardware-gated — see
+  [DEMO_READINESS.md](docs/contest/DEMO_READINESS.md).
 - **M4 Platform opening** — not started.
 
 Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).

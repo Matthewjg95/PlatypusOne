@@ -231,59 +231,58 @@ std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std
     return holes;
 }
 
-/// Principal-axis extents from the labeled pixels: second central moments give
-/// the axis angle; projecting every pixel onto the axes gives exact extents.
-void measurePrincipalExtents(const std::vector<std::int32_t>& labels, std::int32_t width,
-                             std::int32_t label, BlobStats& stats) {
-    double sumXX = 0.0;
-    double sumYY = 0.0;
-    double sumXY = 0.0;
+/// Width and length by minimum support width: sweep directions in 1° steps,
+/// take the direction with the smallest projected extent as the width axis
+/// and the orthogonal extent as the length. Rotation-invariant — a rotated
+/// hexagon measures its across-flats, a rotated rod its true diameter —
+/// unlike principal-axis extents, which overestimate as shapes rotate.
+void measureSupportExtents(const std::vector<std::int32_t>& labels, std::int32_t width,
+                           std::int32_t label, BlobStats& stats) {
+    std::vector<std::pair<double, double>> points;
     for (std::size_t index = 0; index < labels.size(); ++index) {
         if (labels[index] != label) continue;
-        const auto x =
-            static_cast<double>(index % static_cast<std::size_t>(width)) - stats.centroidX;
-        const auto y =
-            static_cast<double>(index / static_cast<std::size_t>(width)) - stats.centroidY;
-        sumXX += x * x;
-        sumYY += y * y;
-        sumXY += x * y;
+        points.emplace_back(
+            static_cast<double>(index % static_cast<std::size_t>(width)) - stats.centroidX,
+            static_cast<double>(index / static_cast<std::size_t>(width)) - stats.centroidY);
+    }
+    if (points.empty()) return;
+
+    constexpr double kPi = 3.14159265358979;
+    double bestWidth = std::numeric_limits<double>::max();
+    double bestAngle = 0.0;
+    for (std::int32_t step = 0; step < 180; ++step) {
+        const double angle = static_cast<double>(step) * kPi / 180.0;
+        const double nx = -std::sin(angle);
+        const double ny = std::cos(angle);
+        double lo = std::numeric_limits<double>::max();
+        double hi = std::numeric_limits<double>::lowest();
+        for (const auto& [x, y] : points) {
+            const double projection = x * nx + y * ny;
+            lo = std::min(lo, projection);
+            hi = std::max(hi, projection);
+        }
+        if (hi - lo < bestWidth) {
+            bestWidth = hi - lo;
+            bestAngle = angle;
+        }
     }
 
-    const double angle = 0.5 * std::atan2(2.0 * sumXY, sumXX - sumYY);
-    const double axisX = std::cos(angle);
-    const double axisY = std::sin(angle);
-
-    double minMajor = std::numeric_limits<double>::max();
-    double maxMajor = std::numeric_limits<double>::lowest();
-    double minMinor = std::numeric_limits<double>::max();
-    double maxMinor = std::numeric_limits<double>::lowest();
-    for (std::size_t index = 0; index < labels.size(); ++index) {
-        if (labels[index] != label) continue;
-        const auto x =
-            static_cast<double>(index % static_cast<std::size_t>(width)) - stats.centroidX;
-        const auto y =
-            static_cast<double>(index / static_cast<std::size_t>(width)) - stats.centroidY;
-        const double major = x * axisX + y * axisY;
-        const double minor = -x * axisY + y * axisX;
-        minMajor = std::min(minMajor, major);
-        maxMajor = std::max(maxMajor, major);
-        minMinor = std::min(minMinor, minor);
-        maxMinor = std::max(maxMinor, minor);
+    const double ax = std::cos(bestAngle);
+    const double ay = std::sin(bestAngle);
+    double lo = std::numeric_limits<double>::max();
+    double hi = std::numeric_limits<double>::lowest();
+    for (const auto& [x, y] : points) {
+        const double projection = x * ax + y * ay;
+        lo = std::min(lo, projection);
+        hi = std::max(hi, projection);
     }
 
     // +1: extents span pixel centres; each end pixel contributes half a pixel.
-    const double along = maxMajor - minMajor + 1.0;
-    const double across = maxMinor - minMinor + 1.0;
-    if (along >= across) {
-        stats.majorAxisAngleRad = angle;
-        stats.lengthPx = along;
-        stats.widthPx = across;
-    } else {
-        stats.majorAxisAngleRad =
-            angle > 0.0 ? angle - 1.5707963267948966 : angle + 1.5707963267948966;
-        stats.lengthPx = across;
-        stats.widthPx = along;
-    }
+    stats.widthPx = bestWidth + 1.0;
+    stats.lengthPx = (hi - lo) + 1.0;
+    // The sweep angle at minimum width IS the length direction; normalize to
+    // [-pi/2, pi/2).
+    stats.majorAxisAngleRad = bestAngle >= kPi / 2.0 ? bestAngle - kPi : bestAngle;
 }
 
 bool isSquareCandidate(const BlobStats& stats) {
@@ -353,8 +352,8 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
     analysis.binarizationThreshold = threshold;
     analysis.reference = reference->stats;
     analysis.subject = subject->stats;
-    measurePrincipalExtents(labels, mode.width, reference->label, analysis.reference);
-    measurePrincipalExtents(labels, mode.width, subject->label, analysis.subject);
+    measureSupportExtents(labels, mode.width, reference->label, analysis.reference);
+    measureSupportExtents(labels, mode.width, subject->label, analysis.subject);
 
     // sqrt(area) is the square's side regardless of small rotations, unlike
     // the axis-aligned bounding box.
@@ -368,7 +367,7 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
 void appendEvidence(observation::EngineeringObservation& record, const ScoutAnalysis& analysis,
                     const CalibrationSpec& spec, std::string_view sourceArtifactId) {
     const std::string source(sourceArtifactId);
-    const std::string method = "vision.scout_analyzer.v1";
+    const std::string method = "vision.scout_analyzer.v2";
 
     const auto observed = [&](std::string id, std::string name, double value,
                               std::optional<std::string> unit) {
