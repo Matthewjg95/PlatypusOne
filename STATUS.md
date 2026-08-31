@@ -19,9 +19,10 @@ if this file disagrees with the code, the code wins and this file is stale.
 
 - **M0 Foundation** — complete. HAL, app framework, renderer, host simulator,
   unit tests, architecture docs.
-- **M1 Board bring-up** — partial. MCU bridge protocol and Linux driver written
-  (untested against hardware); STM32 firmware, camera, sensors, cross-compile,
-  and CI outstanding.
+- **M1 Board bring-up** — partial. MCU bridge protocol, Linux driver, and now
+  the STM32 firmware sketch ([firmware/mcu_bridge](firmware/mcu_bridge)) all
+  written but untested against hardware; camera backend written (Linux-only);
+  sensors and cross-compile outstanding. Host CI is in place.
 - **M2 Runtime maturity** — **complete** (2026-08-31). Win32 simulator window,
   runtime geometry, bounded input event queue (PR #5), dirty-region present
   (PR #6), real 5×7 bitmap font, and the typed settings store
@@ -105,6 +106,8 @@ commit message. Current such changes:
 | main @ merge of PR #11 | Scout capture slice | ✅ **Verified 2026-08-30** locally: all 8 suites pass; harness smoke (`--fake`) produced `scan-0001/source.ppm` + valid `observation.json`. `V4l2Camera` is Linux-only — **not** compiled by Windows CI/local; bench-verify on UNO Q per TEST_CHECKLISTS §4 |
 | `services/vision` ScoutAnalyzer | Calibration + deterministic measurement | ✅ **Verified 2026-08-30** locally: all 9 suites pass with live asserts — exact 0.5 mm/px scale on the synthetic reference, rotated-rod extents within 1.5 mm, all five scene/input error paths, evidence validates + JSON round-trips |
 | `services/ai` FastenerClassifier + vision hole counting | Classification + nominal matching | ✅ **Verified 2026-08-30** locally: all 10 suites pass — M12 rod and M6 nut classified with correct nominals, off-table and holeless cases honestly unknown/unmatched, inferred claims satisfy the contract's confidence/provenance/method rules, JSON round-trips |
+| 2026-08-31 session (font, Scout card, validation suite, settings store) | UI + validation + M2 close | ✅ **Verified 2026-08-31** locally + Host CI: 13 suites, live asserts; validation battery 21/21, hit rates 100%, max dimensional error 0.50 mm; card + font verified visually via `ui_preview` renders |
+| `firmware/mcu_bridge` sketch | mcu-bridge v1 MCU side | ⚠️ **NOT COMPILED** — needs the UNO Q Arduino core; framing is the shared, host-tested `Framing.hpp`. Bench-verify per TEST_CHECKLISTS §2 |
 
 Verification protocol: the MSVC machine session runs build+tests on pull and
 updates this table; TARS marks new code changes `NOT COMPILED` until then.
@@ -136,7 +139,8 @@ the primary signal; this table records local hardware-adjacent verification.
    PRs #5, #6, and #7 (presentation-link framing codec, shared with future
    firmware) reviewed and merged in order; `display/linked` is now unblocked
    for wiring into the composition root.
-6. STM32 firmware implementing [mcu-bridge v1](docs/protocols/mcu-bridge.md):
-   Ping/Pong plus GPIO loopback is the smallest proof of the dual-brain
-   architecture, and [checklist §2](docs/hardware/TEST_CHECKLISTS.md) is already
-   written for it.
+6. ~~STM32 firmware implementing mcu-bridge v1~~ **Sketch written 2026-08-31**
+   ([firmware/mcu_bridge](firmware/mcu_bridge), shares `Framing.hpp` verbatim;
+   Ping/Pong + GPIO/analog/PWM core topics). **NOT COMPILED** — needs the UNO
+   Q Arduino core; bring-up per
+   [checklist §2](docs/hardware/TEST_CHECKLISTS.md) when the board lands.
