@@ -174,7 +174,9 @@ plan.
 
 Minimum for the application:
 
-- [ ] UNO Q envelope placed: **85 × 54 × 20 mm**
+- [ ] UNO Q placed from the **official Arduino STEP model** (board outline
+      68.58 × 53.34 mm per the mechanical drawing; do not derive a 3D
+      clearance from the 2D outline — take it from the STEP)
 - [ ] Display placeholder — model the **aperture and envelope**, not a specific
       panel (the panel is deliberately undecided; use the 165 × 100 × 8 mm
       packaging envelope as the upper bound and note it as TBD)
