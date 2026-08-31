@@ -120,6 +120,25 @@ std::int32_t Renderer::textWidth(std::string_view text, std::int32_t scale) noex
     return static_cast<std::int32_t>(text.size()) * font::kGlyphAdvance * scale;
 }
 
+void Renderer::drawImage(const Rect& dest, std::span<const std::uint8_t> pixels,
+                         std::int32_t srcWidth, std::int32_t srcHeight, std::int32_t channels) {
+    if (srcWidth <= 0 || srcHeight <= 0 || dest.w <= 0 || dest.h <= 0) return;
+    if (channels != 1 && channels != 3) return;
+    if (pixels.size() != static_cast<std::size_t>(srcWidth) * srcHeight * channels) return;
+
+    for (std::int32_t dy = 0; dy < dest.h; ++dy) {
+        const auto sy = static_cast<std::size_t>(dy) * srcHeight / dest.h;
+        for (std::int32_t dx = 0; dx < dest.w; ++dx) {
+            const auto sx = static_cast<std::size_t>(dx) * srcWidth / dest.w;
+            const auto base = (sy * static_cast<std::size_t>(srcWidth) + sx) * channels;
+            const std::uint8_t r = pixels[base];
+            const std::uint8_t g = channels == 3 ? pixels[base + 1] : r;
+            const std::uint8_t b = channels == 3 ? pixels[base + 2] : r;
+            setPixel(dest.x + dx, dest.y + dy, Color{r, g, b}.toRgb565());
+        }
+    }
+}
+
 hal::Status Renderer::present() {
     if (!dirtyRect_) return {};
 

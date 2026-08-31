@@ -97,22 +97,45 @@ void confidenceBar(Renderer& r, std::int32_t x, std::int32_t y, std::int32_t wid
 
 }  // namespace
 
-void drawObservationCard(Renderer& r, const observation::EngineeringObservation& record) {
+void drawObservationCard(Renderer& r, const observation::EngineeringObservation& record,
+                         const std::optional<CardImage>& thumbnail) {
     const auto info = r.displayInfo();
     const std::int32_t margin = 10;
     const std::int32_t x = margin;
-    const std::int32_t width = info.width - 2 * margin;
+    const std::int32_t fullWidth = info.width - 2 * margin;
+    // A valid thumbnail reserves a right column; every section then lays out
+    // against the narrower content width so nothing collides with it.
+    const bool haveThumbnail = thumbnail && thumbnail->channels > 0 && thumbnail->width > 0 &&
+                               thumbnail->height > 0 && fullWidth > 220;
+    const std::int32_t kThumbColumn = 140;
+    const std::int32_t width = haveThumbnail ? fullWidth - kThumbColumn : fullWidth;
     const auto charsPerLine = static_cast<std::size_t>(width / 6);
     std::int32_t y = margin;
 
     r.clear(kBackground);
-    r.drawRect({margin - 4, margin - 4, width + 8, info.height - 2 * margin + 8}, kCardEdge);
+    r.drawRect({margin - 4, margin - 4, fullWidth + 8, info.height - 2 * margin + 8}, kCardEdge);
 
-    // Header: app identity + record identity.
+    // Header: app identity + record identity (spanning the full card).
     r.drawText(x, y, "ENGINEERING SCOUT", kAccent);
     const std::string stamp = record.observationId + "  " + record.timestampUtc;
-    r.drawText(x + width - Renderer::textWidth(stamp), y, stamp, kDim);
+    r.drawText(x + fullWidth - Renderer::textWidth(stamp), y, stamp, kDim);
     y += Renderer::textHeight() + 8;
+
+    if (haveThumbnail) {
+        const std::int32_t boxW = kThumbColumn - 8;
+        const std::int32_t boxH = 99;
+        const std::int32_t boxX = x + width + 8;
+        const std::int32_t boxY = y + Renderer::textHeight() + 2;
+        const double scale = std::min(static_cast<double>(boxW) / thumbnail->width,
+                                      static_cast<double>(boxH) / thumbnail->height);
+        const auto drawW = static_cast<std::int32_t>(thumbnail->width * scale);
+        const auto drawH = static_cast<std::int32_t>(thumbnail->height * scale);
+        const renderer::Rect imageRect{boxX + (boxW - drawW) / 2, boxY, drawW, drawH};
+        r.drawText(boxX + (boxW - Renderer::textWidth("SOURCE")) / 2, y, "SOURCE", kDim);
+        r.drawImage(imageRect, thumbnail->pixels, thumbnail->width, thumbnail->height,
+                    thumbnail->channels);
+        r.drawRect({imageRect.x - 1, imageRect.y - 1, imageRect.w + 2, imageRect.h + 2}, kCardEdge);
+    }
 
     // Headline: the derived measurement is the product's answer.
     const auto* lengthMm = findClaim(record.derived, "subject_length");
@@ -205,6 +228,49 @@ void drawObservationCard(Renderer& r, const observation::EngineeringObservation&
     }
 }
 
+std::optional<CardImage> loadCardImage(const std::filesystem::path& file) {
+    std::ifstream in(file, std::ios::binary);
+    if (!in) return std::nullopt;
+
+    std::string magic;
+    in >> magic;
+    if (magic != "P5" && magic != "P6") return std::nullopt;
+
+    // Header tokens with '#' comment lines allowed between them.
+    const auto nextValue = [&in]() -> std::optional<std::int32_t> {
+        std::string token;
+        while (in >> token) {
+            if (token.front() == '#') {
+                std::string rest;
+                std::getline(in, rest);
+                continue;
+            }
+            try {
+                return std::stoi(token);
+            } catch (...) {
+                return std::nullopt;
+            }
+        }
+        return std::nullopt;
+    };
+    const auto width = nextValue();
+    const auto height = nextValue();
+    const auto maxval = nextValue();
+    if (!width || !height || !maxval || *width <= 0 || *height <= 0 || *maxval != 255)
+        return std::nullopt;
+    in.get();  // the single whitespace byte before pixel data
+
+    CardImage image;
+    image.width = *width;
+    image.height = *height;
+    image.channels = magic == "P6" ? 3 : 1;
+    image.pixels.resize(static_cast<std::size_t>(*width) * *height * image.channels);
+    in.read(reinterpret_cast<char*>(image.pixels.data()),
+            static_cast<std::streamsize>(image.pixels.size()));
+    if (in.gcount() != static_cast<std::streamsize>(image.pixels.size())) return std::nullopt;
+    return image;
+}
+
 void drawNoObservationCard(Renderer& r, std::string_view detail) {
     const auto info = r.displayInfo();
     r.clear(kBackground);
@@ -231,6 +297,7 @@ const appfw::AppManifest& EngineeringScoutApp::manifest() const noexcept {
 
 void EngineeringScoutApp::loadNewest() {
     record_.reset();
+    thumbnail_.reset();
     loadDetail_ = "capture one with engineering_scout_capture into '" + root_.string() + "'";
 
     std::error_code ec;
@@ -255,6 +322,15 @@ void EngineeringScoutApp::loadNewest() {
         return;
     }
     record_ = std::move(*outcome.record);
+
+    // Source thumbnail: the record's first netpbm image artifact, if any.
+    for (const auto& artifact : record_->artifacts) {
+        if (artifact.kind == "image/x-portable-pixmap" ||
+            artifact.kind == "image/x-portable-graymap") {
+            thumbnail_ = loadCardImage(records.back().parent_path() / artifact.path);
+            break;
+        }
+    }
 }
 
 void EngineeringScoutApp::onStart(appfw::AppContext&) {
@@ -282,7 +358,7 @@ void EngineeringScoutApp::onFrame(appfw::AppContext& ctx, std::chrono::milliseco
     }
     if (!needsRedraw_) return;
     if (record_) {
-        drawObservationCard(ctx.renderer, *record_);
+        drawObservationCard(ctx.renderer, *record_, thumbnail_);
     } else {
         drawNoObservationCard(ctx.renderer, loadDetail_);
     }

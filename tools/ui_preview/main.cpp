@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <sstream>
@@ -115,10 +116,11 @@ int renderFontSpecimen(const std::string& outPath) {
     return 0;
 }
 
-int renderCard(const observation::EngineeringObservation& record, const std::string& outPath) {
+int renderCard(const observation::EngineeringObservation& record, const std::string& outPath,
+               const std::optional<apps::CardImage>& thumbnail = std::nullopt) {
     auto display = std::make_shared<MemoryDisplay>(std::uint16_t{480}, std::uint16_t{320});
     renderer::Renderer r(display);
-    apps::drawObservationCard(r, record);
+    apps::drawObservationCard(r, record, thumbnail);
     if (const auto status = r.present(); !status.ok()) {
         std::fprintf(stderr, "error: present failed\n");
         return 1;
@@ -141,7 +143,16 @@ int renderScoutCard(const std::string& jsonPath, const std::string& outPath) {
         std::fprintf(stderr, "error: %s\n", outcome.error.c_str());
         return 1;
     }
-    return renderCard(*outcome.record, outPath);
+    // Thumbnail from the record's image artifact beside the JSON, if present.
+    std::optional<apps::CardImage> thumbnail;
+    for (const auto& artifact : outcome.record->artifacts) {
+        if (artifact.kind.rfind("image/x-portable-", 0) == 0) {
+            thumbnail =
+                apps::loadCardImage(std::filesystem::path(jsonPath).parent_path() / artifact.path);
+            break;
+        }
+    }
+    return renderCard(*outcome.record, outPath, thumbnail);
 }
 
 int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
@@ -172,7 +183,17 @@ int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
     record.artifacts.push_back({"source-image", "image/x-portable-graymap", "source.pgm"});
     vision::appendEvidence(record, *analyzed.analysis, spec, "source-image");
     ai::appendClassification(record, ai::classify(*analyzed.analysis));
-    return renderCard(record, outPath);
+
+    apps::CardImage thumbnail;
+    const auto frame2 = scene.frame();
+    thumbnail.width = frame2.mode().width;
+    thumbnail.height = frame2.mode().height;
+    thumbnail.channels = 1;
+    const auto scenePixels = frame2.pixels();
+    thumbnail.pixels.resize(scenePixels.size());
+    for (std::size_t i = 0; i < scenePixels.size(); ++i)
+        thumbnail.pixels[i] = std::to_integer<std::uint8_t>(scenePixels[i]);
+    return renderCard(record, outPath, thumbnail);
 }
 
 }  // namespace
