@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -52,6 +53,12 @@ class Renderer {
     [[nodiscard]] static constexpr std::int32_t textHeight(std::int32_t scale = 1) noexcept {
         return 7 * scale;
     }
+
+    /// Nearest-neighbour blit of an 8-bit image (channels = 1 grayscale or
+    /// 3 RGB) scaled into dest. Source rows are tightly packed. A pixel
+    /// count mismatch draws nothing.
+    void drawImage(const Rect& dest, std::span<const std::uint8_t> pixels, std::int32_t srcWidth,
+                   std::int32_t srcHeight, std::int32_t channels);
 
     /// Push the framebuffer to hardware.
     hal::Status present();
