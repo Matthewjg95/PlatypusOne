@@ -9,10 +9,12 @@ add_executable(platypus_tests
     test_presentation_framing.cpp
     test_renderer.cpp
     test_scout_analyzer.cpp
-    test_scout_capture.cpp)
+    test_scout_capture.cpp
+    test_scout_card.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
     platypus::ai
+    platypus::app_engineering_scout
     platypus::appfw
     platypus::observation
     platypus::renderer

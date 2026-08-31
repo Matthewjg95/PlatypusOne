@@ -130,6 +130,7 @@ void test_observation();
 void test_presentation_framing();
 void test_scout_analyzer();
 void test_scout_capture();
+void test_scout_card();
 
 int main() {
     test_app_registry();
@@ -142,6 +143,7 @@ int main() {
     test_renderer_geometry();
     test_scout_analyzer();
     test_scout_capture();
+    test_scout_card();
     std::puts("All tests passed.");
     return 0;
 }

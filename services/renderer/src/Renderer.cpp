@@ -1,5 +1,7 @@
 #include "platypus/renderer/Renderer.hpp"
 
+#include "Font5x7.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -91,14 +93,31 @@ void Renderer::drawLine(std::int32_t x0, std::int32_t y0, std::int32_t x1, std::
     }
 }
 
-void Renderer::drawText(std::int32_t x, std::int32_t y, std::string_view text, Color color) {
-    // Placeholder glyph rendering: 5x7 filled box per character until the
-    // bitmap font lands (see ROADMAP: renderer/font-atlas).
+void Renderer::drawText(std::int32_t x, std::int32_t y, std::string_view text, Color color,
+                        std::int32_t scale) {
+    if (scale < 1) return;
+    const auto c = color.toRgb565();
     auto cx = x;
     for (const char ch : text) {
-        if (ch != ' ') fillRect({cx, y, 5, 7}, color);
-        cx += 6;
+        const auto& glyph = font::glyphFor(ch);
+        for (std::int32_t col = 0; col < font::kGlyphWidth; ++col) {
+            const auto bits = glyph[static_cast<std::size_t>(col)];
+            for (std::int32_t row = 0; row < font::kGlyphHeight; ++row) {
+                if ((bits & (1u << row)) == 0) continue;
+                if (scale == 1) {
+                    setPixel(cx + col, y + row, c);
+                } else {
+                    fillRect({cx + col * scale, y + row * scale, scale, scale}, color);
+                }
+            }
+        }
+        cx += font::kGlyphAdvance * scale;
     }
+}
+
+std::int32_t Renderer::textWidth(std::string_view text, std::int32_t scale) noexcept {
+    if (scale < 1) return 0;
+    return static_cast<std::int32_t>(text.size()) * font::kGlyphAdvance * scale;
 }
 
 hal::Status Renderer::present() {

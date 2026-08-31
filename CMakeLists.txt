@@ -37,12 +37,16 @@ add_subdirectory(services/vision)
 add_subdirectory(services/ai)
 add_subdirectory(services/appfw)
 
+# App *libraries* build unconditionally (tests and tools link them); the
+# guard only gates app executables like the launcher.
+add_subdirectory(apps/engineering_scout)
 if(PLATYPUS_BUILD_APPS)
     add_subdirectory(apps/launcher)
     add_subdirectory(apps/settings)
 endif()
 
 add_subdirectory(tools/engineering_scout_capture)
+add_subdirectory(tools/ui_preview)
 
 if(PLATYPUS_BUILD_TESTS)
     enable_testing()
