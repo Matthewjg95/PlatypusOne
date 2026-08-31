@@ -25,8 +25,7 @@ using namespace platypus;
 
 int fail(const char* stage, hal::Error error) {
     std::fprintf(stderr, "error: %s failed: %.*s\n", stage,
-                 static_cast<int>(hal::to_string(error).size()),
-                 hal::to_string(error).data());
+                 static_cast<int>(hal::to_string(error).size()), hal::to_string(error).data());
     return 1;
 }
 
@@ -48,11 +47,16 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         const auto next = [&]() -> const char* { return i + 1 < argc ? argv[++i] : ""; };
-        if (arg == "--fake") useFake = true;
-        else if (arg == "--list") listOnly = true;
-        else if (arg == "--device") device = next();
-        else if (arg == "--out") outDir = next();
-        else if (arg == "--id") id = next();
+        if (arg == "--fake")
+            useFake = true;
+        else if (arg == "--list")
+            listOnly = true;
+        else if (arg == "--device")
+            device = next();
+        else if (arg == "--out")
+            outDir = next();
+        else if (arg == "--id")
+            id = next();
         else {
             std::fprintf(stderr,
                          "usage: engineering_scout_capture [--fake] [--device PATH] "

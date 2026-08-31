@@ -21,7 +21,7 @@
 namespace platypus::unoq {
 
 class V4l2Camera final : public hal::ICamera {
-public:
+   public:
     /// devicePath e.g. "/dev/video0".
     explicit V4l2Camera(std::string devicePath);
     ~V4l2Camera() override;
@@ -46,7 +46,7 @@ public:
     hal::Status startStream(std::function<void(const hal::Frame&)> onFrame) override;
     hal::Status stopStream() override;
 
-private:
+   private:
     struct MappedBuffer {
         void* start = nullptr;
         std::size_t length = 0;
