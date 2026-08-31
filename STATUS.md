@@ -26,8 +26,11 @@ if this file disagrees with the code, the code wins and this file is stale.
   geometry, bounded input event queue (PR #5), and dirty-region present
   (PR #6) landed; settings store outstanding.
 - **M3 Flagship apps** — not started. Six app directories hold READMEs only.
-  Engineering Scout Q (issue #9) groundwork underway: evidence contract merged;
-  camera→artifact→record capture slice is the next chunk in flight.
+  Engineering Scout Q (issue #9): evidence contract merged; **capture slice
+  merged (PR #11, 2026-08-30)** — `CaptureService` (frame → artifact + valid
+  record, all-or-nothing), `FakeCamera` test double, `V4l2Camera` UVC backend
+  (Linux-only, awaits physical UNO Q bench test), `engineering_scout_capture`
+  CLI harness.
 - **M4 Platform opening** — not started.
 
 Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -75,6 +78,7 @@ commit message. Current such changes:
 | `feat(sim): make simulated display geometry a runtime choice` | Sim display geometry injection, `--geometry`, launcher row scaling, new geometry test | ✅ **Verified 2026-08-24** on the MSVC machine: clean build, all tests pass, `--geometry 800x480` sim window smoke-tested |
 | main @ merge of PRs #1–#4 (incl. observation contract v0.1, PR #10) | Full host target | ✅ **Verified 2026-08-30** on the new dev machine (VS 2022 Build Tools, MSVC 14.44, CMake 4.4.3): fresh configure, clean Release build, 100% tests pass |
 | main @ merge of PRs #5–#7 | Event queue, dirty regions, link framing | ✅ **Verified 2026-08-30** locally: clean Release build, all 7 test suites pass **with live asserts** — note Release configs previously compiled `assert` out (`NDEBUG`), so earlier Release test runs verified nothing; fixed in `fix(tests): undefine NDEBUG` |
+| main @ merge of PR #11 | Scout capture slice | ✅ **Verified 2026-08-30** locally: all 8 suites pass; harness smoke (`--fake`) produced `scan-0001/source.ppm` + valid `observation.json`. `V4l2Camera` is Linux-only — **not** compiled by Windows CI/local; bench-verify on UNO Q per TEST_CHECKLISTS §4 |
 
 Verification protocol: the MSVC machine session runs build+tests on pull and
 updates this table; TARS marks new code changes `NOT COMPILED` until then.
