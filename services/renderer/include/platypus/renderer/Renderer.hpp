@@ -2,7 +2,7 @@
 //
 // Owns a CPU framebuffer (RGB565) and flushes it to an injected IDisplay.
 // Apps draw through this API only; they never see the display driver.
-// Future work: font atlas, GPU path on the MPU.
+// Future work: proportional font atlas, GPU path on the MPU.
 #pragma once
 
 #include <platypus/hal/IDisplay.hpp>
@@ -39,8 +39,19 @@ class Renderer {
     void drawRect(const Rect& rect, Color color);
     void drawLine(std::int32_t x0, std::int32_t y0, std::int32_t x1, std::int32_t y1, Color color);
 
-    /// Built-in 6x8 bitmap font (TODO: font atlas + scaling).
-    void drawText(std::int32_t x, std::int32_t y, std::string_view text, Color color);
+    /// Built-in monospaced 5x7 bitmap font with integer scaling; characters
+    /// outside printable ASCII render as a replacement box. (x, y) is the
+    /// glyph cell's top-left.
+    void drawText(std::int32_t x, std::int32_t y, std::string_view text, Color color,
+                  std::int32_t scale = 1);
+
+    /// Pixel metrics for layout. Width includes the inter-glyph gap after
+    /// every character, so adjacent drawText calls tile exactly.
+    [[nodiscard]] static std::int32_t textWidth(std::string_view text,
+                                                std::int32_t scale = 1) noexcept;
+    [[nodiscard]] static constexpr std::int32_t textHeight(std::int32_t scale = 1) noexcept {
+        return 7 * scale;
+    }
 
     /// Push the framebuffer to hardware.
     hal::Status present();

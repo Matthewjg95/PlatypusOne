@@ -9,6 +9,7 @@
 #include <platypus/appfw/AppContext.hpp>
 #include <platypus/appfw/AppRegistry.hpp>
 #include <platypus/appfw/EventQueue.hpp>
+#include <platypus/apps/EngineeringScoutApp.hpp>
 #include <platypus/apps/SettingsApp.hpp>
 #include <platypus/filesystem/ProjectStore.hpp>
 #include <platypus/renderer/Renderer.hpp>
@@ -84,6 +85,8 @@ int main(int argc, char** argv) {
     // Built-in apps register here. shadowscan/viewer/measurement/inspection/
     // documentation follow the same pattern as settings (see apps/settings).
     registry.add(platypus::apps::SettingsApp().manifest(), &platypus::apps::SettingsApp::create);
+    registry.add(platypus::apps::EngineeringScoutApp().manifest(),
+                 &platypus::apps::EngineeringScoutApp::create);
 
     // The launcher needs the registry, so it is constructed directly rather
     // than through a factory.
