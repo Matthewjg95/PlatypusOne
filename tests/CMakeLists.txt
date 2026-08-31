@@ -6,7 +6,8 @@ add_executable(platypus_tests
     test_mcu_framing.cpp
     test_observation.cpp
     test_presentation_framing.cpp
-    test_renderer.cpp)
+    test_renderer.cpp
+    test_scout_capture.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
     platypus::appfw
