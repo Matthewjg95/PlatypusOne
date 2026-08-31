@@ -7,12 +7,14 @@ add_executable(platypus_tests
     test_observation.cpp
     test_presentation_framing.cpp
     test_renderer.cpp
+    test_scout_analyzer.cpp
     test_scout_capture.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
     platypus::appfw
     platypus::observation
-    platypus::renderer)
+    platypus::renderer
+    platypus::vision)
 
 platypus_set_warnings(platypus_tests)
 

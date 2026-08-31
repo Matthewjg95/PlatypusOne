@@ -30,7 +30,13 @@ if this file disagrees with the code, the code wins and this file is stale.
   merged (PR #11, 2026-08-30)** — `CaptureService` (frame → artifact + valid
   record, all-or-nothing), `FakeCamera` test double, `V4l2Camera` UVC backend
   (Linux-only, awaits physical UNO Q bench test), `engineering_scout_capture`
-  CLI harness.
+  CLI harness. **MVP build-order step 3 landed host-side (2026-08-30):**
+  `services/vision` ScoutAnalyzer — Otsu binarization → connected components →
+  square-reference calibration (sqrt-area scale) → principal-axis subject
+  measurement in mm; emits OBSERVED/DERIVED claims with provenance chains,
+  UNRESOLVED classification, and one recommended next observation. Scene
+  faults (no reference, ambiguous reference, no subject) are typed errors for
+  the future Scout UI. Classification/nominal matching is the next chunk.
 - **M4 Platform opening** — not started.
 
 Detail and tags: [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -79,6 +85,7 @@ commit message. Current such changes:
 | main @ merge of PRs #1–#4 (incl. observation contract v0.1, PR #10) | Full host target | ✅ **Verified 2026-08-30** on the new dev machine (VS 2022 Build Tools, MSVC 14.44, CMake 4.4.3): fresh configure, clean Release build, 100% tests pass |
 | main @ merge of PRs #5–#7 | Event queue, dirty regions, link framing | ✅ **Verified 2026-08-30** locally: clean Release build, all 7 test suites pass **with live asserts** — note Release configs previously compiled `assert` out (`NDEBUG`), so earlier Release test runs verified nothing; fixed in `fix(tests): undefine NDEBUG` |
 | main @ merge of PR #11 | Scout capture slice | ✅ **Verified 2026-08-30** locally: all 8 suites pass; harness smoke (`--fake`) produced `scan-0001/source.ppm` + valid `observation.json`. `V4l2Camera` is Linux-only — **not** compiled by Windows CI/local; bench-verify on UNO Q per TEST_CHECKLISTS §4 |
+| `services/vision` ScoutAnalyzer | Calibration + deterministic measurement | ✅ **Verified 2026-08-30** locally: all 9 suites pass with live asserts — exact 0.5 mm/px scale on the synthetic reference, rotated-rod extents within 1.5 mm, all five scene/input error paths, evidence validates + JSON round-trips |
 
 Verification protocol: the MSVC machine session runs build+tests on pull and
 updates this table; TARS marks new code changes `NOT COMPILED` until then.
