@@ -71,7 +71,9 @@ and professional BGA assembly review justify integration.
 
 ## M2 — Runtime maturity
 
-- [ ] `renderer/font-atlas` — real bitmap font, text metrics, scaling
+- [x] `renderer/font-atlas` — built-in 5×7 bitmap font (printable ASCII,
+      hollow-box replacement glyph), integer scaling, textWidth/textHeight
+      metrics; visually verified via `ui_preview --font-specimen`
 - [x] `renderer/dirty-rects` — bounded dirty-region tracking with no-op clean
       frames, retry after transport failure, and a full-frame fallback for
       drivers without partial-update support. **Prerequisite, not an
