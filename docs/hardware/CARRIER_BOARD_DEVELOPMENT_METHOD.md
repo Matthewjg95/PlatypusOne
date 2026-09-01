@@ -4,8 +4,9 @@ Status: **Proposed**
 Owner: Matthew Garza
 Applies to: PlatypusOne carrier-board experiments and revisions
 Initial tracked components: [MAX78002GXE+](components/MAX78002GXE_PLUS.md),
-[ADXL357BEZ](components/ADXL357BEZ.md), and
-[LTC2949ILXE#3ZZPBF](components/LTC2949ILXE_3ZZPBF.md)
+[ADXL357BEZ](components/ADXL357BEZ.md),
+[LTC2949ILXE#3ZZPBF](components/LTC2949ILXE_3ZZPBF.md), and
+[ADM2587EBRWZ](components/ADM2587EBRWZ.md)
 
 ## Purpose
 
@@ -19,7 +20,8 @@ previous one.
 - **Rev C — product-oriented hardware:** size, cost, assembly, and reliability optimization.
 
 This work does not replace the UNO Q contest core or force every received sample onto
-the contest board. Components can be catalogued and evaluated without receiving a
+the contest board. The request, Core, and research BOMs are controlled separately in
+[Hardware BOM Scope Layers](BOM_SCOPE_LAYERS.md). Components can be catalogued and evaluated without receiving a
 Rev-A footprint.
 
 ## Source of truth and inventory workflow
