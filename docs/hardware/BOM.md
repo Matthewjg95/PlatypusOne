@@ -51,8 +51,8 @@ each component dossier before any schematic commitment.
 |---|---|---|---|---|---|---|---|
 | 7a | Camera: USB UVC OV5640-class autofocus ✦ | 1 | $25 | 25×25×10 | Amazon | Simplest Linux path (V4L2) | PLANNED |
 | 7b | Camera: 13 MP autofocus module | 1 | $40 | 25×25×10 | TBD | Higher fidelity for ShadowScan; confirm UVC or MIPI-CSI availability on UNO Q before choosing | PLANNED |
-| 8a | ToF: VL53L1X (single-zone, 4 m) ✦ | 1 | $12 | 13×18×2 (breakout) | Pololu/Adafruit | Proven, cheap, fine for distance app | PLANNED |
-| 8b | ToF: VL53L8CX (8×8 multizone) | 1 | $20 | 6×6×3 | ST/Sparkfun | Coarse depth grid — assists ShadowScan; more driver work | PLANNED |
+| 8a | ToF: VL53L1X (single-zone, 4 m) | 1 | $12 | 13×18×2 (breakout) | Pololu/Adafruit | FALLBACK — proven, cheap single distance channel if multizone integration threatens schedule | HOLD |
+| 8b | **ToF: VL53L8CX (8×8 multizone)** ✦ | 1 | $20 | 6×6×3 IC; breakout envelope TBD | ST/SparkFun | PREFERRED — 64-zone coarse depth, target/background separation, multiple-target handling, and camera-geometry cross-check; not a precision CAD scanner | PLANNED |
 | 9a | IMU: BNO055 (fused orientation on-chip) ✦ | 1 | $25 | 20×27×4 (breakout) | Adafruit | No sensor-fusion code needed — fastest to a working level/angle app | PLANNED |
 | 9b | IMU: BMI270 | 1 | $8 | 10×10×3 | DigiKey | Cheaper/smaller; fusion runs on our side | PLANNED |
 | 10 | Color: TCS34725 | 1 | $8 | 20×20×3 | Adafruit | Multi-measure lineage feature | PLANNED |
@@ -96,7 +96,7 @@ each component dossier before any schematic commitment.
 
 | Item | Cost | Notes |
 |---|---|---|
-| Autodesk Fusion (+ Electronics) | Free personal / contest license | Enclosure + carrier PCB + schematics |
+| Autodesk Fusion (+ Electronics) | Free personal / contest license | Enclosure + carrier PCB + schematics + contest measurement-to-parameter handoff |
 | PlatypusOS (this repo) | — | C++20/CMake, own work |
 | Arduino App Lab / UNO Q image | Free | Board OS |
 
@@ -112,6 +112,7 @@ each component dossier before any schematic commitment.
    [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md). Blocks battery sizing
    and enclosure freeze; renderer geometry remains runtime-dynamic.
 2. Camera 7a vs 7b — blocked on confirming UNO Q camera input paths.
-3. ToF 8a vs 8b and IMU 9a vs 9b — Matthew's analysis pending; both pairs are
-   I²C and carrier-PCB-compatible either way, so these do NOT block the PCB
-   schematic start, only the final placement.
+3. **ToF architecture selected: 8b preferred.** VL53L8CX multizone depth now supports
+   the contest capture-to-Fusion workflow; VL53L1X remains the schedule fallback.
+   Final breakout, interface choice, optical window, calibration, and bench proof remain open.
+4. IMU 9a vs 9b — selection pending; both candidates remain carrier-compatible.
