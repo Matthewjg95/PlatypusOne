@@ -3,6 +3,8 @@
 Status: **scope baseline**  
 Date: **2026-08-29**
 
+BOM relationship: this is the authoritative **Contest Core Build** scope. It is distinct from the application/request BOM and the post-contest research inventory; see [Hardware BOM Scope Layers](../hardware/BOM_SCOPE_LAYERS.md).
+
 ## Purpose
 
 This document defines the bounded **PlatypusOne Core** submission for the Autodesk University 2027 Product challenge.
@@ -317,6 +319,8 @@ The existing BOM is already close to the Core envelope, but this scope document 
 - **BGT24LTR11 radar** — remains V2/stretch.
 - vibration motor — optional polish.
 - speaker/audio — optional unless a concrete workflow proves it necessary.
+
+Received research components—including [redacted-research-part], [redacted-research-part], [redacted-research-part], and [redacted-research-part]—remain outside Core unless explicitly promoted through §11.
 
 This prevents a BOM from silently becoming a requirements document.
 
