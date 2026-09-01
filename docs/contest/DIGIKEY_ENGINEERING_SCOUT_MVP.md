@@ -67,7 +67,7 @@ The DigiKey work must land behind reusable PlatypusOS boundaries:
 - project/filesystem service: saved record + artifacts
 - `apps/engineering_scout`: contest-facing workflow/UI
 
-After DigiKey, these same components feed PlatypusOne measurement, inspection, documentation, and ShadowScan work. No contest-only rewrite should be required.
+After DigiKey, these same components feed PlatypusOne measurement, inspection, documentation, and ShadowScan work. The canonical Engineering Observation remains CAD-neutral; the Autodesk build adds the bounded Fusion adapter defined in [CAD Handoff Architecture](../architecture/CAD_HANDOFF.md). No contest-only rewrite should be required.
 
 ## Build order
 
