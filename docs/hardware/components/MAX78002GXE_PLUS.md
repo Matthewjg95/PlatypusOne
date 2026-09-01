@@ -2,7 +2,7 @@
 
 Status: **RECEIVED — unopened handling recommended until assembly plan exists**
 Disposition: **RESEARCH / possible V2 edge-AI coprocessor**
-Quantity: **TBD — record from package**
+Quantity: **2**
 Package received: ESD-protective bag; record moisture-barrier label, desiccant, and
 humidity-indicator condition before opening
 Evidence date: 2026-09-01
@@ -207,7 +207,7 @@ measured energy/latency advantage that justifies its integration burden.
 
 ## Open questions / schematic blockers
 
-- Exact received quantity, dry-pack label, lot/date code, HIC, and storage state.
+- Dry-pack label, lot/date code, HIC, and storage state.
 - EV kit availability versus using the samples only for eventual assembled boards.
 - Which PlatypusOne workload is small enough for the MAX78002 but frequent enough to
   justify a dedicated accelerator.
