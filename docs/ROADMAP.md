@@ -53,8 +53,9 @@ Method and exit criteria:
 
 - [x] Define the evidence-gated Rev A → Rev B → Rev C development method
 - [x] Establish per-component dossier and inventory-to-repository workflow
-- [x] Create first received-component dossiers:
-      [[redacted-research-part]](hardware/components/[redacted-research-part].md) and
+- [x] Create initial received-component dossiers:
+      [[redacted-research-part]](hardware/components/[redacted-research-part].md),
+      [[redacted-research-part]](hardware/components/[redacted-research-part].md), and
       [[redacted-research-part]](hardware/components/[redacted-research-part].md)
 - [ ] Reconcile the physical hardware inventory into dossiers and BOM acquisition states
 - [ ] Assign every candidate CORE / DE-RISK / RESEARCH / HOLD
