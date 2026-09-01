@@ -75,7 +75,7 @@ A user should be able to:
 7. reopen/export that observation for later engineering work;
 8. send reviewed, unit-aware measurements into a parameterized Autodesk Fusion design.
 
-If the December prototype does this convincingly, the PlatypusOne concept is proven.
+If the December prototype does this convincingly and completes the traceable Fusion handoff, the PlatypusOne contest concept is proven.
 
 ---
 
@@ -163,8 +163,6 @@ The software must prove a **measurement-to-artifact pipeline**, not merely a lau
    - import/update a prepared Fusion design through Parameter I/O or a bounded Fusion add-in
    - retain source-observation identity and confidence in the handoff
    - follow [CAD Handoff Architecture](../architecture/CAD_HANDOFF.md)
-
-8. **Repeatable validation**
 
 8. **Repeatable validation**
    - known targets
