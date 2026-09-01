@@ -46,8 +46,7 @@ Goal: submit a strong free-hardware application (UNO Q 4G + $300 PCBWay + Fusion
       handheld enclosure around the UNO Q footprint and a **display envelope**
       — the panel is deliberately unfrozen per
       [ADR-0001](../adr/0001-dynamic-linked-prototype-display.md); export .f3d
-- [ ] Publish preliminary BOM (adapt [BOM.md](BOM.md) rev B) to the project
-      page — must list the UNO Q and Fusion
+- [ ] Publish the curated **Hardware Request BOM** from [the application checklist](../contest/HARDWARE_APPLICATION_CHECKLIST.md#4-bom-excerpt-for-the-project-page-agent) to the project page — must list the UNO Q and Fusion. Do not paste the master planning BOM or its received-research rows; see [BOM scope layers](BOM_SCOPE_LAYERS.md)
 - [ ] Answer all application-form questions; submit via "Apply for hardware"
       tab **no later than Sep 4** (3-day margin)
 - [x] Confirm on the live page whether the Sep 18 announcement date moved with
@@ -73,8 +72,7 @@ Goal: submit a strong free-hardware application (UNO Q 4G + $300 PCBWay + Fusion
 ## Phase 2 — Sep 25 → mid-Oct (parts + bring-up)
 
 Decision point Sep 25 (verified on the live page 2026-08-30; was Sep 18):
-- **Selected:** hardware + credit incoming; order [BOM](BOM.md) rev B items
-  2–3, 5–11, 13–17, 20–21 same week. Every ⚖ DECISION line must close first.
+- **Selected:** hardware + credit incoming; reconcile the [Contest Core scope](../contest/PLATYPUSONE_CORE_SCOPE.md) against the master [BOM](BOM.md), then order only selected Core items the same week. Received-research rows R1–R4 are excluded unless explicitly promoted. Every ⚖ DECISION line must close first.
 - **Not selected:** buy UNO Q retail (~$59) immediately; self-fund a reduced
   enclosure budget; scope unchanged otherwise.
 
