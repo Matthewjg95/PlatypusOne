@@ -53,9 +53,10 @@ Method and exit criteria:
 
 - [x] Define the evidence-gated Rev A → Rev B → Rev C development method
 - [x] Establish per-component dossier and inventory-to-repository workflow
-- [x] Create first received-component dossiers:
-      [MAX78002GXE+](hardware/components/MAX78002GXE_PLUS.md) and
-      [ADXL357BEZ](hardware/components/ADXL357BEZ.md)
+- [x] Create initial received-component dossiers:
+      [MAX78002GXE+](hardware/components/MAX78002GXE_PLUS.md),
+      [ADXL357BEZ](hardware/components/ADXL357BEZ.md), and
+      [LTC2949ILXE#3ZZPBF](hardware/components/LTC2949ILXE_3ZZPBF.md)
 - [ ] Reconcile the physical hardware inventory into dossiers and BOM acquisition states
 - [ ] Assign every candidate CORE / DE-RISK / RESEARCH / HOLD
 - [ ] Freeze bounded Rev-A job and functional block diagram
