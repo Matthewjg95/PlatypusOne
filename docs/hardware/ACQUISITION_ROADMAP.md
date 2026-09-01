@@ -21,6 +21,12 @@ gantt
     Carrier PCB spin 1 (PCBWay)   :2026-10-19, 14d
     Enclosure print (PCBWay)      :2026-10-26, 14d
     PCB/enclosure respin buffer   :2026-11-10, 14d
+    section DFM gates
+    DFM-0 architecture review     :crit, 2026-09-25, 8d
+    DFM-1 mechanical interfaces   :milestone, 2026-10-12, 0d
+    DFM-2 manufacturing release   :milestone, crit, 2026-10-18, 0d
+    DFM-3 first-article review    :2026-11-03, 5d
+    DFM-4 production readiness    :milestone, crit, 2026-11-23, 0d
     section Software
     Display+camera+IMU drivers    :2026-09-01, 45d
     ShadowScan + measurement apps :2026-10-15, 40d
@@ -29,6 +35,25 @@ gantt
     Video, photos, writeup        :2026-12-01, 15d
     Submit (buffer before deadline):crit, 2026-12-16, 4d
 ```
+
+## DFM gates — evidence required to advance
+
+These are schedule gates, not advisory reviews. A gate closes only when its
+artifacts are committed or linked from the repository. An unresolved
+critical-to-function item blocks the associated PCB/enclosure release.
+
+| Gate | Window | Exit evidence |
+|---|---|---|
+| **DFM-0 — architecture** | Sep 25–Oct 2 | Selected processes and suppliers; PCB stack-up/assembly class; enclosure process; standard fasteners/connectors; optical, RF, thermal, battery-service, and cable-access constraints; costly/manual operations identified |
+| **DFM-1 — mechanical interfaces** | Close by Oct 12 | Board/enclosure datums; connector reach and strain relief; camera/ToF/illumination optical axes and keep-outs; antenna RF window; tolerance stack; thermal path; programming, test-point, and assembly-tool access |
+| **DFM-2 — manufacturing release** | Close Oct 16–18, before the Oct 19 order | Fusion Electronics DRC; footprint and pin-1 audit; fab-rule, annular-ring, solder-mask, paste, pick-and-place, assembly-side, and BOM-availability checks; enclosure wall/minimum-feature/tool-radius/support review; fabrication drawing and export/re-import check; PCBWay manufacturability/quote review |
+| **DFM-3 — first article** | Nov 3–7, before the Nov 10 respin gate | Critical dimensions measured against drawing; assembly sequence/time; connector strain; sensor alignment; thermal and power checks; test access; fit and serviceability review; defect, bodge, and rework log with Rev-B disposition |
+| **DFM-4 — production readiness** | Close Nov 20–23, before hardware freeze | As-built BOM and drawings reconciled; assembly/calibration/inspection instructions; torque/adhesive/fastener controls; risky manual operations identified; 750-unit scaling and cost review; no unresolved critical manufacturing issue |
+
+For the contest narrative, preserve Fusion interference screenshots, tolerance
+callouts, manufacturing exports, first-article photographs and measurements,
+and the issue-to-correction trail. DFM is both risk control and visible evidence
+that PlatypusOne was engineered for manufacture.
 
 ## Phase 0 — NOW → Sep 7 (hardware application) 🔴 critical path
 
@@ -79,17 +104,23 @@ Decision point Sep 25 (verified on the live page 2026-08-30; was Sep 18):
 - [ ] Execute [test checklists](TEST_CHECKLISTS.md) 1–2 (boot, PlatypusOS, MCU bridge)
 - [ ] Checklists 3–7 as parts land (display, camera, sensors, power, audio)
 - [ ] Breadboard-validate every sensor **before** freezing the carrier PCB
+- [ ] Close **DFM-0** by Oct 2 and **DFM-1** by Oct 12; unresolved critical
+      interface or manufacturing assumptions remain release blockers
+- [ ] Close **DFM-2** by Oct 18 before authorizing the Oct 19 fabrication order
 
 ## Phase 3 — mid-Oct → mid-Nov (PCBWay + integration)
 
 - [ ] Order carrier PCB spin 1 + enclosure from PCBWay (~2-week turn incl. shipping)
 - [ ] Checklist 8–9 on arrival; log defects
+- [ ] Execute **DFM-3 first-article review Nov 3–7** and feed every material
+      defect, bodge, fit issue, or assembly burden into the Nov 10 respin decision
 - [ ] **Respin decision gate: Nov 10** — last date a second PCB/enclosure
       order safely lands before the freeze
 - [ ] Apps: ShadowScan capture→mesh→export path; measurement app calibrated
 
 ## Phase 4 — mid-Nov → Dec 20 (freeze, document, submit)
 
+- [ ] Close **DFM-4 production-readiness review by Nov 23**
 - [ ] **Hardware freeze Nov 24** — after this, software and documentation only
 - [ ] Checklist 10 integration soak; capture accuracy metrics
 - [ ] Shoot submission video + photos (device in action, in hand)
