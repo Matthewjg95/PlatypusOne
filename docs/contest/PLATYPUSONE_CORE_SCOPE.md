@@ -58,7 +58,7 @@ It captures a physical object or condition, combines multiple observations when 
 
 The contest device should demonstrate the loop:
 
-**physical target → intentional capture → sensor evidence → engineering interpretation → uncertainty/provenance → saved artifact**
+**physical target → intentional capture → sensor evidence → engineering interpretation → uncertainty/provenance → reviewed artifact → Autodesk Fusion handoff**
 
 This is the defining differentiator from a traditional digital multi-tool.
 
@@ -72,7 +72,8 @@ A user should be able to:
 4. obtain at least one defensible measurement or derived property;
 5. receive a clearly labeled interpretation with confidence/uncertainty;
 6. save the result as a structured Engineering Observation;
-7. reopen/export that observation for later engineering work.
+7. reopen/export that observation for later engineering work;
+8. send reviewed, unit-aware measurements into a parameterized Autodesk Fusion design.
 
 If the December prototype does this convincingly, the PlatypusOne concept is proven.
 
@@ -87,10 +88,10 @@ These are **functional roles**, not locked part numbers. Current BOM candidates 
 | Role | Why it is Core | Current path |
 |---|---|---|
 | **Arduino UNO Q** | Contest platform + local compute + deterministic I/O split | Required contest hardware |
-| **Display** | Review observations/results at point of work | 4.3–5 in DSI target |
+| **Display** | Review observations/results at point of work | Selected 5 in DSI touch target + UNO Media Carrier |
 | **Primary physical input** | Gloves/field-friendly deliberate capture and navigation | Trigger + encoder/buttons |
 | **Camera** | Imperfect real-world visual input; foundation for Engineering Scout / future ShadowScan | UVC autofocus candidate |
-| **Distance/depth reference** | Adds an independent physical measurement channel and scale/context | Single-zone ToF initially |
+| **Distance/depth reference** | Adds spatial depth context, target/background separation, and an independent camera-geometry cross-check | VL53L8CX-class 8×8 multizone ToF preferred; VL53L1X retained as fallback |
 | **Orientation sensing** | Captures pose/gravity/reference-frame context | IMU |
 | **Controlled illumination** | Improves repeatability and turns lighting into part of the measurement system | High-CRI LED(s) + driver |
 | **Local storage** | Makes observations persistent and reproducible | microSD / local filesystem |
@@ -108,7 +109,6 @@ The existence of a BOM line does not make the feature mandatory for December.
 - audio interaction
 - modular detachable scout camera
 - additional RF hardware
-- multi-zone depth arrays
 - custom actuator/mechanical probes
 - environmental sensors
 - external accessory ecosystem
@@ -152,12 +152,21 @@ The software must prove a **measurement-to-artifact pipeline**, not merely a lau
    - unresolved fields
    - recommended next observation when appropriate
 
-6. **Persistence/export**
-   - JSON as canonical machine-readable record
-   - referenced image(s)
-   - optional CSV/report view where useful
+6. **Persistence and CAD-neutral export**
+   - JSON as the canonical machine-readable Engineering Observation
+   - referenced image(s), calibration evidence, units, coordinate frame, and uncertainty
+   - adapter-ready measurement/geometry package without CAD-vendor assumptions
 
-7. **Repeatable validation**
+7. **Autodesk Fusion contest handoff**
+   - require user review before measurements drive CAD
+   - export named, unit-aware parameters from the canonical observation
+   - import/update a prepared Fusion design through Parameter I/O or a bounded Fusion add-in
+   - retain source-observation identity and confidence in the handoff
+   - follow [CAD Handoff Architecture](../architecture/CAD_HANDOFF.md)
+
+8. **Repeatable validation**
+
+8. **Repeatable validation**
    - known targets
    - measured error
    - failure cases
@@ -180,8 +189,10 @@ A judge watches one uninterrupted sequence:
 5. It derives or infers useful engineering information.
 6. The UI explicitly distinguishes **OBSERVED / MEASURED / DERIVED / INFERRED / UNRESOLVED**.
 7. If evidence is insufficient, PlatypusOne asks for a useful next observation rather than fabricating certainty.
-8. The result is stored as a reusable Engineering Observation.
-9. A second screen/export demonstrates that this is an engineering artifact, not a transient answer.
+8. The result is stored as a reusable, CAD-neutral Engineering Observation.
+9. The user confirms which measurements may drive CAD.
+10. A Fusion adapter imports the reviewed values into named parameters in a prepared Autodesk Fusion design.
+11. The model updates, while the source image, units, uncertainty, and observation identity remain traceable.
 
 ### Stronger target
 
@@ -230,12 +241,12 @@ This makes the device visibly multi-capability while keeping the software story 
 - haptics beyond basic feedback
 - advanced local AI models
 - autonomous follow-up capture
-- deep Fusion API automation
+- generalized CAD automation beyond the bounded Fusion parameter handoff
 - swappable sensor cartridges
 
 ### FULL PRODUCT — roadmap, not contest obligation
 
-The long-term PlatypusOne can become a general physical-engineering interface spanning measurement, inspection, geometry recovery, RF characterization, documentation, CAD handoff, maintenance, and modular sensing.
+The long-term PlatypusOne can become a general physical-engineering interface spanning measurement, inspection, geometry recovery, RF characterization, documentation, CAD handoff, maintenance, and modular sensing. Its canonical observation stays CAD-program agnostic; selectable adapters translate reviewed evidence into Fusion, FreeCAD, neutral formats, or future CAD targets.
 
 The contest prototype is **evidence that this platform should exist**, not an obligation to ship the entire platform in December.
 
@@ -306,7 +317,7 @@ The existing BOM is already close to the Core envelope, but this scope document 
 - DSI display
 - encoder/buttons/trigger
 - autofocus camera
-- ToF
+- VL53L8CX-class 8×8 multizone ToF (VL53L1X fallback)
 - IMU
 - high-CRI illumination
 - battery/power
@@ -372,7 +383,8 @@ PlatypusOne Core is contest-ready when:
 - [ ] Vision is integrated as an engineering input, not a camera demo.
 - [ ] At least one non-vision physical measurement is integrated into the observation pipeline.
 - [ ] The UI distinguishes evidence, derivation, inference, and uncertainty.
-- [ ] Observations persist as reusable artifacts.
+- [ ] Observations persist as reusable, CAD-neutral artifacts.
+- [ ] A reviewed observation updates named parameters in an Autodesk Fusion design with units and traceability preserved.
 - [ ] Validation quantifies at least one meaningful performance metric.
 - [ ] Failure behavior is demonstrated honestly.
 - [ ] Assembly is clean enough to communicate a plausible ~750-unit product path.
@@ -385,4 +397,4 @@ At that point, **stop adding features and submit**.
 
 ## One-line scope lock
 
-> **PlatypusOne Core is a manufacturable handheld that turns imperfect physical observations into measured, uncertainty-aware, reusable engineering records; everything beyond proving that loop is stretch.**
+> **PlatypusOne Core is a manufacturable handheld that turns imperfect physical observations into measured, uncertainty-aware engineering records and drives a traceable Autodesk Fusion handoff; the underlying record remains CAD-neutral for the post-contest platform.**
