@@ -1,6 +1,6 @@
 # Platypus One — Bill of Materials (rev B, planning — merged)
 
-Status date: **2026-08-25**. Merges the original planning BOM with the
+Status date: **2026-09-01**. Merges the original planning BOM with the
 envelope BOM from `industrial_design/bounding_boxes/BOM_v0_1.md` (which stays
 as the packaging-envelope tracker). **Alternates are kept deliberately** —
 selection analysis is pending; do not delete an option without a decision
@@ -15,6 +15,16 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 | 1 | **Arduino UNO Q (4G)** ✦ | 1 | $59 (or free) | 68.58×53.34 board outline; 3D clearance TBD from official STEP | Contest hw / store.arduino.cc | Required by contest. Hardware recipients announced Sep 18 | PLANNED |
 | 2 | microSD 32 GB A1 | 1 | $12 | — | Amazon/DigiKey | OS + data partition | PLANNED |
 | 3 | USB-C PD supply 5V/3A + cable | 1 | $15 | — | Amazon | Bench power | PLANNED |
+
+## Received research components
+
+These parts are catalogued without forcing them into the bounded Rev-A carrier. Apply
+the [carrier-board development method](CARRIER_BOARD_DEVELOPMENT_METHOD.md) and close
+each component dossier before any schematic commitment.
+
+| # | Item | Qty | Role | Notes | ACQ |
+|---|---|---|---|---|---|
+| R1 | **MAX78002GXE+** | TBD | RESEARCH — possible V2 low-power vision/inference module | Bare 144-CSBGA; professional assembly and multi-rail/reference-design study required. Keep sealed until ESD/MSL-controlled handling and assembly plan exist. [Dossier](components/MAX78002GXE_PLUS.md) | RECEIVED |
 
 ## Display — **DECIDED: 4a (DSI)** per [ADR-0002](../adr/0002-dsi-production-display.md); analysis in [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md)
 
@@ -65,7 +75,7 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 
 | # | Item | Qty | Est. | Source | Notes | ACQ |
 |---|---|---|---|---|---|---|
-| 18 | Carrier/breakout PCB (I²C hub, buttons, encoder, power) | 1 | ~$60 asm | **PCBWay** | Fusion Electronics design; freeze gate Nov 10 | PLANNED |
+| 18 | Carrier/breakout PCB (I²C hub, buttons, encoder, power) | 1 | ~$60 asm | **PCBWay** | Follow the [Rev-A methodology](CARRIER_BOARD_DEVELOPMENT_METHOD.md); observability/recoverability first; freeze gate Nov 10 | PLANNED |
 | 19 | Enclosure: CNC alu barrel + printed polymer grip (hybrid per [INDUSTRIAL_DESIGN.md](INDUSTRIAL_DESIGN.md)) | 1 set | ~$120–250 | **PCBWay** | Metal barrel likely $150–250 alone — quote early; RF window required | PLANNED |
 | 20 | JST-SH/Qwiic cables, headers, M2/M2.5 standoffs kit | — | $15 | Adafruit/Amazon | | PLANNED |
 | 21 | Hookup wire, heat-shrink | — | $10 | Amazon | | PLANNED |
