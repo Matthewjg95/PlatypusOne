@@ -103,7 +103,7 @@ Paste this condensed table. This table is the authoritative **Hardware Request B
 | Item | Qty | Est. | Notes |
 |---|---|---|---|
 | **Arduino UNO Q (4G RAM)** | 1 | $59 | QRB2210 Linux MPU + STM32U585 real-time core |
-| **Autodesk Fusion (+ Electronics)** | 1 | Free / contest licence | Enclosure, carrier PCB, schematics |
+| **Autodesk Fusion (+ Electronics)** | 1 | Free / contest licence | Enclosure, carrier PCB, schematics, and measurement-to-parameter handoff |
 | **5" DSI capacitive-touch display + UNO Media Carrier** | 1 set | ~$55–60 | Larger display direction selected from the Fusion model; final sourcing/bench proof remains open |
 | Rotary encoder, EC11-style push | 1 | $3 | Primary navigation control |
 | Camera module, autofocus (USB UVC) | 1 | $25 | ShadowScan capture + documentation |
