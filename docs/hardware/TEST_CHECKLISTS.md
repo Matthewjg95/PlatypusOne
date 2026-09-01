@@ -8,7 +8,11 @@ photos feed the 20-point documentation score.
 ## 0. Bench safety / prerequisites
 
 - [ ] Multimeter available and battery-checked
-- [ ] Anti-static precautions (touch ground before handling boards)
+- [ ] ESD-sensitive work is performed on a grounded static-dissipative mat with
+      a verified wrist strap/common-point ground; follow
+      [Carrier Board Development Methodology](CARRIER_BOARD_DEVELOPMENT_METHOD.md)
+- [ ] Loose ICs remain in shielding/dry packaging until the controlled bench and
+      assembly window are ready; record MSL opening time where applicable
 - [ ] USB-C supply verified 5.0–5.2 V open-circuit before first connection
 - [ ] LiPo visually inspected (no puffing/damage); never charge unattended
 
