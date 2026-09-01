@@ -3,7 +3,9 @@
 Status: **Proposed**
 Owner: Matthew Garza
 Applies to: PlatypusOne carrier-board experiments and revisions
-First tracked component: [MAX78002GXE+](components/MAX78002GXE_PLUS.md)
+Initial tracked components: [MAX78002GXE+](components/MAX78002GXE_PLUS.md),
+[ADXL357BEZ](components/ADXL357BEZ.md), and
+[LTC2949ILXE#3ZZPBF](components/LTC2949ILXE_3ZZPBF.md)
 
 ## Purpose
 
