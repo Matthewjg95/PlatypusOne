@@ -39,7 +39,7 @@ project** plus form answers. The project page must contain:
 | Requirement | Status | Owner |
 |---|---|---|
 | Beginning of the BOM, **including the UNO Q and Autodesk Fusion** | Ready to paste — §4 | [agent] prepared / [owner] pastes |
-| **Fusion design/dataset (.f3d)** — first pass, not final | **NOT STARTED — the critical path** | [owner] |
+| **Fusion design/dataset (.f3d)** — first pass, not final | **IN PROGRESS — current handheld model establishes the larger display envelope** | [owner] |
 | Project name, description, cover image | Draft ready — §3 | [owner] finalizes |
 | Answers to all form questions | Drafts ready — §5 | [owner] edits and submits |
 | Written in English | ✔ | — |
@@ -58,7 +58,7 @@ inspects, and documents, where every capability is an app.
 > extensible operating environment where scanning, measuring, inspecting, and
 > documenting are separate apps sharing one set of sensors. Point it at a part
 > to capture geometry, measure it, check it against what it should be, and
-> write the result into a project file — in the field, offline, in one hand.
+> write a reviewed, Fusion-ready engineering record — in the field, offline, in one hand.
 
 **Longer story beats** (expand these on the page; documentation is 20 of 100
 points and the story is what carries them):
@@ -67,8 +67,8 @@ points and the story is what carries them):
    calipers, a phone camera, a notebook, and a laptop. The measurements end up
    in four places and get retyped.
 2. **The idea.** One handheld where the *job* is what you select, not the
-   sensor. "Reverse engineer this part" recruits camera, depth, IMU, and
-   geometry services together — see
+   sensor. "Reverse engineer this part" recruits camera, multizone depth, IMU, and
+   geometry services together, then sends reviewed measurements into Fusion — see
    [engineering utilities](../roadmap/ENGINEERING_UTILITIES.md).
 3. **Why the UNO Q specifically.** The dual-brain layout is the product, not a
    convenience: the QRB2210 Linux MPU runs vision, inference, and project
@@ -80,12 +80,12 @@ points and the story is what carries them):
    a flashlight or multimeter. See
    [industrial design](../hardware/INDUSTRIAL_DESIGN.md).
 5. **Fusion's role.** Enclosure (hybrid CNC-aluminium barrel + polymer grip)
-   and the carrier PCB schematic both live in Fusion — the barrel doubles as
-   the SoC heatsink, with a deliberate plastic RF window for the onboard
-   antenna.
+   and the carrier PCB schematic both live in Fusion. The contest workflow also
+   exports reviewed engineering measurements into a parameterized Fusion design;
+   Fusion is part of what the device produces, not only how its enclosure is made.
 6. **Honest engineering.** The software builds and runs on a workstation with
    no hardware attached, so progress never blocked on parts. Decisions —
-   including deliberately *not* freezing the display yet — are recorded as ADRs
+   including the selected larger DSI display direction — are recorded as ADRs
    in the repository.
 
 **Cover image [owner]:** ⚠️ Use an original render or photo — your own Fusion
@@ -104,10 +104,10 @@ Paste this condensed table. This table is the authoritative **Hardware Request B
 |---|---|---|---|
 | **Arduino UNO Q (4G RAM)** | 1 | $59 | QRB2210 Linux MPU + STM32U585 real-time core |
 | **Autodesk Fusion (+ Electronics)** | 1 | Free / contest licence | Enclosure, carrier PCB, schematics |
-| Display, 3.2"–4.3" touch panel | 1 | $16–TBD | Final panel deliberately not frozen; prototyping on a linked external display |
+| **5" DSI capacitive-touch display + UNO Media Carrier** | 1 set | ~$55–60 | Larger display direction selected from the Fusion model; final sourcing/bench proof remains open |
 | Rotary encoder, EC11-style push | 1 | $3 | Primary navigation control |
 | Camera module, autofocus (USB UVC) | 1 | $25 | ShadowScan capture + documentation |
-| Time-of-flight distance sensor | 1 | $12 | Distance / level measurement |
+| **VL53L8CX-class 8×8 multizone ToF module** | 1 | ~$20 | 64-zone coarse depth, target/background separation, and camera-geometry cross-check |
 | IMU, 9-DoF | 1 | $25 | Angle measurement, scan orientation |
 | Colour sensor (TCS34725) | 1 | $8 | Colour measurement |
 | High-CRI LED + driver | 2 | $2 | Controlled illumination for ShadowScan |
@@ -132,8 +132,8 @@ on the page. These cover what such applications typically ask.
 > A handheld engineering multi-tool — Platypus One — running PlatypusOS, an
 > extensible embedded OS where every capability (3D capture, measurement,
 > inspection, documentation) is a separate app on shared hardware. It captures
-> geometry and measurements from real parts in the field and files them into
-> project records, offline.
+> geometry and measurements from real parts in the field, preserves uncertainty,
+> and exports reviewed parameters into an Autodesk Fusion design.
 
 **Why the Arduino UNO Q?**
 > The product needs both soft real-time perception and hard real-time sensing.
@@ -152,9 +152,10 @@ on the page. These cover what such applications typically ask.
 
 **How will you use Autodesk Fusion?**
 > Enclosure design and the carrier PCB, both in Fusion (Fusion Electronics for
-> the schematic and layout). The mechanical design is a hybrid: a CNC-aluminium
-> barrel around the camera and screen that doubles as the SoC heatsink, and a
-> printed polymer pistol grip that keeps the Wi-Fi antenna clear of metal.
+> the schematic and layout), plus a contest workflow that maps reviewed,
+> unit-aware Engineering Observations into named parameters in a Fusion design.
+> The canonical observation remains CAD-neutral so later adapters can target
+> other CAD programs without changing the sensor or evidence model.
 
 **What will you do with the PCBWay credit?**
 > One carrier PCB spin (sensor I²C hub, buttons, encoder, power routing) and the
@@ -177,9 +178,9 @@ Minimum for the application:
 - [ ] UNO Q placed from the **official Arduino STEP model** (board outline
       68.58 × 53.34 mm per the mechanical drawing; do not derive a 3D
       clearance from the 2D outline — take it from the STEP)
-- [ ] Display placeholder — model the **aperture and envelope**, not a specific
-      panel (the panel is deliberately undecided; use the 165 × 100 × 8 mm
-      packaging envelope as the upper bound and note it as TBD)
+- [ ] Selected **5-inch DSI touch-display envelope + UNO Media Carrier** represented
+      in the assembly; use the current Fusion-model envelope until the final panel
+      CAD/STEP and bench proof close the remaining sourcing risk
 - [ ] Fat pistol grip body, left-hand orientation
 - [ ] Camera at the barrel, forward-facing along the pointing axis
 - [ ] Rotary encoder at the thumb (24 × 24 × 30 mm)
