@@ -1,6 +1,6 @@
 # Platypus One — Bill of Materials (rev B, planning — merged)
 
-Status date: **2026-09-01**. Merges the original planning BOM with the
+Status date: **2026-09-01**. This is the **master planning and inventory superset**, not the frozen hardware-request BOM or the bounded Contest Core build. See [Hardware BOM Scope Layers](BOM_SCOPE_LAYERS.md). It merges the original planning BOM with the
 envelope BOM from `industrial_design/bounding_boxes/BOM_v0_1.md` (which stays
 as the packaging-envelope tracker). **Alternates are kept deliberately** —
 selection analysis is pending; do not delete an option without a decision
@@ -27,6 +27,7 @@ each component dossier before any schematic commitment.
 | R1 | **MAX78002GXE+** | 2 | RESEARCH — possible V2 low-power vision/inference module | Bare 144-CSBGA; professional assembly and multi-rail/reference-design study required. Keep sealed until ESD/MSL-controlled handling and assembly plan exist. [Dossier](components/MAX78002GXE_PLUS.md) | RECEIVED |
 | R2 | **ADXL357BEZ** | 2 | DE-RISK — precision vibration/tilt module for electromechanical diagnostics | 20-bit digital 3-axis MEMS accelerometer. Prefer a small stiff daughterboard; does not replace a gyro/fusion IMU. [Dossier](components/ADXL357BEZ.md) | RECEIVED |
 | R3 | **LTC2949ILXE#3ZZPBF** | 2 | DE-RISK — switched power-characterization pod; future robot/high-power monitor | Precision dual-channel current plus voltage/power/charge/energy monitor. Not the always-on 1S handheld gauge: 4.5–14 V supply and ~16–20 mA measuring current. [Dossier](components/LTC2949ILXE_3ZZPBF.md) | RECEIVED |
+| R4 | **ADM2587EBRWZ** | 2 | RESEARCH / DE-RISK — isolated industrial RS-485 daughterboard | Integrated signal + power isolation, 500 kbps, wide-body SOIC. Keep off the Contest Core carrier; reference-layout EMI/isolation work and a two-node link test come first. [Dossier](components/ADM2587EBRWZ.md) | RECEIVED |
 
 ## Display — **DECIDED: 4a (DSI)** per [ADR-0002](../adr/0002-dsi-production-display.md); analysis in [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md)
 
