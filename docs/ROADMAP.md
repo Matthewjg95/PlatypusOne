@@ -46,6 +46,27 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 - [ ] `infra/test-framework` — vendor Catch2 into third_party
 - [ ] `infra/format` — commit .clang-format + ruff config, enforce in CI
 
+## M1H — Carrier Board Rev-A Methodology
+
+Method and exit criteria:
+[hardware/CARRIER_BOARD_DEVELOPMENT_METHOD.md](hardware/CARRIER_BOARD_DEVELOPMENT_METHOD.md).
+
+- [x] Define the evidence-gated Rev A → Rev B → Rev C development method
+- [x] Establish per-component dossier and inventory-to-repository workflow
+- [x] Create first dossier:
+      [MAX78002GXE+](hardware/components/MAX78002GXE_PLUS.md)
+- [ ] Reconcile the physical hardware inventory into dossiers and BOM acquisition states
+- [ ] Assign every candidate CORE / DE-RISK / RESEARCH / HOLD
+- [ ] Freeze bounded Rev-A job and functional block diagram
+- [ ] Close interface budget and power tree
+- [ ] Complete schematic, pre-layout, DFM, and assembly reviews
+- [ ] Commit bring-up procedure and acceptance limits before fabrication release
+- [ ] Characterize Rev A and derive the Rev-B change list from measured evidence
+
+This milestone does not place every received sample on Rev A. In particular, the bare
+MAX78002GXE+ remains a V2 research candidate until an evaluation-platform experiment
+and professional BGA assembly review justify integration.
+
 ## M2 — Runtime maturity
 
 - [ ] `renderer/font-atlas` — real bitmap font, text metrics, scaling
