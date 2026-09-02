@@ -26,7 +26,11 @@ class FakeCamera final : public ICamera {
         bool failCapture = false;
     };
 
-    explicit FakeCamera(Behavior behavior = {}) : behavior_(behavior) {}
+    // Delegating rather than a `= {}` default argument: GCC cannot evaluate a
+    // nested aggregate's default member initializers in a default argument
+    // inside the enclosing class (same finding as UnoQBoard::Config).
+    FakeCamera() : FakeCamera(Behavior{}) {}
+    explicit FakeCamera(Behavior behavior) : behavior_(behavior) {}
 
     [[nodiscard]] std::vector<CameraMode> supportedModes() const override { return {kFixtureMode}; }
 
