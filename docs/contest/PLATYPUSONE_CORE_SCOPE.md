@@ -329,7 +329,7 @@ The existing BOM is already close to the Core envelope, but this scope document 
 - vibration motor — optional polish.
 - speaker/audio — optional unless a concrete workflow proves it necessary.
 
-Received research components—including [redacted-research-part], [redacted-research-part], [redacted-research-part], and [redacted-research-part]—remain outside Core unless explicitly promoted through §11.
+Received research components (catalogued in the private planning overlay) remain outside Core unless explicitly promoted through §11.
 
 This prevents a BOM from silently becoming a requirements document.
 

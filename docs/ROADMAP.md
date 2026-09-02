@@ -62,9 +62,9 @@ overlay until their components are promoted into Contest Core.
 - [ ] Commit bring-up procedure and acceptance limits before fabrication release
 - [ ] Characterize Rev A and derive the Rev-B change list from measured evidence
 
-This milestone does not place every received sample on Rev A. In particular, the bare
-[redacted-research-part] remains a V2 research candidate until an evaluation-platform experiment
-and professional BGA assembly review justify integration.
+This milestone does not place every received sample on Rev A: research
+candidates stay in the private planning overlay until an evaluation-platform
+experiment and assembly review justify integration.
 
 ## M2 — Runtime maturity
 
