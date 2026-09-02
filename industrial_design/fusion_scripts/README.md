@@ -1,5 +1,9 @@
 # Fusion 360 scripts
 
+> **Status: EXPERIMENT — do not merge.** This work lives only on the
+> `claude/platypus-one-fusion-0v6eiu` branch as a packaging study. Nothing on
+> `main` depends on it; deleting the branch discards it cleanly.
+
 Scripts that run inside Autodesk Fusion 360 against the Platypus One
 enclosure design. `.f3d` is a closed format, so geometry changes are
 delivered as Fusion API scripts you run with the design open, rather than
