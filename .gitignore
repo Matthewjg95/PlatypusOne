@@ -6,3 +6,14 @@ __pycache__/
 *.pyc
 .vscode/
 .idea/
+
+# Private planning overlay: post-contest / research material stays out of the
+# public repository until its components are promoted into Contest Core.
+# These files remain on local disks; see BOM.md's research-inventory note.
+docs/private/
+docs/hardware/components/
+docs/hardware/CARRIER_BOARD_DEVELOPMENT_METHOD.md
+docs/hardware/BOM_SCOPE_LAYERS.md
+docs/hardware/ENERGY_HARVESTING_SUBSYSTEM.md
+docs/roadmap/24GHZ_RADAR_EXTENSION.md
+docs/contest/ELEMENT14_PLATYPUSVISION_ROADTEST_APPLICATION.md

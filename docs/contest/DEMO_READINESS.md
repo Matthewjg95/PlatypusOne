@@ -56,10 +56,9 @@ risk. Everything else can only polish.
 
 ## 3. element14 RoadTest — PlatypusVision
 
-Application submitted 2026-08-30
-([record](ELEMENT14_PLATYPUSVISION_ROADTEST_APPLICATION.md)). Nothing to do
-until element14 responds; if selected, the RoadTest review is its own
-deliverable with its own timeline.
+Application submitted 2026-08-30 (record kept in the private planning
+overlay). Nothing to do until element14 responds; if selected, the RoadTest
+review is its own deliverable with its own timeline.
 
 ## 4. Renesas Robotics Design Contest — PlatypusTail (separate repo)
 
@@ -70,9 +69,9 @@ contest calendar is complete.
 
 ## 5. Deferred extensions (documented, no demo commitments)
 
-- [24 GHz radar](../roadmap/24GHZ_RADAR_EXTENSION.md) — deferred by design.
-- [Energy harvesting subsystem](../hardware/ENERGY_HARVESTING_SUBSYSTEM.md) —
-  architecture note only.
+- 24 GHz radar extension — deferred by design (private planning overlay).
+- Energy harvesting subsystem — architecture note only (private planning
+  overlay).
 
 ## Shared infrastructure both active demos ride on
 

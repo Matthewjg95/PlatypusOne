@@ -48,15 +48,12 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 
 ## M1H — Carrier Board Rev-A Methodology
 
-Method and exit criteria:
-[hardware/CARRIER_BOARD_DEVELOPMENT_METHOD.md](hardware/CARRIER_BOARD_DEVELOPMENT_METHOD.md).
+Method, exit criteria, and per-component dossiers live in the private planning
+overlay until their components are promoted into Contest Core.
 
 - [x] Define the evidence-gated Rev A → Rev B → Rev C development method
 - [x] Establish per-component dossier and inventory-to-repository workflow
-- [x] Create initial received-component dossiers:
-      [[redacted-research-part]](hardware/components/[redacted-research-part].md),
-      [[redacted-research-part]](hardware/components/[redacted-research-part].md), and
-      [[redacted-research-part]](hardware/components/[redacted-research-part].md)
+- [x] Create initial received-component dossiers (private planning overlay)
 - [ ] Reconcile the physical hardware inventory into dossiers and BOM acquisition states
 - [ ] Assign every candidate CORE / DE-RISK / RESEARCH / HOLD
 - [ ] Freeze bounded Rev-A job and functional block diagram

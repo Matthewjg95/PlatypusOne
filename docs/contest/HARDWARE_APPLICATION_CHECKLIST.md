@@ -96,7 +96,7 @@ platypus mascot is fine if it is your own.
 
 ## 4. BOM excerpt for the project page **[agent]**
 
-Paste this condensed table. This table is the authoritative **Hardware Request BOM**; it is deliberately curated from, but is not identical to, the master planning inventory in [docs/hardware/BOM.md](../hardware/BOM.md). See [Hardware BOM Scope Layers](../hardware/BOM_SCOPE_LAYERS.md). Both mandatory lines — the UNO Q and Autodesk Fusion — are present.
+Paste this condensed table. This table is the authoritative **Hardware Request BOM**; it is deliberately curated from, but is not identical to, the master planning inventory in [docs/hardware/BOM.md](../hardware/BOM.md) (scope layering is governed in the private planning overlay). Both mandatory lines — the UNO Q and Autodesk Fusion — are present.
 
 **Scope lock:** received research samples ([redacted-research-part], [redacted-research-part], [redacted-research-part], and [redacted-research-part]) are not being requested from the contest and do not alter this application BOM.
 

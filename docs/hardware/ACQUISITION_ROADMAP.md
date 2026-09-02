@@ -71,7 +71,7 @@ Goal: submit a strong free-hardware application (UNO Q 4G + $300 PCBWay + Fusion
       handheld enclosure around the UNO Q footprint and a **display envelope**
       — the panel is deliberately unfrozen per
       [ADR-0001](../adr/0001-dynamic-linked-prototype-display.md); export .f3d
-- [ ] Publish the curated **Hardware Request BOM** from [the application checklist](../contest/HARDWARE_APPLICATION_CHECKLIST.md#4-bom-excerpt-for-the-project-page-agent) to the project page — must list the UNO Q and Fusion. Do not paste the master planning BOM or its received-research rows; see [BOM scope layers](BOM_SCOPE_LAYERS.md)
+- [ ] Publish the curated **Hardware Request BOM** from [the application checklist](../contest/HARDWARE_APPLICATION_CHECKLIST.md#4-bom-excerpt-for-the-project-page-agent) to the project page — must list the UNO Q and Fusion. Do not paste the master planning BOM or any received-research inventory (scope layering is governed in the private planning overlay)
 - [ ] Answer all application-form questions; submit via "Apply for hardware"
       tab **no later than Sep 4** (3-day margin)
 - [x] Confirm on the live page whether the Sep 18 announcement date moved with

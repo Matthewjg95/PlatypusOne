@@ -65,8 +65,9 @@ see [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) and the
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, diagrams, rationale
 - [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) — C++/Python conventions
 - [docs/ROADMAP.md](docs/ROADMAP.md) — prioritized TODO roadmap
-- [docs/hardware/CARRIER_BOARD_DEVELOPMENT_METHOD.md](docs/hardware/CARRIER_BOARD_DEVELOPMENT_METHOD.md) — evidence-gated Rev-A carrier workflow and component dossier format
-- [docs/hardware/BOM_SCOPE_LAYERS.md](docs/hardware/BOM_SCOPE_LAYERS.md) — separates the hardware request, Contest Core build, and post-contest research BOM
+- Carrier-board methodology, BOM scope layering, and post-contest research
+  dossiers live in the private planning overlay until their components are
+  promoted into Contest Core
 - [docs/adr/](docs/adr/README.md) — architecture decision records
 - [docs/protocols/](docs/protocols/) — wire protocols (MCU bridge, presentation link)
 - Per-module headers carry interface documentation inline.

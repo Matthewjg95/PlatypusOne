@@ -3,7 +3,7 @@
 Status: **scope baseline**  
 Date: **2026-08-29**
 
-BOM relationship: this is the authoritative **Contest Core Build** scope. It is distinct from the application/request BOM and the post-contest research inventory; see [Hardware BOM Scope Layers](../hardware/BOM_SCOPE_LAYERS.md).
+BOM relationship: this is the authoritative **Contest Core Build** scope. It is distinct from the application/request BOM and the post-contest research inventory (scope layering is governed in the private planning overlay).
 
 ## Purpose
 
