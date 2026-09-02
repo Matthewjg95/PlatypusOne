@@ -5,12 +5,37 @@ current one passes. Record date/initials/notes inline (copy this file per unit
 if building more than one). Contest tie-in: photograph each stage — bring-up
 photos feed the 20-point documentation score.
 
+## First UNO Q session — status board
+
+The bring-up-brief sequence for the first physical session (UNO Q in hand,
+M5Stack Tab5 as the temporary linked display per
+[presentation.md](../protocols/presentation.md) and ADR-0001). Update the
+Status column as physical testing occurs: `UNTESTED`, `PASS`, `FAIL`, or
+`BLOCKED (reason)`. Nothing is claimed compiled or run on the UNO Q until it
+actually has.
+
+| # | Step | Detail | Status |
+|---|---|---|---|
+| 1 | Board/environment verification | Checklist §1 (boot, network, `uname -a`, storage) | UNTESTED |
+| 2 | Hello-world | Any trivial program compiles + runs on the Linux side | UNTESTED |
+| 3 | Linux-side Platypus executable | On-device native build: cmake + full `platypus_tests` + launcher headless (§2) | UNTESTED |
+| 4 | MCU ↔ Linux communication | Flash `firmware/mcu_bridge`; Ping/Pong + GPIO loopback over `/dev/ttyRPMSG0` (§2) | UNTESTED |
+| 5 | UNO Q ↔ Tab5 heartbeat | `LinkedDisplay` session: Hello/HelloReply + Ping/Pong over USB CDC | UNTESTED |
+| 6 | Tab5 input → UNO Q → response | Touch on Tab5 reaches the app via EventQueue; visible UI response tile returns | UNTESTED |
+| 7 | Camera capture | `engineering_scout_capture --device /dev/video0` produces a real observation (§4) | UNTESTED |
+| 8 | Scout pipeline on a real image | Analyzer + classifier over a physical fastener beside the 20 mm reference | UNTESTED |
+| 9 | Result on Tab5 | Scout result card rendered through `LinkedDisplay` on the Tab5 panel | UNTESTED |
+
+Session prerequisites: a USB serial path between the UNO Q and the Tab5
+(cable/role decision is open), the UNO Q Arduino core installed in
+arduino-cli for step 4, and the Tab5 display-client firmware for steps 5–9.
+
 ## 0. Bench safety / prerequisites
 
 - [ ] Multimeter available and battery-checked
 - [ ] ESD-sensitive work is performed on a grounded static-dissipative mat with
-      a verified wrist strap/common-point ground; follow
-      [Carrier Board Development Methodology](CARRIER_BOARD_DEVELOPMENT_METHOD.md)
+      a verified wrist strap/common-point ground (methodology in the private
+      planning overlay)
 - [ ] Loose ICs remain in shielding/dry packaging until the controlled bench and
       assembly window are ready; record MSL opening time where applicable
 - [ ] USB-C supply verified 5.0–5.2 V open-circuit before first connection
