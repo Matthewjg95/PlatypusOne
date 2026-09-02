@@ -34,10 +34,10 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 - [x] `board/mcu-bridge` — framing codec + Linux SerialMcuBridge driver;
       protocol spec in docs/protocols/mcu-bridge.md
 - [ ] `board/mcu-firmware` — STM32-side counterpart implementing the spec
-- [ ] `display/linked` — `LinkedDisplay` over the
-      [presentation link](protocols/presentation.md) + client firmware; the
-      prototype display path per ADR-0001. Its `appfw/event-queue` and
-      `renderer/dirty-rects` prerequisites are complete
+- [ ] `display/linked` — **host side done** (2026-09-02): `LinkedDisplay` +
+      POSIX serial transport, loopback-tested, injectable into `UnoQBoard`
+      via `--board unoq --display-link PATH`. Remaining: Tab5 client
+      firmware + physical session (status board step 5)
 - [ ] `display/driver` — integrated panel driver + touch. **Deferred** until a
       production panel is selected; do not start before ADR-0001 is superseded
 - [ ] `camera/libcamera` — libcamera/V4L2 backend for ICamera

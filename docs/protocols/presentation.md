@@ -287,9 +287,12 @@ transcripts that omit it are unreadable six weeks later.
 
 ## 11. Open items
 
-- [ ] Reference implementation: `LinkedDisplay` under `platform/display/src/linked/`,
-      plus a host-side loopback fake so the codec is testable with no hardware
-      (the [CODING_STANDARDS](../CODING_STANDARDS.md) testing rule).
+- [x] Reference implementation: `LinkedDisplay` under `platform/display/src/linked/`
+      (portable core + POSIX `SerialTransport`), proven by a scripted loopback
+      client in `tests/test_linked_display.cpp`: session negotiation, row-bounded
+      raw tiling, ack timeout/drop handling, input dispatch, encoder-to-button
+      translation, backlight capability gating. Host encoder is raw-only for
+      now — RLE16 lands with bench measurements.
 - [x] Shared framing codec header (`platypus/hal/link/Framing.hpp`), used
       verbatim by driver, client firmware, and unit tests — the pattern
       [mcu-bridge](mcu-bridge.md) already follows.

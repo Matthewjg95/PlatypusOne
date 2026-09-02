@@ -4,6 +4,7 @@ add_executable(platypus_tests
     test_app_registry.cpp
     test_event_queue.cpp
     test_fastener_classifier.cpp
+    test_linked_display.cpp
     test_mcu_framing.cpp
     test_observation.cpp
     test_presentation_framing.cpp
@@ -18,6 +19,7 @@ target_link_libraries(platypus_tests PRIVATE
     platypus::ai
     platypus::app_engineering_scout
     platypus::appfw
+    platypus::display_linked
     platypus::observation
     platypus::renderer
     platypus::scout_validation

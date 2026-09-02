@@ -18,24 +18,28 @@
 namespace platypus::unoq {
 
 class UnoQBoard final : public hal::IBoard {
-public:
+   public:
     struct Config {
         std::string mcuDevice = "/dev/ttyRPMSG0";
         std::filesystem::path dataRoot = "/var/lib/platypusos";
+        /// Injected by the composition root — a connected LinkedDisplay during
+        /// the ADR-0001 prototype phase, a panel driver later. The board does
+        /// not construct displays; it only exposes what it was given.
+        std::shared_ptr<hal::IDisplay> display;
     };
 
     explicit UnoQBoard(Config config = {});
 
     [[nodiscard]] std::string_view id() const noexcept override { return "arduino-uno-q-r1"; }
 
-    std::shared_ptr<hal::IDisplay>     display() override { return nullptr; }
-    std::shared_ptr<hal::ICamera>      camera() override { return nullptr; }
-    std::shared_ptr<hal::ISensorHub>   sensors() override { return nullptr; }
+    std::shared_ptr<hal::IDisplay> display() override { return config_.display; }
+    std::shared_ptr<hal::ICamera> camera() override { return nullptr; }
+    std::shared_ptr<hal::ISensorHub> sensors() override { return nullptr; }
     std::shared_ptr<hal::IAudioOutput> audio() override { return nullptr; }
-    std::shared_ptr<hal::IStorage>     storage() override { return storage_; }
-    std::shared_ptr<hal::IMcuBridge>   mcuBridge() override;
+    std::shared_ptr<hal::IStorage> storage() override { return storage_; }
+    std::shared_ptr<hal::IMcuBridge> mcuBridge() override;
 
-private:
+   private:
     Config config_;
     std::shared_ptr<hal::IStorage> storage_;
     std::shared_ptr<SerialMcuBridge> bridge_;  ///< lazily opened on first access

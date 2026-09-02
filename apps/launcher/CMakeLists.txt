@@ -14,4 +14,11 @@ target_link_libraries(platypus_launcher PRIVATE
     platypus::sensors
     platypus::audio)
 
+if(UNIX)
+    # UNO Q composition path: --board unoq with an optional linked display.
+    target_link_libraries(platypus_launcher PRIVATE
+        platypus::board_unoq
+        platypus::display_linked)
+endif()
+
 platypus_set_warnings(platypus_launcher)
