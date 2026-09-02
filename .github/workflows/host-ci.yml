@@ -81,3 +81,31 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+
+  linux-gcc:
+    # The UNO Q runs Debian: this job is the closest CI stand-in for the
+    # target, and the only build that compiles the UNIX-only code at all
+    # (V4l2Camera, UnoQBoard/SerialMcuBridge, POSIX transports).
+    name: Linux / GCC
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure host build
+        run: >
+          cmake
+          -S .
+          -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DPLATYPUS_TARGET_HOST=ON
+          -DPLATYPUS_BUILD_APPS=ON
+          -DPLATYPUS_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
