@@ -28,9 +28,12 @@ class UnoQBoard final : public hal::IBoard {
         std::shared_ptr<hal::IDisplay> display;
     };
 
-    // Config() spelled out: GCC rejects a brace-init default argument for an
-    // aggregate whose NSDMIs it is still parsing; MSVC accepts it.
-    explicit UnoQBoard(Config config = Config());
+    // No default argument: GCC cannot evaluate Config's default member
+    // initializers inside the enclosing class, so the no-config form is a
+    // delegating constructor defined in the .cpp (MSVC accepted `= {}`, the
+    // target's GCC does not — first catch of the Linux CI job).
+    UnoQBoard();
+    explicit UnoQBoard(Config config);
 
     [[nodiscard]] std::string_view id() const noexcept override { return "arduino-uno-q-r1"; }
 

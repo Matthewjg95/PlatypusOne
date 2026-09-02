@@ -31,6 +31,8 @@ private:
 
 }  // namespace
 
+UnoQBoard::UnoQBoard() : UnoQBoard(Config{}) {}
+
 UnoQBoard::UnoQBoard(Config config)
     : config_(std::move(config)),
       storage_(std::make_shared<PartitionStorage>(config_.dataRoot)) {}
