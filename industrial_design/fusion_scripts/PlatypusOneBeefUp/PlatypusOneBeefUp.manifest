@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "PlatypusOne",
+    "description": {
+        "": "Adds grip, sensor head, packaging envelopes and controls to the Platypus One enclosure as named placeholder components."
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
