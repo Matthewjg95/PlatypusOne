@@ -12,7 +12,7 @@
 #include <platypus/observation/CaptureService.hpp>
 
 #ifdef __linux__
-#include "V4l2Camera.hpp"
+#include "v4l2/V4l2Camera.hpp"
 #endif
 
 #include <cstdio>

@@ -5,7 +5,7 @@ namespace platypus::unoq {
 namespace {
 
 class PartitionStorage final : public hal::IStorage {
-public:
+   public:
     explicit PartitionStorage(std::filesystem::path root) : root_(std::move(root)) {
         std::error_code ec;
         std::filesystem::create_directories(root_, ec);
@@ -25,7 +25,7 @@ public:
     }
     bool isRemovable() const noexcept override { return false; }
 
-private:
+   private:
     std::filesystem::path root_;
 };
 
@@ -34,8 +34,7 @@ private:
 UnoQBoard::UnoQBoard() : UnoQBoard(Config{}) {}
 
 UnoQBoard::UnoQBoard(Config config)
-    : config_(std::move(config)),
-      storage_(std::make_shared<PartitionStorage>(config_.dataRoot)) {}
+    : config_(std::move(config)), storage_(std::make_shared<PartitionStorage>(config_.dataRoot)) {}
 
 std::shared_ptr<hal::IMcuBridge> UnoQBoard::mcuBridge() {
     if (!bridge_) {
