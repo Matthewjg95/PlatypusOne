@@ -11,7 +11,7 @@ if this file disagrees with the code, the code wins and this file is stale.
 |---|---|
 | **Deadline in focus** | Hackster hardware application, **Sep 7, 2026** (extended from Aug 23) — target submit **Sep 4** |
 | **Critical path** | The Fusion `.f3d` first pass. Owner-only work; nothing else in the application is blocked |
-| **Hardware in hand** | M5Stack Tab5 (prototype display fixture). No UNO Q, no sensors |
+| **Hardware in hand** | **Arduino UNO Q** and M5Stack Tab5 (temporary linked display per ADR-0001). No sensors yet. First physical session runs the [status board](docs/hardware/TEST_CHECKLISTS.md#first-uno-q-session--status-board) |
 | **Software state** | Builds and runs host-side; no hardware drivers exercised. Engineering Observation contract v0.1 merged (PR #10, review-corrected): `services/observation` with JSON round-trip + contract validation, GCC-12-safe |
 | **Display** | **Conditional:** MIPI-DSI via UNO Media Carrier + Waveshare 5-DSI-TOUCH-A; hardware proof pending — [candidate research](docs/hardware/DSI_PANEL_CANDIDATES.md). Geometry remains runtime-dynamic per [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) |
 
@@ -108,6 +108,8 @@ commit message. Current such changes:
 | `services/ai` FastenerClassifier + vision hole counting | Classification + nominal matching | ✅ **Verified 2026-08-30** locally: all 10 suites pass — M12 rod and M6 nut classified with correct nominals, off-table and holeless cases honestly unknown/unmatched, inferred claims satisfy the contract's confidence/provenance/method rules, JSON round-trips |
 | 2026-08-31 session (font, Scout card, validation suite, settings store) | UI + validation + M2 close | ✅ **Verified 2026-08-31** locally + Host CI: 13 suites, live asserts; validation battery 21/21, hit rates 100%, max dimensional error 0.50 mm; card + font verified visually via `ui_preview` renders |
 | `firmware/mcu_bridge` sketch | mcu-bridge v1 MCU side | ⚠️ **NOT COMPILED** — needs the UNO Q Arduino core; framing is the shared, host-tested `Framing.hpp`. Bench-verify per TEST_CHECKLISTS §2 |
+| `LinkedDisplay` + `SerialTransport` + `--board unoq` wiring | Presentation-link host side | ✅ **Verified 2026-09-02** host-side: 14 suites incl. the scripted loopback client (session, tiling, ack timeout/drop, input, backlight). Serial transport + unoq wiring compile on the new Linux/GCC CI job; physical session per status board steps 5–6 |
+| `firmware/tab5_display_client` sketch | Presentation-link client (Tab5) | ⚠️ **NOT COMPILED** — needs the M5Stack Tab5 core; shares the host-tested link codec. Bench questions listed in its README |
 
 Verification protocol: the MSVC machine session runs build+tests on pull and
 updates this table; TARS marks new code changes `NOT COMPILED` until then.
