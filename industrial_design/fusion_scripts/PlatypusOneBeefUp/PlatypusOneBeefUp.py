@@ -1,4 +1,4 @@
-"""Platypus One "beef up" script for Autodesk Fusion 360.
+"""Platypus One "beef up" script for Autodesk Fusion 360 - rev 3.
 
 Layout: portrait handheld (per the industrial-design reference render) - the
 existing enclosure stays the hero, held vertically like a phone. A sculpted
@@ -6,24 +6,23 @@ side grip runs along the right edge, the sensor cluster lives in a band
 across the top of the front face with a protruding corner camera block, and
 thumb controls sit on the right edge above the grip.
 
+Rev 3 packaging changes (these RESOLVE the rev 2 warnings):
+  * ENCLOSURE_MID_FRAME - an 8 mm perimeter band behind the existing shell
+    grows total thickness 27.9 -> 35.9 mm, so display (13) + UNO Q (16)
+    stack front/back with ~1.9 mm to spare.
+  * Battery re-specced 100x60x8 -> 90x60x10 flat pack (similar Wh) so it
+    clears the UNO Q lengthwise in the back bay.
+  * Display envelope shifts 9 mm toward the grip end (the window opening is
+    139.7 mm for a 121.1 mm display, so it can slide) - the radar bay clears
+    the display top edge. Matches the reference render's low display.
+  * SENSOR_CARRIER becomes a 2 mm interposer sandwiched between the UNO Q
+    (back bay) and radar (front bay).
+  * Fillets are applied to the grip, mid-frame and camera block where the
+    kernel allows (skipped silently if a radius fails - placeholders).
+
 Run this with the PlatypusOne enclosure design OPEN and ACTIVE
 (Utilities tab -> ADD-INS -> Scripts and Add-Ins -> green "+" -> pick this
 folder -> Run).
-
-What it does:
-  1. Renames the existing enclosure bodies (ENCLOSURE_TOP / ENCLOSURE_BOTTOM,
-     or ENCLOSURE_SHELL when there is only one body).
-  2. GRIP        - side handle on the right edge with a USB-C slot in its
-                   base end.
-  3. SENSOR_HEAD - top-band cluster: corner camera block (bored for the
-                   lens), sensor pill with ToF + LED windows, radar grille,
-                   plus internal CAMERA_ENVELOPE, TOF_ENVELOPE,
-                   RADAR_ENVELOPE and a generic SENSOR_CARRIER.
-  4. UNO_Q, DISPLAY_ENVELOPE, BATTERY - internal packaging envelopes using
-                   the real board outline / BOM envelope numbers.
-  5. CONTROLS    - ROTARY_ENCODER side-mounted at the thumb, TRIGGER behind
-                   the grip top for the index finger, USB_C_PORT in the grip
-                   base.
 
 Everything is created inside its own named component so the browser tree
 reads like the packaging plan. The script NEVER cuts or modifies your
@@ -58,12 +57,18 @@ CONFIG = {
     # Assumed enclosure wall for internal packaging placement (placeholder).
     "WALL": 2.5,
 
+    # Mid-frame band behind the existing shell - the thickness the packaging
+    # needs. Set to 0 to study the original thickness again.
+    "MID_FRAME_THICK": 8.0,
+    "MID_FRAME_WALL": 3.0,
+
     # Side grip (right edge, lower half).
     "GRIP_LENGTH": 105.0,        # along the device's long axis
     "GRIP_PROUD": 32.0,          # how far it stands out past the edge
     "GRIP_THICK": 30.0,          # front-to-back
     "GRIP_EMBED": 4.0,           # sunk into the edge
     "GRIP_CENTER_OFFSET": -25.0, # centre along long axis (0 = device centre)
+    "GRIP_FILLET": 9.0,
 
     # Trigger (index finger, back of the grip near its top).
     "TRIGGER_DIAMETER": 14.0,
@@ -91,6 +96,7 @@ CONFIG = {
     "BAND_FROM_TOP": 18.0,           # band centreline, from the top edge
     "CORNER_BLOCK": (32.0, 32.0, 34.0),  # corner camera block L x W x thick
     "CORNER_BLOCK_PROUD": 6.0,           # stands proud of the front face
+    "CORNER_BLOCK_FILLET": 6.0,
     "CAMERA_BORE_D": 20.0,
     "CAMERA_BORE_DEPTH": 12.0,
     "CAMERA_LENS_D": 12.0,
@@ -103,16 +109,17 @@ CONFIG = {
     "GRILLE_D": 24.0,                    # radar grille applique
     "GRILLE_OFFSET": -6.0,
     "RADAR_ENVELOPE": (20.0, 40.0, 12.0),  # Grove BGT24LTR11 (BOM)
-    "CARRIER_ENVELOPE": (20.0, 55.0, 5.0),  # generic sensor/carrier zone
+    "CARRIER_ENVELOPE": (20.0, 55.0, 2.0),  # interposer between the bays
 
     # Internal packaging envelopes.
     "UNO_Q_OUTLINE": (68.58, 53.34),  # official board outline - do NOT change
     "UNO_Q_CLEARANCE_H": 16.0,        # 3D clearance TBD from vendor STEP
-    "UNO_Q_POS": (44.0, -10.0),       # centre: (long axis, width axis)
+    "UNO_Q_POS": (45.0, -10.0),       # centre: (long axis, width axis)
     "DISPLAY_ENVELOPE": (121.11, 77.93, 13.0),  # Waveshare 5in HDMI LCD (H)
     "DISPLAY_TOP_GAP": 2.0,           # display face below the outer front face
-    "BATTERY_ENVELOPE": (100.0, 60.0, 8.0),     # flat Li-ion (BOM)
-    "BATTERY_POS": -28.0,             # centre along the long axis
+    "DISPLAY_L_OFFSET": -9.0,         # slid toward the grip end (rev 3)
+    "BATTERY_ENVELOPE": (90.0, 60.0, 10.0),     # flat Li-ion, rev 3 re-spec
+    "BATTERY_POS": -35.0,             # centre along the long axis
 
     # Fallback outer envelope if no bodies exist in the design (mm).
     "FALLBACK_ENVELOPE": (165.1, 96.52, 27.94),
@@ -122,7 +129,8 @@ MM = 0.1  # mm -> internal cm
 
 # Components this script owns; deleted and rebuilt on every run.
 OWNED_COMPONENTS = (
-    "GRIP", "SENSOR_HEAD", "UNO_Q", "DISPLAY_ENVELOPE", "BATTERY", "CONTROLS",
+    "MID_FRAME", "GRIP", "SENSOR_HEAD", "UNO_Q", "DISPLAY_ENVELOPE",
+    "BATTERY", "CONTROLS",
 )
 
 
@@ -184,7 +192,8 @@ def new_component(root, name):
 
 
 def add_bodies(design, comp, named_bodies):
-    """Add [(name, tempBody), ...] to a component, parametric-safe."""
+    """Add [(name, tempBody), ...] to a component, parametric-safe.
+    Returns the persisted bodies in the same order."""
     start = comp.bRepBodies.count
     if design.designType == adsk.fusion.DesignTypes.ParametricDesignType:
         base = comp.features.baseFeatures.add()
@@ -195,8 +204,32 @@ def add_bodies(design, comp, named_bodies):
     else:
         for _, body in named_bodies:
             comp.bRepBodies.add(body)
+    out = []
     for i, (name, _) in enumerate(named_bodies):
-        comp.bRepBodies.item(start + i).name = name
+        persisted = comp.bRepBodies.item(start + i)
+        persisted.name = name
+        out.append(persisted)
+    return out
+
+
+def try_fillet(comp, body, radius_mm):
+    """Round every edge of a persisted body; placeholder-grade, so a failed
+    radius is silently skipped. Returns True on success."""
+    try:
+        edges = adsk.core.ObjectCollection.create()
+        for edge in body.edges:
+            edges.add(edge)
+        fillets = comp.features.filletFeatures
+        fi = fillets.createInput()
+        radius = adsk.core.ValueInput.createByReal(radius_mm * MM)
+        if hasattr(fi, "edgeSetInputs"):
+            fi.edgeSetInputs.addConstantRadiusEdgeSet(edges, radius, True)
+        else:  # older API
+            fi.addConstantRadiusEdgeSet(edges, radius, True)
+        fillets.add(fi)
+        return True
+    except Exception:  # noqa: BLE001 - cosmetic only
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +309,26 @@ def rename_enclosure_bodies(root, frame):
     return "{} bodies -> ENCLOSURE_BOTTOM / ENCLOSURE_TOP".format(len(bodies))
 
 
+def build_mid_frame(design, root, tmp, frame, dims, cfg):
+    """Perimeter band behind the shell that grows the total thickness."""
+    mid = cfg["MID_FRAME_THICK"]
+    if mid <= 0:
+        return False
+    length, width, height = dims
+    u_center = -height / 2.0 - mid / 2.0
+    band = make_box(tmp, frame.point(0.0, 0.0, u_center),
+                    frame.vL, frame.vS, length, width, mid)
+    wall = cfg["MID_FRAME_WALL"]
+    cavity = make_box(tmp, frame.point(0.0, 0.0, u_center),
+                      frame.vL, frame.vS,
+                      length - 2 * wall, width - 2 * wall, mid + 2.0)
+    cut(tmp, band, cavity)
+    comp = new_component(root, "MID_FRAME")
+    bodies = add_bodies(design, comp, [("ENCLOSURE_MID_FRAME", band)])
+    filleted = try_fillet(comp, bodies[0], 3.0)
+    return filleted
+
+
 def build_grip(design, root, tmp, frame, dims, cfg):
     """Side handle along the grip edge; returns its key positions."""
     _, width, _ = dims
@@ -296,8 +349,9 @@ def build_grip(design, root, tmp, frame, dims, cfg):
     cut(tmp, grip_body, slot)
 
     comp = new_component(root, "GRIP")
-    add_bodies(design, comp, [("GRIP_BODY", grip_body)])
-    return s_center, l_bottom
+    bodies = add_bodies(design, comp, [("GRIP_BODY", grip_body)])
+    filleted = try_fillet(comp, bodies[0], cfg["GRIP_FILLET"])
+    return s_center, l_bottom, filleted
 
 
 def build_controls(design, root, tmp, frame, dims, cfg, grip_s, grip_bottom):
@@ -347,6 +401,7 @@ def build_sensor_cluster(design, root, tmp, frame, dims, cfg):
     length, width, height = dims
     band_l = length / 2.0 - cfg["BAND_FROM_TOP"]
     face_u = height / 2.0
+    wall = cfg["WALL"]
 
     # Corner camera block, standing proud of the front face.
     bl, bw, bt = cfg["CORNER_BLOCK"]
@@ -390,105 +445,129 @@ def build_sensor_cluster(design, root, tmp, frame, dims, cfg):
 
     tw, th, td = cfg["TOF_ENVELOPE"]
     tof_env = make_box(tmp, frame.point(band_l, tof_s,
-                                        face_u - cfg["WALL"] - td / 2.0),
+                                        face_u - wall - td / 2.0),
                        frame.vL, frame.vS, tw, th, td)
 
-    # Radar grille applique + envelope behind it.
+    # Radar grille applique + envelope behind it (front bay).
     grille = make_cylinder(
         tmp, frame.point(band_l, cfg["GRILLE_OFFSET"], face_u),
         frame.point(band_l, cfg["GRILLE_OFFSET"], face_u + 2.0),
         cfg["GRILLE_D"])
     rl, rw, rt = cfg["RADAR_ENVELOPE"]
+    radar_u = face_u - wall - rt / 2.0
     radar_env = make_box(tmp,
-                         frame.point(band_l, cfg["GRILLE_OFFSET"],
-                                     face_u - cfg["WALL"] - rt / 2.0),
+                         frame.point(band_l, cfg["GRILLE_OFFSET"], radar_u),
                          frame.vL, frame.vS, rl, rw, rt)
 
+    # Carrier interposer between the front (radar) and back (UNO Q) bays.
     kl, kw, kt = cfg["CARRIER_ENVELOPE"]
-    carrier = make_box(tmp, frame.point(band_l, -14.0, -4.0),
+    uno_top = (-height / 2.0 - cfg["MID_FRAME_THICK"] + wall
+               + cfg["UNO_Q_CLEARANCE_H"])
+    radar_bottom = radar_u - rt / 2.0
+    carrier_u = (uno_top + radar_bottom) / 2.0
+    carrier = make_box(tmp, frame.point(band_l, -14.0, carrier_u),
                        frame.vL, frame.vS, kl, kw, kt)
 
     comp = new_component(root, "SENSOR_HEAD")
-    add_bodies(design, comp, [("CORNER_CAMERA_BLOCK", block),
-                              ("CAMERA_LENS", lens),
-                              ("CAMERA_ENVELOPE", cam_env),
-                              ("SENSOR_PILL", pill),
-                              ("TOF_WINDOW", tof_win),
-                              ("LED_WINDOW", led_win),
-                              ("TOF_ENVELOPE", tof_env),
-                              ("RADAR_GRILLE", grille),
-                              ("RADAR_ENVELOPE", radar_env),
-                              ("SENSOR_CARRIER", carrier)])
-    return band_l
+    bodies = add_bodies(design, comp,
+                        [("CORNER_CAMERA_BLOCK", block),
+                         ("CAMERA_LENS", lens),
+                         ("CAMERA_ENVELOPE", cam_env),
+                         ("SENSOR_PILL", pill),
+                         ("TOF_WINDOW", tof_win),
+                         ("LED_WINDOW", led_win),
+                         ("TOF_ENVELOPE", tof_env),
+                         ("RADAR_GRILLE", grille),
+                         ("RADAR_ENVELOPE", radar_env),
+                         ("SENSOR_CARRIER", carrier)])
+    filleted = try_fillet(comp, bodies[0], cfg["CORNER_BLOCK_FILLET"])
+    return band_l, filleted
 
 
 def build_packaging(design, root, tmp, frame, dims, cfg, band_l):
-    """UNO Q, display and battery envelopes. Returns packaging warnings."""
+    """UNO Q, display and battery envelopes. Returns report lines."""
     length, _, height = dims
     wall = cfg["WALL"]
-    u_floor = -height / 2.0 + wall
-    warnings = []
+    back_wall = -height / 2.0 - cfg["MID_FRAME_THICK"] + wall
+    notes, conflicts = [], []
 
-    def span(l_center, l_len, u_center, u_len):
-        return (l_center - l_len / 2.0, l_center + l_len / 2.0,
-                u_center - u_len / 2.0, u_center + u_len / 2.0)
+    def box3(l_c, l_len, s_c, s_len, u_c, u_len):
+        return ((l_c - l_len / 2.0, l_c + l_len / 2.0),
+                (s_c - s_len / 2.0, s_c + s_len / 2.0),
+                (u_c - u_len / 2.0, u_c + u_len / 2.0))
 
-    def overlap_mm(a, b):
-        l = min(a[1], b[1]) - max(a[0], b[0])
-        u = min(a[3], b[3]) - max(a[2], b[2])
-        return (l, u) if (l > 0.1 and u > 0.1) else None
+    def overlap3(a, b):
+        gaps = [min(a[i][1], b[i][1]) - max(a[i][0], b[i][0])
+                for i in range(3)]
+        return gaps if all(g > 0.1 for g in gaps) else None
 
+    # UNO Q in the back bay, against the mid-frame floor.
     uno_l, uno_w = cfg["UNO_Q_OUTLINE"]
     uno_h = cfg["UNO_Q_CLEARANCE_H"]
     uno_pos_l, uno_pos_s = cfg["UNO_Q_POS"]
-    uno_u = u_floor + uno_h / 2.0
+    uno_u = back_wall + uno_h / 2.0
     comp = new_component(root, "UNO_Q")
     add_bodies(design, comp, [(
         "UNO_Q_CLEARANCE",
         make_box(tmp, frame.point(uno_pos_l, uno_pos_s, uno_u),
                  frame.vL, frame.vS, uno_l, uno_w, uno_h))])
 
+    # Display in the front bay, slid toward the grip end.
     dsp_l, dsp_w, dsp_t = cfg["DISPLAY_ENVELOPE"]
+    dsp_pos_l = cfg["DISPLAY_L_OFFSET"]
     dsp_u = height / 2.0 - cfg["DISPLAY_TOP_GAP"] - dsp_t / 2.0
     comp = new_component(root, "DISPLAY_ENVELOPE")
     add_bodies(design, comp, [(
         "DISPLAY",
-        make_box(tmp, frame.point(0.0, 0.0, dsp_u), frame.vL, frame.vS,
+        make_box(tmp, frame.point(dsp_pos_l, 0.0, dsp_u), frame.vL, frame.vS,
                  dsp_l, dsp_w, dsp_t))])
 
+    # Battery in the back bay below the UNO Q.
     bat_l, bat_w, bat_t = cfg["BATTERY_ENVELOPE"]
-    bat_u = u_floor + bat_t / 2.0
+    bat_u = back_wall + bat_t / 2.0
     comp = new_component(root, "BATTERY")
     add_bodies(design, comp, [(
         "BATTERY_PACK",
         make_box(tmp, frame.point(cfg["BATTERY_POS"], 0.0, bat_u),
                  frame.vL, frame.vS, bat_l, bat_w, bat_t))])
 
-    # Honest packaging report (long-axis x thickness projections).
-    rl, _, rt = cfg["RADAR_ENVELOPE"]
+    # True 3D interference check across the envelopes.
+    rl, rw, rt = cfg["RADAR_ENVELOPE"]
     radar_u = height / 2.0 - wall - rt / 2.0
-    uno = span(uno_pos_l, uno_l, uno_u, uno_h)
-    dsp = span(0.0, dsp_l, dsp_u, dsp_t)
-    bat = span(cfg["BATTERY_POS"], bat_l, bat_u, bat_t)
-    radar = span(band_l, rl, radar_u, rt)
-    for name_a, a, name_b, b in (("UNO_Q", uno, "DISPLAY", dsp),
-                                 ("UNO_Q", uno, "BATTERY", bat),
-                                 ("BATTERY", bat, "DISPLAY", dsp),
-                                 ("RADAR", radar, "DISPLAY", dsp)):
-        hit = overlap_mm(a, b)
-        if hit:
-            warnings.append(
-                "{} and {} overlap ~{:.1f} mm (long axis) x {:.1f} mm "
-                "(thickness)".format(name_a, name_b, hit[0], hit[1]))
-    inner_h = height - 2.0 * wall
+    envelopes = {
+        "UNO_Q": box3(uno_pos_l, uno_l, uno_pos_s, uno_w, uno_u, uno_h),
+        "DISPLAY": box3(dsp_pos_l, dsp_l, 0.0, dsp_w, dsp_u, dsp_t),
+        "BATTERY": box3(cfg["BATTERY_POS"], bat_l, 0.0, bat_w, bat_u, bat_t),
+        "RADAR": box3(band_l, rl, cfg["GRILLE_OFFSET"], rw, radar_u, rt),
+    }
+    names = list(envelopes)
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            hit = overlap3(envelopes[a], envelopes[b])
+            if hit:
+                conflicts.append(
+                    "{} and {} interfere ~{:.1f} x {:.1f} x {:.1f} mm".format(
+                        a, b, *hit))
+
+    inner = height + cfg["MID_FRAME_THICK"] - 2.0 * wall
     stack = dsp_t + uno_h
-    if stack > inner_h:
-        warnings.append(
-            "display ({} mm) + UNO Q clearance ({} mm) = {} mm stack vs "
-            "~{:.1f} mm inner thickness -> body needs ~{:.1f} mm more, or "
-            "the UNO Q moves out from under the display".format(
-                dsp_t, uno_h, stack, inner_h, stack - inner_h))
-    return warnings
+    if stack > inner:
+        conflicts.append(
+            "display + UNO Q stack {} mm vs {:.1f} mm inner - short "
+            "{:.1f} mm".format(stack, inner, stack - inner))
+    else:
+        notes.append(
+            "display (13) + UNO Q (16) stack fits: {:.1f} mm margin in the "
+            "{:.1f} mm inner thickness".format(inner - stack, inner))
+        gap = (uno_pos_l - uno_l / 2.0) - (cfg["BATTERY_POS"] + bat_l / 2.0)
+        notes.append(
+            "battery clears the UNO Q by {:.1f} mm on the long axis".format(
+                gap))
+        gap_r = (band_l - rl / 2.0) - (dsp_pos_l + dsp_l / 2.0)
+        notes.append(
+            "radar bay clears the display top edge by {:.1f} mm".format(
+                gap_r))
+    return notes, conflicts
 
 
 # ---------------------------------------------------------------------------
@@ -512,30 +591,39 @@ def run(context):
         frame, dims, mapping = build_frame(lo, hi, cfg)
         rename_note = rename_enclosure_bodies(root, frame)
 
-        grip_s, grip_bottom = build_grip(design, root, tmp, frame, dims, cfg)
+        build_mid_frame(design, root, tmp, frame, dims, cfg)
+        grip_s, grip_bottom, grip_fillet = build_grip(design, root, tmp,
+                                                      frame, dims, cfg)
         build_controls(design, root, tmp, frame, dims, cfg, grip_s,
                        grip_bottom)
-        band_l = build_sensor_cluster(design, root, tmp, frame, dims, cfg)
-        warnings = build_packaging(design, root, tmp, frame, dims, cfg,
-                                   band_l)
+        band_l, blk_fillet = build_sensor_cluster(design, root, tmp, frame,
+                                                  dims, cfg)
+        notes, conflicts = build_packaging(design, root, tmp, frame, dims,
+                                           cfg, band_l)
 
         lines = [
-            "Platypus One beef-up complete (portrait side-grip layout).",
+            "Platypus One beef-up complete (rev 3).",
             "",
             "Enclosure envelope {}: {:.1f} x {:.1f} x {:.1f} mm ({})".format(
                 "measured" if measured else "FALLBACK (no bodies found)",
                 dims[0], dims[1], dims[2], mapping),
+            "Total thickness with mid-frame: {:.1f} mm".format(
+                dims[2] + cfg["MID_FRAME_THICK"]),
             "Existing bodies: " + rename_note,
-            "Created: GRIP (side handle), CONTROLS (TRIGGER / ROTARY_ENCODER",
-            "  / USB_C_PORT), SENSOR_HEAD (corner camera block, ToF/LED pill,",
-            "  radar grille + envelopes), UNO_Q, DISPLAY_ENVELOPE, BATTERY.",
+            "Created: MID_FRAME, GRIP{}, CONTROLS, SENSOR_HEAD{}, UNO_Q,"
+            .format("" if grip_fillet else " (fillet skipped)",
+                    "" if blk_fillet else " (fillet skipped)"),
+            "  DISPLAY_ENVELOPE, BATTERY (re-specced 90 x 60 x 10).",
         ]
         if removed:
             lines.append("Replaced previous run: " + ", ".join(removed))
-        if warnings:
-            lines.append("")
-            lines.append("PACKAGING WARNINGS:")
-            lines.extend("  - " + w for w in warnings)
+        lines.append("")
+        if conflicts:
+            lines.append("PACKAGING CONFLICTS:")
+            lines.extend("  - " + c for c in conflicts)
+        else:
+            lines.append("PACKAGING: clean - no envelope interference.")
+            lines.extend("  - " + n for n in notes)
         lines.append("")
         lines.append("Wrong face or end? Flip FLIP_TOP / FLIP_FRONT / "
                      "FLIP_GRIP_SIDE in CONFIG and run again - re-runs "
