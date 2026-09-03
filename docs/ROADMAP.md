@@ -51,16 +51,44 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
 Method, exit criteria, and per-component dossiers live in the private planning
 overlay until their components are promoted into Contest Core.
 
+**2026-09-04 milestone:** the related Project Platypus Patch Antenna was approved
+for the Tindie × NextPCB Hardware Creator R&D Support Program. Three monthly
+rounds provide standalone PCB-fabrication and international-shipping support.
+The September round is reserved for Patch Antenna Rev 2. October and/or November
+may be redirected to Platypus One carrier/interface fabrication if antenna
+validation closes without another evidence-justified spin. The program PCB
+voucher does not fund assembly or component procurement, so the Platypus One
+carrier plan must continue to control package difficulty and BOM cost separately.
+
+**Learning strategy:** prioritize general CCA development capability, using
+KiCad as the implementation tool. The target competency is requirements →
+interface table → datasheet/reference circuit → schematic → placement/routing →
+DFM/DFA → bring-up → measured revision, rather than KiCad proficiency as an end
+in itself.
+
 - [x] Define the evidence-gated Rev A → Rev B → Rev C development method
 - [x] Establish per-component dossier and inventory-to-repository workflow
 - [x] Create initial received-component dossiers (private planning overlay)
+- [x] Establish CCA-first learning strategy with KiCad as the working tool
+- [x] Identify potential October/November NextPCB fabrication support path
 - [ ] Reconcile the physical hardware inventory into dossiers and BOM acquisition states
 - [ ] Assign every candidate CORE / DE-RISK / RESEARCH / HOLD
+- [ ] Build one minimal sacrificial KiCad board if needed to close the full fabrication workflow
 - [ ] Freeze bounded Rev-A job and functional block diagram
+- [ ] Create the Rev-A interface-control table: source, destination, voltage, protocol, current, protection, test access
 - [ ] Close interface budget and power tree
-- [ ] Complete schematic, pre-layout, DFM, and assembly reviews
+- [ ] Reproduce and annotate each CORE device's manufacturer-recommended circuit before custom optimization
+- [ ] Complete schematic, ERC, pre-layout, DFM, DFA, and assembly reviews
+- [ ] Add accessible power/debug/test points and define current-limited first-power procedure
 - [ ] Commit bring-up procedure and acceptance limits before fabrication release
+- [ ] Target fabrication-ready Sensor/Interface Carrier Rev A before the October 5 support round
 - [ ] Characterize Rev A and derive the Rev-B change list from measured evidence
+
+Rev A should be deliberately conservative: favor proven interfaces, manageable
+packages, accessible test points, and modular sensor connections over dense or
+novel integration. Advanced power, RF, radar, BGA, and other difficult assembly
+features belong in later boards unless they are required by the bounded Core
+mission.
 
 This milestone does not place every received sample on Rev A: research
 candidates stay in the private planning overlay until an evaluation-platform
