@@ -20,6 +20,13 @@ Rev 3 packaging changes (these RESOLVE the rev 2 warnings):
   * Fillets are applied to the grip, mid-frame and camera block where the
     kernel allows (skipped silently if a radius fails - placeholders).
 
+Rev 4 review notes (from the phone review of the STEP):
+  * mid-frame gains a back wall - the device is closed at the back
+  * trigger peg removed: the finger hook is part of the grip form (the
+    sculpted splined grip lives in generate_step.py / the preview; here the
+    grip stays a rounded block, pulled 10 mm into the body)
+  * camera bore + lens ride higher on the corner block
+
 Run this with the PlatypusOne enclosure design OPEN and ACTIVE
 (Utilities tab -> ADD-INS -> Scripts and Add-Ins -> green "+" -> pick this
 folder -> Run).
@@ -66,14 +73,9 @@ CONFIG = {
     "GRIP_LENGTH": 105.0,        # along the device's long axis
     "GRIP_PROUD": 32.0,          # how far it stands out past the edge
     "GRIP_THICK": 30.0,          # front-to-back
-    "GRIP_EMBED": 4.0,           # sunk into the edge
+    "GRIP_EMBED": 10.0,          # pulled into the body (rev 4)
     "GRIP_CENTER_OFFSET": -25.0, # centre along long axis (0 = device centre)
     "GRIP_FILLET": 9.0,
-
-    # Trigger (index finger, back of the grip near its top).
-    "TRIGGER_DIAMETER": 14.0,
-    "TRIGGER_WIDTH": 20.0,
-    "TRIGGER_POS": 15.0,         # along long axis
 
     # Rotary encoder, side-mounted on the right edge above the grip.
     "ENCODER_BODY": 24.0,        # EC11-style 24 x 24 body (BOM)
@@ -97,6 +99,7 @@ CONFIG = {
     "CORNER_BLOCK": (32.0, 32.0, 34.0),  # corner camera block L x W x thick
     "CORNER_BLOCK_PROUD": 6.0,           # stands proud of the front face
     "CORNER_BLOCK_FILLET": 6.0,
+    "CAMERA_UP": 5.5,                # lens stack rides high on the block
     "CAMERA_BORE_D": 20.0,
     "CAMERA_BORE_DEPTH": 12.0,
     "CAMERA_LENS_D": 12.0,
@@ -319,9 +322,12 @@ def build_mid_frame(design, root, tmp, frame, dims, cfg):
     band = make_box(tmp, frame.point(0.0, 0.0, u_center),
                     frame.vL, frame.vS, length, width, mid)
     wall = cfg["MID_FRAME_WALL"]
-    cavity = make_box(tmp, frame.point(0.0, 0.0, u_center),
+    # Tub, not a band: keep a back wall so the device is closed (rev 4).
+    cav_h = mid - wall + 1.0
+    cav_u = -height / 2.0 - (mid - wall - 1.0) / 2.0
+    cavity = make_box(tmp, frame.point(0.0, 0.0, cav_u),
                       frame.vL, frame.vS,
-                      length - 2 * wall, width - 2 * wall, mid + 2.0)
+                      length - 2 * wall, width - 2 * wall, cav_h)
     cut(tmp, band, cavity)
     comp = new_component(root, "MID_FRAME")
     bodies = add_bodies(design, comp, [("ENCLOSURE_MID_FRAME", band)])
@@ -359,15 +365,8 @@ def build_controls(design, root, tmp, frame, dims, cfg, grip_s, grip_bottom):
     edge = width / 2.0
     comp = new_component(root, "CONTROLS")
 
-    # Trigger: across the back of the grip near its top (index finger).
-    trig_u = -(cfg["GRIP_THICK"] / 2.0 + cfg["TRIGGER_DIAMETER"] / 2.0 - 1.0)
-    trig_a = frame.point(cfg["TRIGGER_POS"],
-                         grip_s - cfg["TRIGGER_WIDTH"] / 2.0, trig_u)
-    trig_b = frame.point(cfg["TRIGGER_POS"],
-                         grip_s + cfg["TRIGGER_WIDTH"] / 2.0, trig_u)
-    trigger = make_cylinder(tmp, trig_a, trig_b, cfg["TRIGGER_DIAMETER"])
-
-    # Rotary encoder: side-mounted on the edge above the grip, knob out.
+    # No trigger body (rev 4): the index-finger hook is part of the grip
+    # form. Rotary encoder: side-mounted on the edge above the grip.
     enc_l = cfg["ENCODER_POS"]
     body_s = edge - cfg["ENCODER_BODY_T"] / 2.0 - 2.0
     encoder = make_box(tmp, frame.point(enc_l, body_s, 0.0),
@@ -391,8 +390,7 @@ def build_controls(design, root, tmp, frame, dims, cfg, grip_s, grip_bottom):
                    cfg["USBC_PORT_DEPTH"], cfg["USBC_PORT_H"],
                    cfg["USBC_PORT_W"])
 
-    add_bodies(design, comp, [("TRIGGER", trigger),
-                              ("ROTARY_ENCODER", encoder),
+    add_bodies(design, comp, [("ROTARY_ENCODER", encoder),
                               ("USB_C_PORT", usb)])
 
 
@@ -411,20 +409,21 @@ def build_sensor_cluster(design, root, tmp, frame, dims, cfg):
     block = make_box(tmp, frame.point(blk_l, blk_s, blk_u),
                      frame.vL, frame.vS, bl, bw, bt)
     blk_face = blk_u + bt / 2.0
+    cam_l = blk_l + cfg["CAMERA_UP"]      # lens rides high on the block
     bore = make_cylinder(
-        tmp, frame.point(blk_l, blk_s, blk_face + 1.0),
-        frame.point(blk_l, blk_s, blk_face - cfg["CAMERA_BORE_DEPTH"]),
+        tmp, frame.point(cam_l, blk_s, blk_face + 1.0),
+        frame.point(cam_l, blk_s, blk_face - cfg["CAMERA_BORE_DEPTH"]),
         cfg["CAMERA_BORE_D"])
     cut(tmp, block, bore)
     lens = make_cylinder(
-        tmp, frame.point(blk_l, blk_s, blk_face - cfg["CAMERA_BORE_DEPTH"]),
-        frame.point(blk_l, blk_s, blk_face - 3.0),
+        tmp, frame.point(cam_l, blk_s, blk_face - cfg["CAMERA_BORE_DEPTH"]),
+        frame.point(cam_l, blk_s, blk_face - 3.0),
         cfg["CAMERA_LENS_D"])
 
     cw, ch, cd = cfg["CAMERA_ENVELOPE"]
     cam_env = make_box(
         tmp,
-        frame.point(blk_l, blk_s, blk_face - cfg["CAMERA_BORE_DEPTH"]
+        frame.point(blk_l + 2.5, blk_s, blk_face - cfg["CAMERA_BORE_DEPTH"]
                     - cd / 2.0 - 1.0),
         frame.vL, frame.vS, cw, ch, cd)
 
@@ -602,7 +601,7 @@ def run(context):
                                            cfg, band_l)
 
         lines = [
-            "Platypus One beef-up complete (rev 3).",
+            "Platypus One beef-up complete (rev 4).",
             "",
             "Enclosure envelope {}: {:.1f} x {:.1f} x {:.1f} mm ({})".format(
                 "measured" if measured else "FALLBACK (no bodies found)",
@@ -610,9 +609,10 @@ def run(context):
             "Total thickness with mid-frame: {:.1f} mm".format(
                 dims[2] + cfg["MID_FRAME_THICK"]),
             "Existing bodies: " + rename_note,
-            "Created: MID_FRAME, GRIP{}, CONTROLS, SENSOR_HEAD{}, UNO_Q,"
-            .format("" if grip_fillet else " (fillet skipped)",
-                    "" if blk_fillet else " (fillet skipped)"),
+            "Created: MID_FRAME (closed back), GRIP{}, CONTROLS (encoder +"
+            .format("" if grip_fillet else " (fillet skipped)"),
+            "  USB-C; trigger is the grip hook), SENSOR_HEAD{}, UNO_Q,"
+            .format("" if blk_fillet else " (fillet skipped)"),
             "  DISPLAY_ENVELOPE, BATTERY (re-specced 90 x 60 x 10).",
         ]
         if removed:
