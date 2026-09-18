@@ -7,6 +7,11 @@ __pycache__/
 .vscode/
 .idea/
 
+# Bench capture output. Scans are generated evidence, not source — keep a
+# specific one deliberately with `git add -f observations/scan-NNNN` when it
+# is worth committing as a bring-up artifact.
+observations/
+
 # Private planning overlay: post-contest / research material stays out of the
 # public repository until its components are promoted into Contest Core.
 # These files remain on local disks; see BOM.md's research-inventory note.
