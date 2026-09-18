@@ -1,8 +1,11 @@
 // Scout capture slice tests: fake camera → saved artifact → valid record.
 // Everything here runs hardware-free; the V4L2 backend shares only the
 // ICamera seam and is verified on the physical UNO Q per TEST_CHECKLISTS §4.
+#include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/hal/testing/FakeCamera.hpp>
+#include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/observation/CaptureService.hpp>
+#include <platypus/vision/ScoutAnalyzer.hpp>
 
 #include <cassert>
 #include <cstdio>
@@ -151,6 +154,94 @@ void test_next_observation_id() {
     assert(service.nextObservationId() == "scan-0001");
 }
 
+/// A camera that hands back one measurable scene in the format a UVC webcam
+/// actually delivers. The V4L2 backend shares only the ICamera seam, so this
+/// is how the capture → measure → classify path is verified without hardware.
+class SceneCamera final : public hal::ICamera {
+   public:
+    static constexpr hal::CameraMode kMode{640, 480, hal::PixelFormat::YUYV, 30.0f};
+
+    [[nodiscard]] std::vector<hal::CameraMode> supportedModes() const override { return {kMode}; }
+    hal::Status open(const hal::CameraMode&) override {
+        open_ = true;
+        return {};
+    }
+    hal::Status close() override {
+        open_ = false;
+        return {};
+    }
+    [[nodiscard]] bool isOpen() const noexcept override { return open_; }
+    hal::Status setControls(const hal::CameraControls&) override { return {}; }
+    hal::Result<hal::Frame> capture(std::chrono::milliseconds) override {
+        if (!open_) return hal::Error::NotInitialized;
+        // 40 px square at 20 mm gives exactly 0.5 mm/px; the rod is 120 x 18 mm.
+        hal::testing::SyntheticScene scene;
+        scene.addSquare(50, 50, 40);
+        scene.addRect(400.0, 280.0, 240.0, 36.0, 0.0);
+        return scene.yuyvFrame();
+    }
+    hal::Status startStream(std::function<void(const hal::Frame&)>) override {
+        return hal::Error::NotSupported;
+    }
+    hal::Status stopStream() override { return {}; }
+
+   private:
+    bool open_ = false;
+};
+
+/// The capture harness's wiring: measurement and classification claims must
+/// reach the record inside CaptureService's all-or-nothing write.
+void test_enrichment_writes_measured_evidence() {
+    ScratchRoot scratch;
+    CaptureService service(scratch.path);
+    SceneCamera camera;
+    assert(camera.open(SceneCamera::kMode).ok());
+
+    const vision::CalibrationSpec spec{20.0};
+    auto config = testConfig("scan-0010");
+    config.enrich = [&](const hal::Frame& frame, observation::EngineeringObservation& record) {
+        const auto outcome = vision::analyzeFrame(frame, spec);
+        assert(outcome.ok());  // YUYV must be measurable, not rejected
+        vision::appendEvidence(record, *outcome.analysis, spec, "source-image");
+        ai::appendClassification(record, ai::classify(*outcome.analysis));
+    };
+
+    const auto result = service.capture(camera, config);
+    assert(result.ok());
+
+    // The frame is stored in its own format, and the record carries evidence
+    // rather than the capture-only skeleton.
+    assert(result.value().imagePath.filename() == "source.yuyv");
+    assert(!result.value().record.observed.empty());
+    assert(!result.value().record.derived.empty());
+    assert(validate(result.value().record).empty());
+
+    // The measurement actually landed on disk, not just in the returned copy.
+    const auto json = readFile(result.value().recordPath);
+    assert(json.find("mm_per_pixel") != std::string::npos);
+    assert(json.find("yuyv") != std::string::npos);
+}
+
+/// A scene the analyzer rejects must still leave an honest capture-only
+/// record — never a half-written one, and never invented claims.
+void test_unmeasurable_scene_still_captures() {
+    ScratchRoot scratch;
+    CaptureService service(scratch.path);
+    SceneCamera camera;
+    assert(camera.open(SceneCamera::kMode).ok());
+
+    auto config = testConfig("scan-0011");
+    config.enrich = [](const hal::Frame&, observation::EngineeringObservation&) {
+        // Analyzer found nothing usable: append nothing.
+    };
+
+    const auto result = service.capture(camera, config);
+    assert(result.ok());
+    assert(result.value().record.observed.empty());
+    assert(validate(result.value().record).empty());
+    assert(fs::exists(result.value().imagePath));
+}
+
 }  // namespace
 
 void test_scout_capture() {
@@ -158,5 +249,7 @@ void test_scout_capture() {
     test_determinism();
     test_failures_leave_no_evidence();
     test_next_observation_id();
+    test_enrichment_writes_measured_evidence();
+    test_unmeasurable_scene_still_captures();
     std::puts("test_scout_capture: OK");
 }

@@ -3,9 +3,13 @@
 add_executable(engineering_scout_capture
     main.cpp)
 
+# vision + ai make this the one executable that runs the whole physical path:
+# camera -> measurement -> classification -> evidence record.
 target_link_libraries(engineering_scout_capture PRIVATE
     platypus::camera
-    platypus::observation)
+    platypus::observation
+    platypus::vision
+    platypus::ai)
 
 if(UNIX)
     target_link_libraries(engineering_scout_capture PRIVATE platypus::camera_v4l2)

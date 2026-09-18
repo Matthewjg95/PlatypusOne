@@ -12,8 +12,12 @@
 // evidence is never half-recorded. No database (contract constraint 2); the
 // directory + JSON + image IS the record.
 //
-// Scope: capture only. No detection, calibration, measurement, or inference —
-// those append claims to records in later Scout chunks.
+// Scope: capture and persistence. This service performs no detection,
+// calibration, measurement, or inference itself — but CaptureConfig::enrich
+// lets a caller append analysis claims to the record before it is validated
+// and written, so measured evidence shares the capture's all-or-nothing write.
+// The callback keeps the dependency pointing the right way: observation never
+// links vision or ai; the composition root supplies the analysis.
 #pragma once
 
 #include "Observation.hpp"
@@ -22,6 +26,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <functional>
 
 namespace platypus::observation {
 
@@ -33,6 +38,11 @@ struct CaptureConfig {
     /// appends frame_width / frame_height / pixel_format from the real frame.
     std::vector<std::pair<std::string, std::string>> source;
     std::chrono::milliseconds captureTimeout{2000};
+    /// Optional. Receives the acquired frame and the partly-built record before
+    /// validation, so measurement/classification claims are written atomically
+    /// with the image. It must not throw; a scene it cannot analyze should
+    /// simply add no claims, leaving an honest capture-only record.
+    std::function<void(const hal::Frame&, EngineeringObservation&)> enrich;
 };
 
 struct CaptureResult {

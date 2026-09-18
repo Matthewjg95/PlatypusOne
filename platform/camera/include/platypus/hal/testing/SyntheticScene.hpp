@@ -95,6 +95,20 @@ class SyntheticScene {
                      std::move(rgb), std::chrono::steady_clock::time_point{});
     }
 
+    /// The same scene as packed YUYV with neutral chroma (Y0 U Y1 V, U=V=128)
+    /// — the format a UVC webcam actually delivers, over identical geometry.
+    [[nodiscard]] Frame yuyvFrame() const {
+        auto yuyv = std::make_shared<std::vector<std::byte>>();
+        yuyv->reserve(pixels_->size() * 2);
+        for (const auto value : *pixels_) {
+            yuyv->push_back(value);           // luma for this pixel
+            yuyv->push_back(std::byte{128});  // alternating U / V, neutral
+        }
+        return Frame({static_cast<std::uint16_t>(width_), static_cast<std::uint16_t>(height_),
+                      PixelFormat::YUYV, 30.0f},
+                     std::move(yuyv), std::chrono::steady_clock::time_point{});
+    }
+
    private:
     void fillCircle(double cx, double cy, double radius, std::uint8_t value) {
         for (std::int32_t y = 0; y < height_; ++y)

@@ -23,6 +23,12 @@ namespace {
 
 constexpr unsigned kBufferCount = 2;  // capture ring: enough for stills + modest streaming
 
+/// Frames discarded after STREAMON. A UVC webcam's first frames are produced
+/// while auto-exposure and auto-white-balance are still converging, so they
+/// come out dark or flat — which shifts an Otsu threshold and silently biases
+/// every measurement derived from it. Cheap insurance for a still-capture path.
+constexpr unsigned kWarmupFrames = 5;
+
 /// ioctl with EINTR retry — the canonical V4L2 wrapper.
 int xioctl(int fd, unsigned long request, void* arg) {
     int r;
@@ -190,6 +196,13 @@ Status V4l2Camera::open(const CameraMode& mode) {
         return Error::IoFailure;
     }
     streaming_ = true;
+
+    // Let the sensor settle. Failures here are not fatal: a camera that cannot
+    // produce warm-up frames still reports its real error on the first capture.
+    for (unsigned i = 0; i < kWarmupFrames; ++i) {
+        const auto discarded = dequeueFrame(std::chrono::milliseconds(500));
+        if (!discarded && discarded.error() != Error::Timeout) break;
+    }
     return {};
 }
 
