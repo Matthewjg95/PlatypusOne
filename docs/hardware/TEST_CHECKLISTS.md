@@ -16,9 +16,9 @@ actually has.
 
 | # | Step | Detail | Status |
 |---|---|---|---|
-| 1 | Board/environment verification | Checklist §1 (boot, network, `uname -a`, storage) | PARTIAL 2026-09-19 — boots, ADB over USB, Debian 13 aarch64 4-core/3.6 GB, 3.0 GB free on `/`; Wi-Fi + SSH pending (Session A) |
+| 1 | Board/environment verification | Checklist §1 (boot, network, `uname -a`, storage) | PASS 2026-09-19 — boots, Debian 13 aarch64 4-core/3.6 GB, 3.0 GB free on `/`; Wi-Fi joined, `ping 8.8.8.8` OK; sshd enabled (needed `ssh-keygen -A`, factory image ships no host keys); key login from the PC |
 | 2 | Hello-world | Any trivial program compiles + runs on the Linux side | UNTESTED |
-| 3 | Linux-side Platypus executable | On-device native build: cmake + full `platypus_tests` + launcher headless (§2) | UNTESTED |
+| 3 | Linux-side Platypus executable | On-device native build: cmake + full `platypus_tests` + launcher headless (§2) | PASS 2026-09-19 — GCC 14.2 aarch64, Ninja, 2m44s on 4 cores; `platypus_tests` 14/14; `--fake` harness writes a valid record. Launcher headless soak not yet run |
 | 4 | MCU ↔ Linux communication | Flash `firmware/mcu_bridge`; Ping/Pong + GPIO loopback over `/dev/ttyRPMSG0` (§2) | UNTESTED |
 | 5 | UNO Q ↔ Tab5 heartbeat | `LinkedDisplay` session: Hello/HelloReply + Ping/Pong over USB CDC | UNTESTED |
 | 6 | Tab5 input → UNO Q → response | Touch on Tab5 reaches the app via EventQueue; visible UI response tile returns | UNTESTED |
@@ -43,23 +43,25 @@ the board is still on the PC's USB-C.
 Bundled ADB: `%LOCALAPPDATA%\Arduino15\packages\arduino\tools\adb\32.0.0\adb.exe`
 (installed by the `arduino:zephyr` core). `adb devices` must list the board.
 
-- [ ] Wi-Fi joined (the `arduino` user is in `netdev`, no sudo needed):
+- [x] Wi-Fi joined (the `arduino` user is in `netdev`, no sudo needed):
       `adb shell nmcli device wifi connect "<SSID>" password "<pw>"` — the owner
       types this; the password never goes through an agent
-- [ ] SSH enabled (needs the `arduino` user's sudo password — owner types it):
-      `adb shell -t sudo systemctl enable --now ssh`
-- [ ] Board IP recorded: `adb shell ip -4 -br addr show wlan0` → ______________
+- [x] SSH enabled (needs the `arduino` user's sudo password — owner types it):
+      `adb shell -t sudo systemctl enable --now ssh`. A factory board first forces
+      a password reset here, and the image ships without SSH host keys, so follow
+      with `sudo ssh-keygen -A && sudo systemctl restart ssh`
+- [x] Board IP recorded: `adb shell ip -4 -br addr show wlan0` → **192.168.1.32**
       (or `hostname -I`); reserve it in the router if convenient
-- [ ] `ssh arduino@<ip>` works from the PC with the board still on USB
-- [ ] Build toolchain installed on the board (**none of these are present on the
+- [x] `ssh arduino@<ip>` works from the PC with the board still on USB
+- [x] Build toolchain installed on the board (**none of these are present on the
       stock image**): `sudo apt install -y build-essential cmake ninja-build`
       (~250 MB; 3.0 GB free on `/`). `git`, `python3`, `v4l2-ctl` are already there
-- [ ] Repo on the board: `git clone https://github.com/Matthewjg95/PlatypusOne.git
+- [x] Repo on the board: `git clone https://github.com/Matthewjg95/PlatypusOne.git
       && cd PlatypusOne && git checkout claude/scout-yuyv-capture`
-- [ ] First on-device build while still on USB (catches aarch64/GCC surprises
+- [x] First on-device build while still on USB (catches aarch64/GCC surprises
       before the hub session): `cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release
       && cmake --build build-bench -j4 && ./build-bench/tests/platypus_tests`
-      → status-board step 3 PASS/FAIL: ______
+      → status-board step 3 **PASS** (2026-09-19, 14/14 suites)
 - [ ] 20 mm calibration square printed/cut (matte, high contrast); a light,
       matte background sheet; one M-series bolt and one nut to hand
 - [ ] USB-C PD charger ≥ 20 W located for the hub's PD port
