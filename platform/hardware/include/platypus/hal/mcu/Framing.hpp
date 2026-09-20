@@ -61,11 +61,14 @@ struct Message {
 /// returns a complete message when one is fully received and CRC-valid.
 /// Corrupt frames are dropped and the decoder resyncs on the next 0xA5.
 class Decoder {
-public:
+   public:
     std::optional<Message> feed(std::byte b) {
         switch (state_) {
             case State::Sync:
-                if (b == kSync) { buffer_.clear(); state_ = State::LenLo; }
+                if (b == kSync) {
+                    buffer_.clear();
+                    state_ = State::LenLo;
+                }
                 return std::nullopt;
             case State::LenLo:
                 buffer_.push_back(b);
@@ -74,9 +77,11 @@ public:
                 return std::nullopt;
             case State::LenHi:
                 buffer_.push_back(b);
-                len_ = static_cast<std::uint16_t>(
-                    len_ | (std::to_integer<std::uint16_t>(b) << 8));
-                if (len_ > kMaxPayload) { state_ = State::Sync; return std::nullopt; }
+                len_ = static_cast<std::uint16_t>(len_ | (std::to_integer<std::uint16_t>(b) << 8));
+                if (len_ > kMaxPayload) {
+                    state_ = State::Sync;
+                    return std::nullopt;
+                }
                 state_ = State::TopicLo;
                 return std::nullopt;
             case State::TopicLo:
@@ -86,8 +91,8 @@ public:
                 return std::nullopt;
             case State::TopicHi:
                 buffer_.push_back(b);
-                topic_ = static_cast<std::uint16_t>(
-                    topic_ | (std::to_integer<std::uint16_t>(b) << 8));
+                topic_ =
+                    static_cast<std::uint16_t>(topic_ | (std::to_integer<std::uint16_t>(b) << 8));
                 state_ = len_ == 0 ? State::Crc : State::Payload;
                 return std::nullopt;
             case State::Payload:
@@ -106,7 +111,7 @@ public:
         return std::nullopt;
     }
 
-private:
+   private:
     enum class State { Sync, LenLo, LenHi, TopicLo, TopicHi, Payload, Crc };
     State state_ = State::Sync;
     std::vector<std::byte> buffer_;

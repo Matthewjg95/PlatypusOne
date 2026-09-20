@@ -17,7 +17,9 @@ namespace mcu = hal::mcu;
 SerialMcuBridge::SerialMcuBridge(std::string devicePath, unsigned baud)
     : devicePath_(std::move(devicePath)), baud_(baud) {}
 
-SerialMcuBridge::~SerialMcuBridge() { close(); }
+SerialMcuBridge::~SerialMcuBridge() {
+    close();
+}
 
 Status SerialMcuBridge::open() {
     if (fd_ >= 0) return {};
@@ -94,9 +96,10 @@ Status SerialMcuBridge::send(std::uint16_t topic, std::span<const std::byte> pay
     return {};
 }
 
-Result<std::vector<std::byte>> SerialMcuBridge::request(
-    std::uint16_t requestTopic, std::span<const std::byte> payload,
-    std::uint16_t replyTopic, std::chrono::milliseconds timeout) {
+Result<std::vector<std::byte>> SerialMcuBridge::request(std::uint16_t requestTopic,
+                                                        std::span<const std::byte> payload,
+                                                        std::uint16_t replyTopic,
+                                                        std::chrono::milliseconds timeout) {
     {
         std::lock_guard lock(mutex_);
         replies_.erase(replyTopic);
@@ -104,9 +107,8 @@ Result<std::vector<std::byte>> SerialMcuBridge::request(
     if (const auto s = send(requestTopic, payload); !s) return s.error();
 
     std::unique_lock lock(mutex_);
-    const bool got = replyCv_.wait_for(lock, timeout, [&] {
-        return replies_.count(replyTopic) != 0;
-    });
+    const bool got =
+        replyCv_.wait_for(lock, timeout, [&] { return replies_.count(replyTopic) != 0; });
     if (!got) return Error::Timeout;
     auto payload_out = std::move(replies_[replyTopic]);
     replies_.erase(replyTopic);
@@ -138,16 +140,14 @@ Result<std::uint16_t> SerialMcuBridge::analogRead(std::uint8_t pin) {
                          std::chrono::milliseconds(100));
     if (!reply) return reply.error();
     if (reply.value().size() != 3) return Error::IoFailure;
-    return static_cast<std::uint16_t>(
-        std::to_integer<std::uint16_t>(reply.value()[1]) |
-        (std::to_integer<std::uint16_t>(reply.value()[2]) << 8));
+    return static_cast<std::uint16_t>(std::to_integer<std::uint16_t>(reply.value()[1]) |
+                                      (std::to_integer<std::uint16_t>(reply.value()[2]) << 8));
 }
 
 Status SerialMcuBridge::pwmWrite(std::uint8_t pin, float duty) {
     if (duty < 0.0f || duty > 1.0f) return Error::InvalidArgument;
     const auto scaled = static_cast<std::uint16_t>(duty * 0xFFFF);
-    const std::byte msg[] = {std::byte{pin},
-                             std::byte{static_cast<std::uint8_t>(scaled & 0xFF)},
+    const std::byte msg[] = {std::byte{pin}, std::byte{static_cast<std::uint8_t>(scaled & 0xFF)},
                              std::byte{static_cast<std::uint8_t>(scaled >> 8)}};
     return send(mcu::topics::kPwmWrite, msg);
 }
