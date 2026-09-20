@@ -47,30 +47,35 @@ command -v arduino-cli >/dev/null && ok "arduino-cli $(arduino-cli version 2>/de
                                   || meh "arduino-cli not installed (needed to flash firmware/)"
 
 step "2. Camera enumeration"
+# On the UNO Q, /dev/video0 and /dev/video1 exist with NO camera attached: they
+# are the Qualcomm Venus codec (M2M decoder/encoder) and they list formats, so
+# neither "first node" nor "has formats" identifies the webcam. Select by the
+# Video Capture capability instead; a UVC webcam exposes a capture node AND a
+# metadata node, and only the capture node carries that capability.
 mapfile -t VIDS < <(ls /dev/video* 2>/dev/null)
+CAMS=()
 if (( ${#VIDS[@]} )); then
-    ok "video nodes: ${VIDS[*]}"
     if command -v v4l2-ctl >/dev/null; then
         v4l2-ctl --list-devices 2>/dev/null | sed 's/^/    /'
         for v in "${VIDS[@]}"; do
-            # A UVC webcam exposes a capture node AND a metadata node. Only the
-            # capture node lists formats — that is how you tell them apart.
-            fmts=$(v4l2-ctl -d "$v" --list-formats 2>/dev/null | grep -c "\[")
-            printf '    %s: %s format(s)%s\n' "$v" "$fmts" \
-                   "$( (( fmts == 0 )) && echo '   <- metadata node, do NOT use' )"
-        done
-        echo "    --- formats on the first capture node ---"
-        for v in "${VIDS[@]}"; do
-            if (( $(v4l2-ctl -d "$v" --list-formats 2>/dev/null | grep -c "\[") > 0 )); then
-                v4l2-ctl -d "$v" --list-formats-ext 2>/dev/null | sed 's/^/    /' | head -40
-                break
+            info=$(v4l2-ctl -d "$v" --info 2>/dev/null)
+            if grep -q 'Video Capture' <<<"$info" && ! grep -q 'Video Memory-to-Memory' <<<"$info"; then
+                CAMS+=("$v")
+                printf '    %s: capture node (%s)\n' "$v" "$(sed -n 's/^\s*Driver name\s*: //p' <<<"$info")"
+            else
+                printf '    %s: not a camera (%s) -- skipped\n' "$v" "$(sed -n 's/^\s*Card type\s*: //p' <<<"$info")"
             fi
         done
     else
-        meh "v4l2-ctl not installed (apt install v4l-utils) — falling back to the harness's own --list"
+        meh "v4l2-ctl not installed (apt install v4l-utils) — cannot tell the webcam from the Venus codec nodes"
     fi
+fi
+if (( ${#CAMS[@]} )); then
+    ok "camera capture node(s): ${CAMS[*]}"
+    echo "    --- formats on ${CAMS[0]} ---"
+    v4l2-ctl -d "${CAMS[0]}" --list-formats-ext 2>/dev/null | sed 's/^/    /' | head -40
 else
-    no "no /dev/video* — camera not attached"
+    no "no V4L2 capture node — webcam not attached (or on a hub without power)"
 fi
 
 step "3. Build"
@@ -98,8 +103,8 @@ else
 fi
 
 step "5. Camera modes as the harness sees them"
-if [[ -x "$CAP" ]] && (( ${#VIDS[@]} )); then
-    for v in "${VIDS[@]}"; do
+if [[ -x "$CAP" ]] && (( ${#CAMS[@]} )); then
+    for v in "${CAMS[@]}"; do
         printf '  %s:\n' "$v"
         "$CAP" --device "$v" --list 2>&1 | sed 's/^/    /'
     done
@@ -111,9 +116,9 @@ step "6. Live capture + measurement"
 echo "  Place the calibration square and one fastener in frame, well lit,"
 echo "  not touching, on a light background. Pass --reference-mm if the"
 echo "  square is not 20 mm."
-if [[ -x "$CAP" ]] && (( ${#VIDS[@]} )); then
+if [[ -x "$CAP" ]] && (( ${#CAMS[@]} )); then
     out="${REPO}/observations"
-    if "$CAP" --device "${VIDS[0]}" --out "$out" 2>&1 | sed 's/^/    /'; then
+    if "$CAP" --device "${CAMS[0]}" --mode 640x480 --out "$out" 2>&1 | sed 's/^/    /'; then
         latest=$(ls -td "$out"/scan-* 2>/dev/null | head -1)
         [[ -n "$latest" ]] && ok "wrote $latest" && ls -la "$latest" | sed 's/^/    /' \
                            || no "no observation directory produced"
