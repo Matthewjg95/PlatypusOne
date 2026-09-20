@@ -146,6 +146,11 @@ hal::Result<CaptureResult> CaptureService::capture(hal::ICamera& camera,
     record.source.emplace_back("pixel_format", std::string(pixelFormatName(mode.format)));
     record.artifacts.push_back({"source-image", std::string(imageKindFor(mode.format)), imageName});
 
+    // Optional analysis, before validation: claims the caller appends are held
+    // to the same contract as everything else, and a record the analyzer
+    // corrupts is rejected rather than written.
+    if (config.enrich) config.enrich(frame.value(), record);
+
     if (!validate(record).empty()) return Error::InvalidArgument;
 
     // 3. Persist atomically enough for v0.1: create the directory, write both

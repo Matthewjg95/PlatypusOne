@@ -41,7 +41,8 @@ constexpr double kMinReferenceFill = 0.85;
 /// makes the reference ambiguous instead of silently picking one.
 constexpr double kAmbiguityAreaRatio = 0.5;
 
-/// Luma conversion for RGB888, integer Rec.601-style weights.
+/// Luma extraction. Gray8 passes through; YUYV keeps the luma byte that leads
+/// every pixel; RGB888 uses integer Rec.601-style weights.
 std::vector<std::uint8_t> toGray(const hal::Frame& frame) {
     const auto& mode = frame.mode();
     const auto pixels = frame.pixels();
@@ -51,6 +52,13 @@ std::vector<std::uint8_t> toGray(const hal::Frame& frame) {
     if (mode.format == PixelFormat::Gray8) {
         for (std::size_t i = 0; i < count; ++i)
             gray[i] = std::to_integer<std::uint8_t>(pixels[i]);
+        return gray;
+    }
+    if (mode.format == PixelFormat::YUYV) {
+        // Packed Y0 U Y1 V: luma leads each pixel, chroma is discarded. This is
+        // the UVC webcam path, and binarization wants luma regardless.
+        for (std::size_t i = 0; i < count; ++i)
+            gray[i] = std::to_integer<std::uint8_t>(pixels[i * 2]);
         return gray;
     }
     for (std::size_t i = 0; i < count; ++i) {
@@ -306,11 +314,14 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
     const auto& mode = frame.mode();
     if (frame.empty() || mode.width == 0 || mode.height == 0 || spec.referenceSideMm <= 0.0)
         return {std::nullopt, AnalyzeError::InvalidFrame};
-    if (mode.format != PixelFormat::RGB888 && mode.format != PixelFormat::Gray8)
+    if (mode.format != PixelFormat::RGB888 && mode.format != PixelFormat::Gray8 &&
+        mode.format != PixelFormat::YUYV)
         return {std::nullopt, AnalyzeError::UnsupportedFormat};
 
-    const std::size_t expected = static_cast<std::size_t>(mode.width) * mode.height *
-                                 (mode.format == PixelFormat::RGB888 ? 3u : 1u);
+    const std::size_t bytesPerPixel = mode.format == PixelFormat::RGB888 ? 3u
+                                      : mode.format == PixelFormat::YUYV ? 2u
+                                                                         : 1u;
+    const std::size_t expected = static_cast<std::size_t>(mode.width) * mode.height * bytesPerPixel;
     if (frame.pixels().size() != expected) return {std::nullopt, AnalyzeError::InvalidFrame};
 
     const auto gray = toGray(frame);

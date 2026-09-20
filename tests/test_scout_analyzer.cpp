@@ -49,6 +49,30 @@ void test_measures_calibrated_scene() {
     const auto grayOutcome = vision::analyzeFrame(measurementScene().frame(), spec);
     assert(grayOutcome.ok());
     assert(std::abs(grayOutcome.analysis->subjectLengthMm - a.subjectLengthMm) < 1e-9);
+
+    // YUYV is what a UVC webcam delivers; neutral chroma must measure exactly
+    // like Gray8, since only the luma byte is read.
+    const auto yuyvOutcome = vision::analyzeFrame(measurementScene().yuyvFrame(), spec);
+    assert(yuyvOutcome.ok());
+    assert(yuyvOutcome.analysis->binarizationThreshold ==
+           grayOutcome.analysis->binarizationThreshold);
+    assert(yuyvOutcome.analysis->reference.areaPx == grayOutcome.analysis->reference.areaPx);
+    assert(std::abs(yuyvOutcome.analysis->mmPerPixel - grayOutcome.analysis->mmPerPixel) < 1e-12);
+    assert(std::abs(yuyvOutcome.analysis->subjectLengthMm - grayOutcome.analysis->subjectLengthMm) <
+           1e-9);
+    assert(std::abs(yuyvOutcome.analysis->subjectWidthMm - grayOutcome.analysis->subjectWidthMm) <
+           1e-9);
+
+    // A YUYV buffer sized as if it were Gray8 must be rejected, not misread.
+    const auto truncated = measurementScene().frame();
+    const auto badOutcome = vision::analyzeFrame(
+        hal::Frame({truncated.mode().width, truncated.mode().height, hal::PixelFormat::YUYV, 30.0f},
+                   std::make_shared<std::vector<std::byte>>(truncated.pixels().begin(),
+                                                            truncated.pixels().end()),
+                   std::chrono::steady_clock::time_point{}),
+        spec);
+    assert(!badOutcome.ok());
+    assert(badOutcome.error == vision::AnalyzeError::InvalidFrame);
 }
 
 void test_determinism() {
@@ -85,10 +109,13 @@ void test_scene_conditions_are_reported() {
     assert(vision::analyzeFrame(hal::Frame{}, spec).error == AnalyzeError::InvalidFrame);
     assert(vision::analyzeFrame(measurementScene().rgbFrame(), CalibrationSpec{0.0}).error ==
            AnalyzeError::InvalidFrame);
-    const auto yuyv = hal::Frame({kWidth, kHeight, hal::PixelFormat::YUYV, 30.0f},
-                                 std::make_shared<std::vector<std::byte>>(16, std::byte{0}),
-                                 std::chrono::steady_clock::time_point{});
-    assert(vision::analyzeFrame(yuyv, spec).error == AnalyzeError::UnsupportedFormat);
+    // Compressed formats stay unsupported: measuring them needs a decoder the
+    // tree deliberately does not carry. YUYV, by contrast, is now measured
+    // directly (see test_measures_calibrated_scene).
+    const auto mjpeg = hal::Frame({kWidth, kHeight, hal::PixelFormat::MJPEG, 30.0f},
+                                  std::make_shared<std::vector<std::byte>>(16, std::byte{0}),
+                                  std::chrono::steady_clock::time_point{});
+    assert(vision::analyzeFrame(mjpeg, spec).error == AnalyzeError::UnsupportedFormat);
 }
 
 void test_evidence_emission() {

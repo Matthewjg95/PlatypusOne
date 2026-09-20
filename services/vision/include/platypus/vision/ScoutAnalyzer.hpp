@@ -62,7 +62,7 @@ struct ScoutAnalysis {
 enum class AnalyzeError : std::uint8_t {
     None = 0,
     InvalidFrame,        ///< empty frame or pixel buffer inconsistent with mode
-    UnsupportedFormat,   ///< analyzer accepts RGB888 and Gray8 only
+    UnsupportedFormat,   ///< analyzer accepts Gray8, RGB888 and YUYV only
     NoReferenceTarget,   ///< no blob passes the square-reference gates
     ReferenceAmbiguous,  ///< two comparable square candidates; scene must have one
     NoSubject,           ///< nothing measurable besides the reference

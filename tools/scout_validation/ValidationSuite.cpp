@@ -184,15 +184,22 @@ ValidationRun runValidation() {
     std::size_t widSamples = 0;
 
     for (const auto& caseSpec : buildCases()) {
-        CaseResult result;
-        result.name = caseSpec.name;
-        result.kind = caseSpec.kind;
-        result.expectedError = caseSpec.expectedError;
-        result.expectedClass = caseSpec.expectedClass;
-        result.expectedNominal = caseSpec.expectedNominal;
-        result.truthLengthMm = caseSpec.truthLengthMm;
-        result.truthWidthMm = caseSpec.truthWidthMm;
-        result.note = caseSpec.note;
+        // Initialised, not assigned: GCC 14 mis-tracks an optional's engaged
+        // flag through copy-assignment into a fresh struct and reports it as
+        // maybe-uninitialized.
+        CaseResult result{
+            .name = caseSpec.name,
+            .kind = caseSpec.kind,
+            .expectedError = caseSpec.expectedError,
+            .expectedClass = caseSpec.expectedClass,
+            .expectedNominal = caseSpec.expectedNominal,
+            .truthLengthMm = caseSpec.truthLengthMm,
+            .truthWidthMm = caseSpec.truthWidthMm,
+            .actualError = std::nullopt,
+            .actualClass = std::nullopt,
+            .actualNominal = std::nullopt,
+            .note = caseSpec.note,
+        };
 
         SyntheticScene scene;
         caseSpec.build(scene, 1.0 / caseSpec.mmPerPx);
