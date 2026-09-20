@@ -10,6 +10,7 @@
 // Full spec: docs/protocols/mcu-bridge.md
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -41,16 +42,18 @@ struct Message {
 /// Serializes one message into a wire frame.
 [[nodiscard]] inline std::vector<std::byte> encode(std::uint16_t topic,
                                                    std::span<const std::byte> payload) {
-    std::vector<std::byte> frame;
-    frame.reserve(kHeaderSize + payload.size() + 1);
-    frame.push_back(kSync);
+    // The frame size is known up front, so build it sized and indexed rather
+    // than growing it: no reallocation path, and GCC 12-14 stop reporting a
+    // spurious -Wfree-nonheap-object from the inlined push_back guard.
+    std::vector<std::byte> frame(kHeaderSize + payload.size() + 1);
     const auto len = static_cast<std::uint16_t>(payload.size());
-    frame.push_back(std::byte{static_cast<std::uint8_t>(len & 0xFF)});
-    frame.push_back(std::byte{static_cast<std::uint8_t>(len >> 8)});
-    frame.push_back(std::byte{static_cast<std::uint8_t>(topic & 0xFF)});
-    frame.push_back(std::byte{static_cast<std::uint8_t>(topic >> 8)});
-    frame.insert(frame.end(), payload.begin(), payload.end());
-    frame.push_back(std::byte{crc8({frame.data() + 1, frame.size() - 1})});
+    frame[0] = kSync;
+    frame[1] = std::byte{static_cast<std::uint8_t>(len & 0xFF)};
+    frame[2] = std::byte{static_cast<std::uint8_t>(len >> 8)};
+    frame[3] = std::byte{static_cast<std::uint8_t>(topic & 0xFF)};
+    frame[4] = std::byte{static_cast<std::uint8_t>(topic >> 8)};
+    std::copy(payload.begin(), payload.end(), frame.begin() + kHeaderSize);
+    frame.back() = std::byte{crc8({frame.data() + 1, frame.size() - 2})};
     return frame;
 }
 

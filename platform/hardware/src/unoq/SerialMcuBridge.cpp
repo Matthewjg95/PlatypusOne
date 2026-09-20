@@ -119,7 +119,7 @@ Status SerialMcuBridge::pinMode(std::uint8_t pin, hal::PinMode mode) {
 }
 
 Status SerialMcuBridge::digitalWrite(std::uint8_t pin, bool level) {
-    const std::byte msg[] = {std::byte{pin}, std::byte{level ? 1u : 0u}};
+    const std::byte msg[] = {std::byte{pin}, std::byte{static_cast<std::uint8_t>(level ? 1 : 0)}};
     return send(mcu::topics::kGpioSet, msg);
 }
 
