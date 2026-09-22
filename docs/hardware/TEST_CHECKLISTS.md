@@ -22,7 +22,7 @@ actually has.
 | 4 | MCU ↔ Linux communication | Flash `firmware/mcu_bridge`; Ping/Pong + GPIO loopback over `/dev/ttyRPMSG0` (§2) | UNTESTED |
 | 5 | UNO Q ↔ Tab5 heartbeat | `LinkedDisplay` session: Hello/HelloReply + Ping/Pong over USB CDC | UNTESTED |
 | 6 | Tab5 input → UNO Q → response | Touch on Tab5 reaches the app via EventQueue; visible UI response tile returns | UNTESTED |
-| 7 | Camera capture | `engineering_scout_capture --device /dev/videoN` produces a real observation (§4). **Not `/dev/video0`** — see Session A | BLOCKED (USB-C PD hub in transit) |
+| 7 | Camera capture | `engineering_scout_capture --device /dev/videoN` produces a real observation (§4). **Not `/dev/video0`** — see Session A | PASS 2026-09-21 — UGREEN hub + Adesso CyberTrack H4 on `/dev/video2`, 640x480 YUYV, valid record written (`scan-0001`); YUYV also at 1280x720/1920x1080. Measurement pending the printed sheet |
 | 8 | Scout pipeline on a real image | Analyzer + classifier over a physical fastener beside the 20 mm reference | UNTESTED |
 | 9 | Result on Tab5 | Scout result card rendered through `LinkedDisplay` on the Tab5 panel | UNTESTED |
 
@@ -62,8 +62,11 @@ Bundled ADB: `%LOCALAPPDATA%\Arduino15\packages\arduino\tools\adb\32.0.0\adb.exe
       before the hub session): `cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release
       && cmake --build build-bench -j4 && ./build-bench/tests/platypus_tests`
       → status-board step 3 **PASS** (2026-09-19, 14/14 suites)
-- [ ] 20 mm calibration square printed/cut (matte, high contrast); a light,
-      matte background sheet; one M-series bolt and one nut to hand
+- [ ] Print [calibration_sheet.pdf](calibration_sheet.pdf) at **100 % / actual size**
+      (generator: `tools/calibration_sheet/make_calibration_sheet.py`); check the
+      100 mm bar with a ruler; cut the strip off. Page 1 = validation (20 mm square +
+      40x8 mm printed bar, expect 40.0 x 8.0), page 2 = working sheet. One M-series
+      bolt and one nut to hand
 - [ ] USB-C PD charger ≥ 20 W located for the hub's PD port
 
 ### A1. Rig (hub arrived)
