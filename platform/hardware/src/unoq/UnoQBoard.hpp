@@ -4,7 +4,9 @@
 //   mcuBridge  ✔ SerialMcuBridge over /dev/ttyRPMSG0 (override via ctor)
 //   storage    ✔ fixed data partition path
 //   display    ✖ TODO(board-bringup): panel driver pending hardware selection
-//   camera     ✖ TODO(board-bringup): libcamera backend (ROADMAP camera/libcamera)
+//   camera     ✖ TODO(board-bringup): not wired here yet. The V4L2 backend
+//              (platform/camera/src/v4l2) is proven on the board and is used
+//              directly by tools/engineering_scout_capture
 //   sensors    ✖ TODO(board-bringup): IMU via MCU bridge (ROADMAP sensors/imu)
 //   audio      ✖ TODO(board-bringup)
 // Missing capabilities return nullptr per the IBoard contract; apps degrade.

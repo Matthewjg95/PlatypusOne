@@ -14,6 +14,38 @@ using hal::Result;
 using hal::Status;
 namespace mcu = hal::mcu;
 
+namespace {
+
+/// Maps a numeric baud rate to its termios constant; 0 when unsupported.
+speed_t toSpeed(unsigned baud) {
+    switch (baud) {
+        case 9600:
+            return B9600;
+        case 19200:
+            return B19200;
+        case 38400:
+            return B38400;
+        case 57600:
+            return B57600;
+        case 115200:
+            return B115200;
+        case 230400:
+            return B230400;
+#ifdef B460800
+        case 460800:
+            return B460800;
+#endif
+#ifdef B921600
+        case 921600:
+            return B921600;
+#endif
+        default:
+            return 0;
+    }
+}
+
+}  // namespace
+
 SerialMcuBridge::SerialMcuBridge(std::string devicePath, unsigned baud)
     : devicePath_(std::move(devicePath)), baud_(baud) {}
 
@@ -24,13 +56,15 @@ SerialMcuBridge::~SerialMcuBridge() {
 Status SerialMcuBridge::open() {
     if (fd_ >= 0) return {};
 
+    const speed_t speed = toSpeed(baud_);
+    if (speed == 0) return Error::InvalidArgument;
+
     fd_ = ::open(devicePath_.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ < 0) return Error::IoFailure;
 
     termios tio{};
     if (::tcgetattr(fd_, &tio) == 0) {
         cfmakeraw(&tio);
-        const speed_t speed = baud_ == 115200 ? B115200 : B115200;  // TODO: full baud table
         cfsetispeed(&tio, speed);
         cfsetospeed(&tio, speed);
         tio.c_cc[VMIN] = 1;
