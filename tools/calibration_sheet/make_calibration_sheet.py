@@ -49,20 +49,38 @@ def font(size_pt: int) -> ImageFont.ImageFont:
 
 
 def new_page() -> tuple[Image.Image, ImageDraw.ImageDraw]:
-    page = Image.new("L", (round(PAGE_W_IN * DPI), round(PAGE_H_IN * DPI)), 255)
+    page = Image.new(
+        "L",
+        (round(PAGE_W_IN * DPI), round(PAGE_H_IN * DPI)),
+        255,
+    )
     return page, ImageDraw.Draw(page)
 
 
-def draw_square(draw: ImageDraw.ImageDraw, x_mm: float, y_mm: float, side_mm: float) -> None:
-    draw.rectangle([px(x_mm), px(y_mm), px(x_mm + side_mm), px(y_mm + side_mm)], fill=0)
+def draw_square(
+    draw: ImageDraw.ImageDraw, x_mm: float, y_mm: float, side_mm: float
+) -> None:
+    draw.rectangle(
+        [px(x_mm), px(y_mm), px(x_mm + side_mm), px(y_mm + side_mm)],
+        fill=0,
+    )
 
 
 def draw_strip(draw: ImageDraw.ImageDraw, title: str, lines: list[str]) -> None:
     y = STRIP_TOP_MM
     # Cut line: dashed, so it reads as "cut here" and not as a border.
-    for x in range(px(MARGIN_MM), px(PAGE_W_IN * MM_PER_IN - MARGIN_MM), px(6)):
+    for x in range(
+        px(MARGIN_MM),
+        px(PAGE_W_IN * MM_PER_IN - MARGIN_MM),
+        px(6),
+    ):
         draw.line([x, px(y), x + px(3), px(y)], fill=0, width=px(0.3))
-    draw.text((px(MARGIN_MM), px(y + 1.5)), "cut along this line before use", font=font(8), fill=0)
+    draw.text(
+        (px(MARGIN_MM), px(y + 1.5)),
+        "cut along this line before use",
+        font=font(8),
+        fill=0,
+    )
 
     draw.text((px(MARGIN_MM), px(y + 9)), title, font=font(14), fill=0)
     ty = y + 17
@@ -72,10 +90,22 @@ def draw_strip(draw: ImageDraw.ImageDraw, title: str, lines: list[str]) -> None:
 
     # Print-scale verification bar with 10 mm ticks.
     bx, by = MARGIN_MM, ty + 4
-    draw.rectangle([px(bx), px(by), px(bx + SCALE_BAR_MM), px(by + 1.2)], fill=0)
+    draw.rectangle(
+        [px(bx), px(by), px(bx + SCALE_BAR_MM), px(by + 1.2)],
+        fill=0,
+    )
     for i in range(0, int(SCALE_BAR_MM) + 1, 10):
-        draw.line([px(bx + i), px(by), px(bx + i), px(by + 4)], fill=0, width=px(0.3))
-        draw.text((px(bx + i - 1.5), px(by + 4.5)), str(i), font=font(7), fill=0)
+        draw.line(
+            [px(bx + i), px(by), px(bx + i), px(by + 4)],
+            fill=0,
+            width=px(0.3),
+        )
+        draw.text(
+            (px(bx + i - 1.5), px(by + 4.5)),
+            str(i),
+            font=font(7),
+            fill=0,
+        )
     draw.text(
         (px(bx + SCALE_BAR_MM + 5), px(by - 1)),
         f"= {SCALE_BAR_MM:.0f} mm on a ruler, or the print is scaled and the sheet is void",
@@ -108,7 +138,15 @@ def validation_sheet() -> Image.Image:
     page, draw = new_page()
     draw_square(draw, 50.0, 60.0, REFERENCE_MM)
     bar_x, bar_y = 110.0, 120.0
-    draw.rectangle([px(bar_x), px(bar_y), px(bar_x + BAR_MM[0]), px(bar_y + BAR_MM[1])], fill=0)
+    draw.rectangle(
+        [
+            px(bar_x),
+            px(bar_y),
+            px(bar_x + BAR_MM[0]),
+            px(bar_y + BAR_MM[1]),
+        ],
+        fill=0,
+    )
     draw_strip(
         draw,
         "Engineering Scout - calibration sheet (validation)",
@@ -128,7 +166,13 @@ def main(argv: list[str]) -> int:
     out = Path(argv[1]) if len(argv) > 1 else Path("calibration_sheet.pdf")
     out.parent.mkdir(parents=True, exist_ok=True)
     pages = [validation_sheet(), working_sheet()]
-    pages[0].save(out, "PDF", resolution=DPI, save_all=True, append_images=pages[1:])
+    pages[0].save(
+        out,
+        "PDF",
+        resolution=DPI,
+        save_all=True,
+        append_images=pages[1:],
+    )
     print(f"wrote {out} ({len(pages)} pages, {DPI} dpi)")
     return 0
 
