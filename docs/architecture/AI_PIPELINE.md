@@ -360,6 +360,11 @@ camera/saved image
   -> simple human-readable renderer
 ```
 
+The first host prototype now lives in [tools/ai01](../../tools/ai01/README.md).
+It emits contract v0.1, preserves debug/evidence artifacts, and documents the
+compatibility boundary with the existing C++ Scout path. Real-capture acceptance
+remains pending.
+
 Suggested initial dependency set:
 
 - Python
