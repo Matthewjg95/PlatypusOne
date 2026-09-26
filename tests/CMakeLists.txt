@@ -38,3 +38,8 @@ else()
 endif()
 
 add_test(NAME platypus_tests COMMAND platypus_tests)
+
+# AI-01 Python output must remain readable by the canonical observation service.
+add_executable(ai01_validate_observation ../tools/ai01/validate_observation.cpp)
+target_link_libraries(ai01_validate_observation PRIVATE platypus::observation)
+platypus_set_warnings(ai01_validate_observation)
