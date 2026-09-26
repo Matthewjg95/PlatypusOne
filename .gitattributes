@@ -1,0 +1,17 @@
+# Normalize text to LF in the repository and working tree. The target is
+# Linux (UNO Q), and .clang-format / ruff both expect LF.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets: never diff or normalize.
+*.step binary
+*.stp  binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.jfif binary

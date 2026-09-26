@@ -19,9 +19,12 @@
 namespace platypus::unoq {
 
 class SerialMcuBridge final : public hal::IMcuBridge {
-public:
-    /// devicePath e.g. "/dev/ttyRPMSG0". Baud only applies to real UARTs.
-    explicit SerialMcuBridge(std::string devicePath, unsigned baud = 115200);
+   public:
+    enum class Transport { Uart, Rpmsg };
+
+    /// devicePath e.g. "/dev/ttyRPMSG0". Rpmsg explicitly skips termios; baud is ignored.
+    explicit SerialMcuBridge(std::string devicePath, unsigned baud = 115200,
+                             Transport transport = Transport::Uart);
     ~SerialMcuBridge() override;
 
     SerialMcuBridge(const SerialMcuBridge&) = delete;
@@ -42,7 +45,7 @@ public:
 
     hal::Status ping(std::chrono::milliseconds timeout) override;
 
-private:
+   private:
     hal::Status send(std::uint16_t topic, std::span<const std::byte> payload);
     /// Sends a request and blocks (bounded) for the paired reply topic.
     hal::Result<std::vector<std::byte>> request(std::uint16_t requestTopic,
@@ -53,17 +56,18 @@ private:
 
     std::string devicePath_;
     unsigned baud_;
+    Transport transport_;
     int fd_ = -1;
 
     std::thread reader_;
     std::atomic<bool> running_{false};
 
-    std::mutex mutex_;                       ///< guards subscribers_ + pending replies
+    std::mutex mutex_;  ///< guards subscribers_ + pending replies
     std::condition_variable replyCv_;
     std::map<std::uint16_t, std::function<void(std::span<const std::byte>)>> subscribers_;
     std::map<std::uint16_t, std::vector<std::byte>> replies_;
 
-    std::mutex writeMutex_;                  ///< serializes frame writes
+    std::mutex writeMutex_;  ///< serializes frame writes
 };
 
 }  // namespace platypus::unoq

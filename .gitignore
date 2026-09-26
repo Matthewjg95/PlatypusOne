@@ -22,3 +22,7 @@ docs/hardware/BOM_SCOPE_LAYERS.md
 docs/hardware/ENERGY_HARVESTING_SUBSYSTEM.md
 docs/roadmap/24GHZ_RADAR_EXTENSION.md
 docs/contest/ELEMENT14_PLATYPUSVISION_ROADTEST_APPLICATION.md
+.ruff_cache/
+
+# Claude Code per-session runtime state.
+.claude/scheduled_tasks.lock

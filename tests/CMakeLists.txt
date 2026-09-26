@@ -38,3 +38,14 @@ else()
 endif()
 
 add_test(NAME platypus_tests COMMAND platypus_tests)
+
+# PTYs + GNU linker wrapping test the real Linux serial implementation.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(serial_mcu_bridge_tests test_serial_mcu_bridge.cpp)
+    target_link_libraries(serial_mcu_bridge_tests PRIVATE platypus::board_unoq)
+    target_link_options(serial_mcu_bridge_tests PRIVATE -Wl,--wrap=tcsetattr)
+    target_compile_options(serial_mcu_bridge_tests PRIVATE -UNDEBUG)
+    platypus_set_warnings(serial_mcu_bridge_tests)
+    add_test(NAME serial_mcu_bridge_tests COMMAND serial_mcu_bridge_tests)
+    set_tests_properties(serial_mcu_bridge_tests PROPERTIES TIMEOUT 10)
+endif()

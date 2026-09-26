@@ -1,6 +1,7 @@
 #include "SerialMcuBridge.hpp"
 
 #include <fcntl.h>
+#include <poll.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -14,8 +15,40 @@ using hal::Result;
 using hal::Status;
 namespace mcu = hal::mcu;
 
-SerialMcuBridge::SerialMcuBridge(std::string devicePath, unsigned baud)
-    : devicePath_(std::move(devicePath)), baud_(baud) {}
+namespace {
+
+/// Maps a numeric baud rate to its termios constant; 0 when unsupported.
+speed_t toSpeed(unsigned baud) {
+    switch (baud) {
+        case 9600:
+            return B9600;
+        case 19200:
+            return B19200;
+        case 38400:
+            return B38400;
+        case 57600:
+            return B57600;
+        case 115200:
+            return B115200;
+        case 230400:
+            return B230400;
+#ifdef B460800
+        case 460800:
+            return B460800;
+#endif
+#ifdef B921600
+        case 921600:
+            return B921600;
+#endif
+        default:
+            return 0;
+    }
+}
+
+}  // namespace
+
+SerialMcuBridge::SerialMcuBridge(std::string devicePath, unsigned baud, Transport transport)
+    : devicePath_(std::move(devicePath)), baud_(baud), transport_(transport) {}
 
 SerialMcuBridge::~SerialMcuBridge() {
     close();
@@ -24,18 +57,29 @@ SerialMcuBridge::~SerialMcuBridge() {
 Status SerialMcuBridge::open() {
     if (fd_ >= 0) return {};
 
+    const speed_t speed = toSpeed(baud_);
+    if (transport_ == Transport::Uart && speed == 0) return Error::InvalidArgument;
+
     fd_ = ::open(devicePath_.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ < 0) return Error::IoFailure;
 
-    termios tio{};
-    if (::tcgetattr(fd_, &tio) == 0) {
+    if (transport_ == Transport::Uart) {
+        const auto fail = [this]() -> Status {
+            ::close(fd_);
+            fd_ = -1;
+            return Error::IoFailure;
+        };
+        termios tio{};
+        if (::tcgetattr(fd_, &tio) != 0) return fail();
         cfmakeraw(&tio);
-        const speed_t speed = baud_ == 115200 ? B115200 : B115200;  // TODO: full baud table
-        cfsetispeed(&tio, speed);
-        cfsetospeed(&tio, speed);
-        tio.c_cc[VMIN] = 1;
+        if (::cfsetispeed(&tio, speed) != 0 || ::cfsetospeed(&tio, speed) != 0) return fail();
+        tio.c_cc[VMIN] = 0;
         tio.c_cc[VTIME] = 1;
-        ::tcsetattr(fd_, TCSANOW, &tio);  // best effort; RPMsg endpoints reject this
+        if (::tcsetattr(fd_, TCSANOW, &tio) != 0) return fail();
+        termios applied{};
+        if (::tcgetattr(fd_, &applied) != 0 || ::cfgetispeed(&applied) != speed ||
+            ::cfgetospeed(&applied) != speed)
+            return fail();
     }
 
     running_ = true;
@@ -45,17 +89,27 @@ Status SerialMcuBridge::open() {
 
 void SerialMcuBridge::close() {
     running_ = false;
+    if (reader_.joinable()) reader_.join();
     if (fd_ >= 0) {
-        ::close(fd_);  // unblocks the reader's read()
+        ::close(fd_);
         fd_ = -1;
     }
-    if (reader_.joinable()) reader_.join();
 }
 
 void SerialMcuBridge::readLoop() {
     mcu::Decoder decoder;
     std::byte buf[256];
     while (running_) {
+        // Bound idle shutdown without closing an fd another thread is reading.
+        pollfd input{fd_, POLLIN, 0};
+        const int ready = ::poll(&input, 1, 100);
+        if (!running_) break;
+        if (ready < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+        if (ready == 0) continue;
+        if ((input.revents & POLLIN) == 0) break;
         const ssize_t n = ::read(fd_, buf, sizeof(buf));
         if (n <= 0) {
             if (errno == EINTR) continue;
