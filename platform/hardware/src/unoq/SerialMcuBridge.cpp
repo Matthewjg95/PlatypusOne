@@ -1,6 +1,7 @@
 #include "SerialMcuBridge.hpp"
 
 #include <fcntl.h>
+#include <poll.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -46,8 +47,8 @@ speed_t toSpeed(unsigned baud) {
 
 }  // namespace
 
-SerialMcuBridge::SerialMcuBridge(std::string devicePath, unsigned baud)
-    : devicePath_(std::move(devicePath)), baud_(baud) {}
+SerialMcuBridge::SerialMcuBridge(std::string devicePath, unsigned baud, Transport transport)
+    : devicePath_(std::move(devicePath)), baud_(baud), transport_(transport) {}
 
 SerialMcuBridge::~SerialMcuBridge() {
     close();
@@ -57,19 +58,28 @@ Status SerialMcuBridge::open() {
     if (fd_ >= 0) return {};
 
     const speed_t speed = toSpeed(baud_);
-    if (speed == 0) return Error::InvalidArgument;
+    if (transport_ == Transport::Uart && speed == 0) return Error::InvalidArgument;
 
     fd_ = ::open(devicePath_.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ < 0) return Error::IoFailure;
 
-    termios tio{};
-    if (::tcgetattr(fd_, &tio) == 0) {
+    if (transport_ == Transport::Uart) {
+        const auto fail = [this]() -> Status {
+            ::close(fd_);
+            fd_ = -1;
+            return Error::IoFailure;
+        };
+        termios tio{};
+        if (::tcgetattr(fd_, &tio) != 0) return fail();
         cfmakeraw(&tio);
-        cfsetispeed(&tio, speed);
-        cfsetospeed(&tio, speed);
-        tio.c_cc[VMIN] = 1;
+        if (::cfsetispeed(&tio, speed) != 0 || ::cfsetospeed(&tio, speed) != 0) return fail();
+        tio.c_cc[VMIN] = 0;
         tio.c_cc[VTIME] = 1;
-        ::tcsetattr(fd_, TCSANOW, &tio);  // best effort; RPMsg endpoints reject this
+        if (::tcsetattr(fd_, TCSANOW, &tio) != 0) return fail();
+        termios applied{};
+        if (::tcgetattr(fd_, &applied) != 0 || ::cfgetispeed(&applied) != speed ||
+            ::cfgetospeed(&applied) != speed)
+            return fail();
     }
 
     running_ = true;
@@ -79,17 +89,27 @@ Status SerialMcuBridge::open() {
 
 void SerialMcuBridge::close() {
     running_ = false;
+    if (reader_.joinable()) reader_.join();
     if (fd_ >= 0) {
-        ::close(fd_);  // unblocks the reader's read()
+        ::close(fd_);
         fd_ = -1;
     }
-    if (reader_.joinable()) reader_.join();
 }
 
 void SerialMcuBridge::readLoop() {
     mcu::Decoder decoder;
     std::byte buf[256];
     while (running_) {
+        // Bound idle shutdown without closing an fd another thread is reading.
+        pollfd input{fd_, POLLIN, 0};
+        const int ready = ::poll(&input, 1, 100);
+        if (!running_) break;
+        if (ready < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+        if (ready == 0) continue;
+        if ((input.revents & POLLIN) == 0) break;
         const ssize_t n = ::read(fd_, buf, sizeof(buf));
         if (n <= 0) {
             if (errno == EINTR) continue;
