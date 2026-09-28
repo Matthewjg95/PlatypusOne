@@ -96,10 +96,13 @@ Goal: submit a strong free-hardware application (UNO Q 4G + $300 PCBWay + Fusion
 
 ## Phase 2 — Sep 25 → mid-Oct (parts + bring-up)
 
-Decision point Sep 25 (verified on the live page 2026-08-30; was Sep 18):
-- **Selected:** hardware + credit incoming; reconcile the [Contest Core scope](../contest/PLATYPUSONE_CORE_SCOPE.md) against the master [BOM](BOM.md), then order only selected Core items the same week. Received-research rows R1–R4 are excluded unless explicitly promoted. Every ⚖ DECISION line must close first.
-- **Not selected:** buy UNO Q retail (~$59) immediately; self-fund a reduced
-  enclosure budget; scope unchanged otherwise.
+**SELECTED 2026-09-25.** Hardware/fab support is now confirmed. The contingency branch is closed.
+
+Immediate execution:
+- reconcile [Contest Core scope](../contest/PLATYPUSONE_CORE_SCOPE.md) against the master [BOM](BOM.md);
+- lock Rev A display, camera, ToF, controls, power, and carrier/interconnect choices;
+- identify any PCB/enclosure item whose lead time can block integration and release it as early as validation allows;
+- do not promote research/stretch hardware into Rev A without a critical-path reason.
 
 - [ ] Execute [test checklists](TEST_CHECKLISTS.md) 1–2 (boot, PlatypusOS, MCU bridge)
 - [ ] Checklists 3–7 as parts land (display, camera, sensors, power, audio)
