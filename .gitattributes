@@ -1,0 +1,2 @@
+# Ruff requires LF even when Git checks out on Windows.
+*.py text eol=lf
