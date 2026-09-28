@@ -12,10 +12,10 @@ if this file disagrees with the code, the code wins and this file is stale.
 | **Autodesk hardware request** | **SELECTED — 2026-09-25** |
 | **Mode** | **EXECUTION MODE** — shortest path to a demonstrable PlatypusOne core prototype |
 | **Critical path** | Minimum viable enclosure/packaging → Rev A architecture lock → early PCB/fab orders → one physical end-to-end measurement workflow |
-| **Hardware in hand** | Arduino UNO Q + M5Stack Tab5 prototype-display fixture; additional contest hardware/fab support now expected from selection |
+| **Hardware in hand** | Arduino UNO Q + UNO Media Carrier + Waveshare 5-DSI-TOUCH-A + USB webcam + printed 20 mm reference sheets. M5Stack Tab5 remains a fallback/dev fixture. |
 | **Software state** | Host architecture, observation contract, Scout analyzer/classifier/UI and validation are substantially ahead of physical bring-up; the priority is now hardware proof, not more host-side feature breadth |
 | **Shared Autodesk + Dream Lab slice** | camera → capture → useful measurement → observation record → UI → saved artifact |
-| **Display** | Final Rev A display path must be locked during architecture freeze; Tab5 remains a development fixture, not product architecture |
+| **Display** | Rev A display candidate is physically in hand: UNO Media Carrier + Waveshare 5-DSI-TOUCH-A. Tonight's gate is DSI/touch proof-of-life and Scout UI on this panel. |
 
 ## Execution rules
 
@@ -72,7 +72,7 @@ Deferred from critical path:
 
 ## Immediate next action
 
-**Get a real camera frame on the UNO Q and run the existing Engineering Scout path on one physical fastener + in-frame reference.**
+**Tonight: prove the complete physical loop on the UNO Q with the Media Carrier + Waveshare display + webcam + printed reference: touch trigger → capture → measure/classify → render result → save evidence.**
 
 Do not improve calibration further until that end-to-end physical attempt has produced failure data.
 
@@ -84,7 +84,11 @@ Do not improve calibration further until that end-to-end physical attempt has pr
 - Engineering Observation contract — merged.
 - Engineering Scout host capture/analyzer/classifier/result UI — merged.
 - 21-case synthetic validation battery — merged and useful as regression coverage.
-- Linked-display / Tab5 path — development fixture, not final product dependency.
+- Webcam capture on UNO Q — already proven at 640×480 YUYV; reuse that path tonight.
+- UNO Media Carrier + Waveshare 5-DSI-TOUCH-A — hardware in hand; proof-of-life still required.
+- Touch input is the accepted first-pass trigger; MCU/physical trigger is deferred until after the end-to-end loop works.
+- Printed reference sheets — ready for physical testing.
+- Linked-display / Tab5 path — fallback development fixture, not final product dependency.
 
 ## Evidence discipline
 
