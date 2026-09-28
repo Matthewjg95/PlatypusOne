@@ -46,7 +46,7 @@ Controlled illumination is useful and should be demonstrated if available, but *
 ## Must ship
 
 1. **UNO Q capture path** — camera image acquired on the real UNO Q.
-2. **Physical trigger** — a real button/MCU event initiates capture.
+2. **User trigger** — for the first Dream Lab build, a press on the Waveshare touch display may initiate capture. A dedicated MCU/button trigger is a post-proof refinement, not a blocker.
 3. **In-frame scale evidence** — known-size reference detected and retained in the record.
 4. **One physical measurement** — target shaft diameter and/or length with units.
 5. **One classification** — target fastener class and likely nominal size.
@@ -98,7 +98,8 @@ Track:
 - uncertainty/provenance
 - capture-quality checks and one follow-up observation recommendation
 - local storage
-- physical trigger; controlled light if available
+- touch-display trigger for the first pass; dedicated MCU/button trigger only after the core loop works
+- controlled light if available
 
 ### Explicitly deferred
 
@@ -137,7 +138,7 @@ After DigiKey, these same components feed PlatypusOne measurement, inspection, d
 3. **Make the full record/UI/save loop work once end-to-end.**
 4. **Repeat under 3–4 ordinary lighting conditions and log failures.**
 5. Fix only the failure modes that block the workflow most often.
-6. Add physical trigger.
+6. Add dedicated MCU/button trigger only if the complete touch-triggered loop is already stable.
 7. Add controlled illumination only if it materially improves repeatability.
 8. Add capture-quality/refusal guidance for remaining weak conditions.
 9. Freeze functionality.
