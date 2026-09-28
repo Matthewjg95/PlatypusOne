@@ -7,9 +7,7 @@ photos feed the 20-point documentation score.
 
 ## First UNO Q session — status board
 
-The bring-up-brief sequence for the first physical session (UNO Q in hand,
-M5Stack Tab5 as the temporary linked display per
-[presentation.md](../protocols/presentation.md) and ADR-0001). Update the
+The bring-up-brief sequence for the current physical session. The primary path is now the UNO Q + UNO Media Carrier + Waveshare 5-DSI-TOUCH-A; the M5Stack Tab5 remains a fallback/dev display fixture. Update the
 Status column as physical testing occurs: `UNTESTED`, `PASS`, `FAIL`, or
 `BLOCKED (reason)`. Nothing is claimed compiled or run on the UNO Q until it
 actually has.
@@ -20,15 +18,13 @@ actually has.
 | 2 | Hello-world | Any trivial program compiles + runs on the Linux side | UNTESTED |
 | 3 | Linux-side Platypus executable | On-device native build: cmake + full `platypus_tests` + launcher headless (§2) | PASS 2026-09-19 — GCC 14.2 aarch64, Ninja, 2m44s on 4 cores; `platypus_tests` 14/14; `--fake` harness writes a valid record. Launcher headless soak not yet run |
 | 4 | MCU ↔ Linux communication | Flash `firmware/mcu_bridge`; Ping/Pong + GPIO loopback over `/dev/ttyRPMSG0` (§2) | UNTESTED |
-| 5 | UNO Q ↔ Tab5 heartbeat | `LinkedDisplay` session: Hello/HelloReply + Ping/Pong over USB CDC | UNTESTED |
-| 6 | Tab5 input → UNO Q → response | Touch on Tab5 reaches the app via EventQueue; visible UI response tile returns | UNTESTED |
+| 5 | Waveshare DSI proof-of-life | Media Carrier + 5-DSI-TOUCH-A boots, renders, touch enumerates, rotation usable | UNTESTED |
+| 6 | Touch → app response | Touch press reaches the app and can act as the first-pass Scout trigger | UNTESTED |
 | 7 | Camera capture | `engineering_scout_capture --device /dev/videoN` produces a real observation (§4). **Not `/dev/video0`** — see Session A | PASS 2026-09-21 — UGREEN hub + Adesso CyberTrack H4 on `/dev/video2`, 640x480 YUYV, valid record written (`scan-0001`); YUYV also at 1280x720/1920x1080. Measurement pending the printed sheet |
 | 8 | Scout pipeline on a real image | Analyzer + classifier over a physical fastener beside the 20 mm reference | UNTESTED |
-| 9 | Result on Tab5 | Scout result card rendered through `LinkedDisplay` on the Tab5 panel | UNTESTED |
+| 9 | Result on Waveshare | Scout result card renders on the 5-DSI-TOUCH-A and remains touch-usable | UNTESTED |
 
-Session prerequisites: a USB serial path between the UNO Q and the Tab5
-(cable/role decision is open), the UNO Q Arduino core installed in
-arduino-cli for step 4, and the Tab5 display-client firmware for steps 5–9.
+Session prerequisites: UNO Media Carrier + Waveshare 5-DSI-TOUCH-A installed with power removed; webcam available on USB; printed 20 mm reference sheet verified at 100% scale. MCU bridge/arduino-cli work is not a blocker for tonight because touch is the accepted first-pass trigger.
 
 ## Session A — first camera-on-board run (Dream Lab MVP step 6)
 
@@ -57,12 +53,12 @@ Bundled ADB: `%LOCALAPPDATA%\Arduino15\packages\arduino\tools\adb\32.0.0\adb.exe
       stock image**): `sudo apt install -y build-essential cmake ninja-build`
       (~250 MB; 3.0 GB free on `/`). `git`, `python3`, `v4l2-ctl` are already there
 - [x] Repo on the board: `git clone https://github.com/Matthewjg95/PlatypusOne.git
-      && cd PlatypusOne && git checkout claude/scout-yuyv-capture`
+      && cd PlatypusOne && git checkout main && git pull --ff-only`
 - [x] First on-device build while still on USB (catches aarch64/GCC surprises
       before the hub session): `cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release
       && cmake --build build-bench -j4 && ./build-bench/tests/platypus_tests`
       → status-board step 3 **PASS** (2026-09-19, 14/14 suites)
-- [ ] Print [calibration_sheet.pdf](calibration_sheet.pdf) at **100 % / actual size**
+- [x] Print [calibration_sheet.pdf](calibration_sheet.pdf) at **100 % / actual size**
       (generator: `tools/calibration_sheet/make_calibration_sheet.py`); check the
       100 mm bar with a ruler; cut the strip off. Page 1 = validation (20 mm square +
       40x8 mm printed bar, expect 40.0 x 8.0), page 2 = working sheet. One M-series
@@ -225,3 +221,146 @@ fall back to the USB-C link, fix networking, and retry.
 - [ ] All contest video/photo shots captured (device in action, in hand)
 - [ ] Final BOM reconciled: every physical part appears in BOM.md with real price/source
 - [ ] Submission checklist in the contest snapshot doc 100% ticked
+
+
+## Session B — Dream Lab first end-to-end pass (2026-09-28)
+
+**Goal:** one uninterrupted physical workflow using the hardware currently in hand:
+
+`touch trigger → webcam capture → reference + fastener analysis → measurement/classification → result on Waveshare → saved observation`
+
+This session is allowed to be ugly. It is not allowed to expand in scope.
+
+### B0. Before power
+
+- [ ] UNO Q powered down before attaching/removing the Media Carrier or DSI FFC.
+- [ ] Verify FFC orientation against the carrier/display markings; photograph both ends before assembly.
+- [ ] Media Carrier seated; Waveshare 5-DSI-TOUCH-A connected.
+- [x] Printed 20 mm reference is ready and scale-checked.
+- [ ] One bolt and one nut are ready; calipers available for truth measurements.
+- [ ] Webcam + powered/PD-capable USB path ready.
+
+### B1. Display proof-of-life
+
+Run on the UNO Q:
+
+```bash
+sudo arduino-linux-config carrier list
+sudo arduino-linux-config carrier enable media-carrier display=5-dsi-touch-a
+sudo arduino-linux-config carrier show media-carrier
+sudo reboot
+```
+
+After reboot:
+
+- [ ] Display shows a full frame with no persistent flicker/clipping.
+- [ ] Touch enumerates and responds.
+- [ ] Record `uname -a`, `ls /sys/class/drm`, and relevant `dmesg` panel/touch lines.
+- [ ] Confirm intended landscape/portrait orientation is usable.
+- [ ] Take one photo of the working display.
+
+**If DSI fails:** spend at most 30 minutes on configuration/cable/orientation. Then continue the Scout pipeline headless/SSH and keep display debugging as a separate blocker. Do not lose the whole Dream Lab session to the panel.
+
+### B2. Sync and build
+
+```bash
+cd ~/PlatypusOne
+git checkout main
+git pull --ff-only
+cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release
+cmake --build build-bench -j4
+./build-bench/tests/platypus_tests
+```
+
+- [ ] Build passes on the UNO Q.
+- [ ] Tests pass.
+- [ ] Record the commit SHA: `git rev-parse HEAD`.
+
+### B3. Camera sanity
+
+```bash
+v4l2-ctl --list-devices
+v4l2-ctl -d /dev/video2 --list-formats-ext
+v4l2-ctl -d /dev/video2 --stream-mmap --stream-count=30
+```
+
+- [ ] Webcam capture node confirmed (do not assume `/dev/video2` if enumeration changed).
+- [ ] 640×480 YUYV available.
+- [ ] 30-frame stream completes without USB errors.
+
+### B4. First real Scout run
+
+Place one fastener beside the 20 mm reference under normal room lighting.
+
+Preferred command:
+
+```bash
+engineering_scout_capture --device /dev/video2 \
+  --mode 640x480 \
+  --reference-mm 20 \
+  --out observations
+```
+
+If the executable lives under the build tree, use the built path shown by the CMake output / existing bench script.
+
+Acceptance for the **first run**:
+- [ ] source frame saved
+- [ ] reference detected
+- [ ] subject detected
+- [ ] at least one physical dimension reported in mm
+- [ ] classification/nominal result or honest unresolved state
+- [ ] observation JSON saved
+- [ ] compare one dimension against calipers and record the error
+
+**Do not stop to improve calibration math unless the workflow cannot complete at all.**
+
+### B5. Touch trigger + result display
+
+- [ ] Wire the existing Scout action to a touch press on the Waveshare.
+- [ ] One press initiates capture/analysis.
+- [ ] Result card renders on the Waveshare.
+- [ ] Saved observation path is visible/logged.
+
+A dedicated hardware trigger is explicitly **not required tonight**.
+
+### B6. Robustness pass
+
+Repeat the same object under:
+1. normal desk lighting
+2. uneven overhead lighting
+3. moderate shadow
+4. one rotated placement
+
+For each capture record:
+- success/refusal
+- measured dimension + caliper truth
+- classification
+- failure/refusal reason
+- whether retry guidance was useful
+
+The goal is not perfect accuracy. The goal is a useful result or an honest, actionable refusal.
+
+### B7. Evidence before teardown
+
+Before changing the rig:
+- [ ] copy `scan-*` observation directories off the UNO Q
+- [ ] photograph the full rig
+- [ ] photograph/video the touch-triggered run
+- [ ] save terminal output / commit SHA
+- [ ] note the best run and worst run
+- [ ] record one blocker and the single next action
+
+### Stop conditions / scope guard
+
+Do **not** add tonight:
+- ToF
+- IMU
+- radar
+- thermal
+- carrier PCB work
+- enclosure work
+- generalized object recognition
+- ShadowScan / mesh generation
+- dedicated MCU trigger
+
+Those can only enter after the physical Scout loop above works or a specific blocker proves one is necessary.
