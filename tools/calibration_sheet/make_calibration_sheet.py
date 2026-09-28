@@ -57,9 +57,7 @@ def new_page() -> tuple[Image.Image, ImageDraw.ImageDraw]:
     return page, ImageDraw.Draw(page)
 
 
-def draw_square(
-    draw: ImageDraw.ImageDraw, x_mm: float, y_mm: float, side_mm: float
-) -> None:
+def draw_square(draw: ImageDraw.ImageDraw, x_mm: float, y_mm: float, side_mm: float) -> None:
     draw.rectangle(
         [px(x_mm), px(y_mm), px(x_mm + side_mm), px(y_mm + side_mm)],
         fill=0,
