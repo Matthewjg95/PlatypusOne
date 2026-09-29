@@ -142,3 +142,36 @@ Everything that needed no password:
 - Kernel: the 6.16.7 image package stays installed alongside 7.0.0.
 - If the board stops booting or leaves the network: USB-C straight to the PC
   (no hub) brings back ADB — `C:\Users\Public\adb\adb.exe`.
+
+## Bench result, 2026-09-29 — panel not electrically present
+
+After the OS update (Arduino kernel `7.0.0-g122c2c22d838`, carrier overlays
+installed) and `arduino-linux-config carrier enable media-carrier`:
+
+- **Carrier bus healthy.** The carrier's CCI bus appears and its GPIO
+  expander binds at `0x26`; zero `cci ... timeout` lines in `dmesg`.
+- **Panel absent on both CCI buses.** `detect-panel.sh --scan` on the first
+  CCI bus and `i2cdetect -r` / a 1-byte read on the second show nothing at
+  `0x45` (the panel's ATTINY) — a clean NAK, not a wedge. No backlight glow.
+- **Ruled out:** board power (laptop USB-C PD charger, direct); a switched
+  connector rail (the expander only gates `cam-pwr-csi0/1`, the rest drive
+  LEDs); FFC orientation (checked pin by pin by the owner, several
+  combinations tried); the wrong bus (both CCI masters probed).
+- **Remaining causes:** the 15→22 adapter cable (fault, or a pinout that does
+  not match the carrier's DISPLAY connector), or the panel itself. Neither is
+  testable from the UNO Q.
+
+Two findings for upstream (`dcuartielles/uno_q_dsi_displays`):
+
+- With the carrier **disabled**, `detect-panel.sh` found no CCI adapter and its
+  `0x26` fallback matched the ANX7625 DisplayPort AUX adapter, which answers
+  every address with zeros — it reported every panel as "replied 0x00" on the
+  wrong bus. An `*-aux` adapter should never count as the carrier bus, and a
+  missing CCI adapter should say "enable the carrier" instead.
+- `scripts/detect-panel.sh` is committed without its execute bit.
+
+**Decision:** the Dream Lab demo runs on HDMI through the USB-C hub
+(`carrier disable`, which restores DisplayPort over USB-C). `DrmDisplay` and
+`scout_kiosk` drive either connector unchanged. The panel goes to the PSOC
+Edge E84 kit's Raspberry Pi–compatible DSI header as the tie-breaker between
+a bad cable and a bad panel, after the deadline.
