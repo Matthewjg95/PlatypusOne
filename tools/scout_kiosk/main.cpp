@@ -21,6 +21,7 @@
 // lightdm). The camera is found by capability, never by a remembered node
 // number — node numbers move between boots on the UNO Q.
 #include "drm/DrmDisplay.hpp"
+#include "drm/KmsHelpers.hpp"
 #include "v4l2/V4l2Camera.hpp"
 
 #include <platypus/ai/FastenerClassifier.hpp>
