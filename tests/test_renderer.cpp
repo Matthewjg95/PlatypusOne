@@ -125,6 +125,7 @@ void test_renderer_geometry() {
 void test_app_registry();
 void test_event_queue();
 void test_fastener_classifier();
+void test_kms_helpers();
 void test_linked_display();
 void test_mcu_framing();
 void test_observation();
@@ -139,6 +140,7 @@ int main() {
     test_app_registry();
     test_event_queue();
     test_fastener_classifier();
+    test_kms_helpers();
     test_linked_display();
     test_mcu_framing();
     test_observation();
