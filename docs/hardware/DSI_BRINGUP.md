@@ -30,15 +30,15 @@ clock; an ATTINY-style regulator/backlight controller at I²C `0x45` (REG_ID
 reads `0xc3` or `0xde`); FT5x06 touch at `0x38`, X and Y inverted, held in reset
 by the ATTINY until the driver releases it.
 
-## The three gaps, and what closes each
+## The gaps, and what closes each
 
 | # | Gap | Closed by | Blocks |
 |---|---|---|---|
-| 1 | **No cable joins them.** Cables in hand are 15↔15 (fits the panel) and 22↔22 (fits the carrier). | A **15-pin 1.0 mm ↔ 22-pin 0.5 mm DSI FFC** — the Raspberry Pi 5 display cable (200 mm is plenty). | Everything physical |
+| 1 | ~~The cable.~~ **Closed:** the cable in hand is a 15-pin 1.0 mm ↔ 22-pin 0.5 mm DSI adapter FFC — 22-pin end in the carrier's DISPLAY connector, 15-pin end in the panel (photographs, 2026-09-28). | — | — |
 | 2 | **The board image predates the carrier.** `ls /boot/efi/dtb/qcom/ \| grep carrier-media` returns nothing; `arduino-linux-config` 0.2.0 installs but fails (`qrb2210-arduino-imola-base.dtb` missing). | The `arduino-unoq` meta-package, which pulls in `linux-image-7.0.0` and the carrier overlays. Installing it directly fails on `alsa-ucm-conf`; `scripts/10-update-os.sh` from the project above resolves that by pinning Arduino's ALSA build. **No reflash.** | Panel driver |
 | 3 | **PlatypusOS cannot draw on a local Linux display.** The only `IDisplay` implementations are `LinkedDisplay` (tiles to the Tab5) and the Win32 simulator. | **`DrmDisplay` (PR #27)** — raw KMS ioctls, one XRGB8888 dumb buffer, RGB565 converted on present; `tools/display_probe` to test it. Everything short of `SETCRTC` is verified on the board. | The demo UI |
 
-Gap 3 does not wait for gaps 1 and 2. DRM is DRM: the backend can be written
+Gap 3 does not wait for gap 2. DRM is DRM: the backend can be written
 and proven tonight against **HDMI through the UGREEN hub** (the `DP-1`
 connector, DisplayPort alt-mode over USB-C), and the same binary drives
 `DSI-1` once the panel is up.
@@ -47,8 +47,8 @@ connector, DisplayPort alt-mode over USB-C), and the same binary drives
 
 - **Enabling DSI disables DisplayPort over USB-C** — one display controller
   serves both. HDMI through the hub is the fallback demo display, so it stays
-  available until the panel is proven; do not enable DSI before the cable is
-  fitted and the panel has been detected.
+  available until the panel is proven; do not enable DSI before the panel has
+  been detected.
 - **Power: a dedicated 5 V / 3 A supply.** The project reports that USB-port
   power (0.5–0.9 A) produces intermittent I²C failures, dead backlights and
   "silent display failures that appear software-related". The PD charger
@@ -74,13 +74,14 @@ connector, DisplayPort alt-mode over USB-C), and the same binary drives
 
 ### Sep 28 night — done without the owner
 
-Everything that needed no password and no cable:
+Everything that needed no password:
 
 - Baseline on kernel 6.16.7: SSH, native build, `platypus_tests`, camera
   capture (after fixing a double-open regression in the `--watch` branch —
   it, not the camera, was returning `Busy`).
-- The panel photographed dark (webcam luma 2.1): expected, nothing joins
-  the 22-pin carrier cable to the 15-pin panel cable.
+- The panel photographed dark (webcam luma 2.1): expected on this image —
+  with no carrier overlays the kernel never configures DSI or powers the
+  panel's ATTINY/backlight. The cable is not the cause.
 - `DrmDisplay` + `display_probe` (PR #27): builds warning-free on the board;
   the probe enumerates the real MSM resources and refuses cleanly with
   `no connected display (DP-1 disconnected)`. A one-off check confirmed MSM
@@ -91,10 +92,9 @@ Everything that needed no password and no cable:
   kernel, and running it alone would move `alsa-ucm-conf` to exactly the
   backports build that blocks `arduino-unoq`. It waits for the owner.
 
-### Next session — before the cable arrives
+### Next session
 
-1. `[owner]` Order the 15↔22 DSI cable if not already done; confirm the PD
-   brick's 5 V rating is ≥ 3 A.
+1. `[owner]` Confirm the PD brick's 5 V rating is ≥ 3 A.
 2. `[owner]` Plug a monitor or TV into the hub's HDMI port, then:
 
    ```powershell
@@ -112,10 +112,10 @@ Everything that needed no password and no cable:
    tests, validation battery, and step 3 again — HDMI stays usable until DSI
    is enabled.
 
-### Sep 29 — cable arrives
+### After the OS update — panel install
 
-8. `[owner]` Power off. 22-pin end into the carrier's DISPLAY connector, 15-pin
-   end into the panel. Power on.
+8. `[owner]` Already cabled. Before powering on, reseat both ends: lock bars
+   fully closed, contacts facing the connector's contacts.
 9. `[agent]` `sudo ./scripts/detect-panel.sh --list` must report
    `waveshare-800x480` via the ATTINY at `0x45`. If nothing answers at `0x45`,
    stop: cable orientation or power, not software.
