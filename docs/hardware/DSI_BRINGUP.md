@@ -36,7 +36,7 @@ by the ATTINY until the driver releases it.
 |---|---|---|---|
 | 1 | **No cable joins them.** Cables in hand are 15↔15 (fits the panel) and 22↔22 (fits the carrier). | A **15-pin 1.0 mm ↔ 22-pin 0.5 mm DSI FFC** — the Raspberry Pi 5 display cable (200 mm is plenty). | Everything physical |
 | 2 | **The board image predates the carrier.** `ls /boot/efi/dtb/qcom/ \| grep carrier-media` returns nothing; `arduino-linux-config` 0.2.0 installs but fails (`qrb2210-arduino-imola-base.dtb` missing). | The `arduino-unoq` meta-package, which pulls in `linux-image-7.0.0` and the carrier overlays. Installing it directly fails on `alsa-ucm-conf`; `scripts/10-update-os.sh` from the project above resolves that by pinning Arduino's ALSA build. **No reflash.** | Panel driver |
-| 3 | **PlatypusOS cannot draw on a local Linux display.** The only `IDisplay` implementations are `LinkedDisplay` (tiles to the Tab5) and the Win32 simulator. | A `DrmDisplay` backend: raw KMS ioctls, one dumb buffer, RGB565 per `IDisplay`'s contract. | The demo UI |
+| 3 | **PlatypusOS cannot draw on a local Linux display.** The only `IDisplay` implementations are `LinkedDisplay` (tiles to the Tab5) and the Win32 simulator. | **`DrmDisplay` (PR #27)** — raw KMS ioctls, one XRGB8888 dumb buffer, RGB565 converted on present; `tools/display_probe` to test it. Everything short of `SETCRTC` is verified on the board. | The demo UI |
 
 Gap 3 does not wait for gaps 1 and 2. DRM is DRM: the backend can be written
 and proven tonight against **HDMI through the UGREEN hub** (the `DP-1`
@@ -53,6 +53,13 @@ connector, DisplayPort alt-mode over USB-C), and the same binary drives
   power (0.5–0.9 A) produces intermittent I²C failures, dead backlights and
   "silent display failures that appear software-related". The PD charger
   feeding the hub must deliver 3 A at 5 V after the hub's own draw.
+- **lightdm + Xorg own the display.** The stock image starts a desktop on
+  `:0`, which holds DRM master; `DrmDisplay::open()` then fails with `Busy`
+  and says so. Stop it for the demo: `sudo systemctl stop lightdm` (or
+  `disable` it for a kiosk boot).
+- **Device node numbers move between boots.** The webcam was `/dev/video2`
+  one boot and `/dev/video0` the next. Select by capability or name —
+  `bench_session.sh` and `DrmDisplay` do — never by a remembered number.
 - **No RTC battery on the UNO Q.** Until NTP syncs, apt fails signature checks
   with "Not live until …". It looks like a broken mirror; it is the clock.
 - **Never write to the panel controller's REG_PORTC by hand** — per the
@@ -65,28 +72,45 @@ connector, DisplayPort alt-mode over USB-C), and the same binary drives
 `[owner]` = physical work or anything needing the board's sudo password.
 `[agent]` = done over SSH.
 
-### Tonight — Sep 28 (no cable needed)
+### Sep 28 night — done without the owner
 
-1. `[owner]` Order the 15↔22 DSI cable for next-day delivery. Confirm the PD
+Everything that needed no password and no cable:
+
+- Baseline on kernel 6.16.7: SSH, native build, `platypus_tests`, camera
+  capture (after fixing a double-open regression in the `--watch` branch —
+  it, not the camera, was returning `Busy`).
+- The panel photographed dark (webcam luma 2.1): expected, nothing joins
+  the 22-pin carrier cable to the 15-pin panel cable.
+- `DrmDisplay` + `display_probe` (PR #27): builds warning-free on the board;
+  the probe enumerates the real MSM resources and refuses cleanly with
+  `no connected display (DP-1 disconnected)`. A one-off check confirmed MSM
+  allocates, ADDFBs (XRGB8888, depth 24) and maps an 800×480 dumb buffer
+  (pitch 3200) without DRM master.
+- **Not done, deliberately:** the OS update. Passwordless sudo on this image
+  covers `apt-get install --only-upgrade` only, which cannot install the new
+  kernel, and running it alone would move `alsa-ucm-conf` to exactly the
+  backports build that blocks `arduino-unoq`. It waits for the owner.
+
+### Next session — before the cable arrives
+
+1. `[owner]` Order the 15↔22 DSI cable if not already done; confirm the PD
    brick's 5 V rating is ≥ 3 A.
-2. `[owner]` Power the board back up on the hub; re-plug the webcam (it was
-   returning `Busy`).
-3. `[agent]` Baseline before touching the kernel: `bench_session.sh` output,
-   camera modes, `uname -r`, and whether a display manager is running.
-4. `[owner]` OS update, one line in PowerShell:
+2. `[owner]` Plug a monitor or TV into the hub's HDMI port, then:
+
+   ```powershell
+   ssh -t arduino@192.168.1.32 "sudo systemctl stop lightdm"
+   ```
+3. `[agent]` `display_probe --prefer dp --pattern 20` — first pixels from
+   PlatypusOS code on real glass, and the first `SETCRTC`. Check the four
+   quadrants read red | green / blue | white and all four yellow edges show.
+4. `[owner]` OS update (20–40 min):
 
    ```powershell
    ssh -t arduino@192.168.1.32 "git clone https://github.com/dcuartielles/uno_q_dsi_displays.git && cd uno_q_dsi_displays && sudo ./scripts/10-update-os.sh && sudo reboot"
    ```
-
-   243 packages plus a kernel — budget 20–40 minutes.
-5. `[agent]` After reboot, on `7.0.0`: SSH back, carrier overlays now present,
-   camera still at `/dev/video2`, rebuild the tree, `platypus_tests`,
-   validation battery. A regression here surfaces with two days of margin
-   instead of on submission day.
-6. `[owner]` Plug a monitor or TV into the hub's HDMI port.
-7. `[agent]` Write `DrmDisplay`; prove it on `DP-1` with a test pattern
-   (red/green/blue quadrants — the checklist's byte-order check).
+5. `[agent]` On `7.0.0`: carrier overlays present, camera found, rebuild,
+   tests, validation battery, and step 3 again — HDMI stays usable until DSI
+   is enabled.
 
 ### Sep 29 — cable arrives
 
@@ -101,15 +125,15 @@ connector, DisplayPort alt-mode over USB-C), and the same binary drives
 11. `[agent]` `40-verify.sh`, `test-display.sh`, `test-touch.sh`;
     `/sys/class/drm` shows a connected DSI connector at 800×480. Record in
     [TEST_CHECKLISTS.md](TEST_CHECKLISTS.md) §3.
-12. `[agent]` The step-7 binary on `DSI-1`; touch through the FT5x06 evdev
-    device into `IDisplay::onTouch`.
+12. `[agent]` `display_probe --pattern` on `DSI-1` (the probe prefers DSI by
+    default), then `display_probe --input` for touch through the FT5x06.
 13. `[agent]` The demo loop on the panel: live camera preview, capture on
     touch or button, the Scout result card.
 
 ### Sep 30 — submit
 
 14. Film the loop, write it up, submit. If steps 8–11 slipped, the identical
-    loop runs on the HDMI monitor from step 7.
+    loop runs on the HDMI monitor proven in the next-session step 3.
 
 ## Rollback
 
