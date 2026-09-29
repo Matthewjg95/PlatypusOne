@@ -203,8 +203,6 @@ int main(int argc, char** argv) {
                      "Run --list to see whether this device offers yuyv.\n",
                      std::string(formatName(selected.format)).c_str());
 
-    if (const auto status = camera->open(selected); !status)
-        return fail("camera open", status.error());
 
     // --- Capture, measure, classify, persist --------------------------------
     observation::CaptureService service(outDir);
