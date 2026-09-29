@@ -2,7 +2,7 @@
 //
 //   engineering_scout_capture [--fake] [--device /dev/video0] [--out DIR]
 //                             [--id scan-0042] [--mode WxH] [--reference-mm MM]
-//                             [--no-analyze] [--list]
+//                             [--no-analyze] [--list] [--watch]
 //
 // Captures one frame (real V4L2 camera on Linux, deterministic fake anywhere),
 // measures and classifies the scene against the calibration reference, and
@@ -14,12 +14,19 @@
 // This is the only executable that runs the full physical path — camera to
 // measured, classified evidence record — so it is what the first UNO Q bench
 // session exercises (docs/hardware/TEST_CHECKLISTS.md steps 7-8).
+//
+// --watch turns it into the demo loop: the camera stays open and every press of
+// a board button writes one more observation, with the user LED lit while the
+// frame is taken. That is the Dream Lab trigger requirement met with hardware
+// already on the board — see BenchIo.hpp for why this is bench I/O rather than
+// a HAL interface.
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/hal/testing/FakeCamera.hpp>
 #include <platypus/observation/CaptureService.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
 
 #ifdef __linux__
+#include "BenchIo.hpp"
 #include "v4l2/V4l2Camera.hpp"
 #endif
 
@@ -83,6 +90,7 @@ int main(int argc, char** argv) {
     bool useFake = false;
     bool listOnly = false;
     bool analyze = true;
+    bool watch = false;
     std::string device = "/dev/video0";
     std::string outDir = "observations";
     std::string id;
@@ -99,6 +107,8 @@ int main(int argc, char** argv) {
             listOnly = true;
         else if (arg == "--no-analyze")
             analyze = false;
+        else if (arg == "--watch")
+            watch = true;
         else if (arg == "--device")
             device = next();
         else if (arg == "--out")
@@ -198,62 +208,129 @@ int main(int argc, char** argv) {
 
     // --- Capture, measure, classify, persist --------------------------------
     observation::CaptureService service(outDir);
-    observation::CaptureConfig config;
-    config.observationId = id.empty() ? service.nextObservationId() : id;
-    config.timestampUtc = observation::CaptureService::currentUtcTimestamp();
-    config.source = {{"app", "engineering_scout_capture"},
-                     {"camera", useFake ? "fake" : device},
-                     {"camera_identity", cameraIdentity}};
-
     const vision::CalibrationSpec spec{referenceMm};
-    std::optional<vision::ScoutAnalysis> analysis;
-    std::optional<ai::FastenerClassification> classification;
-    auto sceneError = vision::AnalyzeError::None;
 
-    if (analyze && measurable) {
-        // Runs inside CaptureService's all-or-nothing write: claims land in the
-        // same record as the image, or nothing is written at all. A scene the
-        // analyzer rejects is not an error here — it yields an honest
-        // capture-only record and a reported scene condition.
-        config.enrich = [&](const hal::Frame& frame, observation::EngineeringObservation& record) {
-            const auto outcome = vision::analyzeFrame(frame, spec);
-            if (!outcome.ok()) {
-                sceneError = outcome.error;
-                return;
-            }
-            vision::appendEvidence(record, *outcome.analysis, spec, "source-image");
-            classification = ai::classify(*outcome.analysis);
-            ai::appendClassification(record, *classification);
-            analysis = *outcome.analysis;
-        };
-    }
+    // One press-to-record cycle. Returns false only when the record could not
+    // be written; a scene the analyzer refuses is a successful capture-only
+    // record, which is the honest outcome the evidence contract requires.
+    const auto captureOnce = [&]() -> bool {
+        observation::CaptureConfig config;
+        config.observationId = id.empty() ? service.nextObservationId() : id;
+        config.timestampUtc = observation::CaptureService::currentUtcTimestamp();
+        config.source = {{"app", "engineering_scout_capture"},
+                         {"camera", useFake ? "fake" : device},
+                         {"camera_identity", cameraIdentity}};
 
-    const auto result = service.capture(*camera, config);
-    camera->close();
-    if (!result) return fail("capture", result.error());
+        std::optional<vision::ScoutAnalysis> analysis;
+        std::optional<ai::FastenerClassification> classification;
+        auto sceneError = vision::AnalyzeError::None;
 
-    const auto& r = result.value();
-    std::printf("observation: %s\n", r.record.observationId.c_str());
-    std::printf("  image:  %s\n", r.imagePath.string().c_str());
-    std::printf("  record: %s\n", r.recordPath.string().c_str());
-
-    if (analysis) {
-        std::printf("  scale:  %.4f mm/px (reference %.2f mm)\n", analysis->mmPerPixel,
-                    referenceMm);
-        std::printf("  subject: %.2f x %.2f mm\n", analysis->subjectLengthMm,
-                    analysis->subjectWidthMm);
-        if (classification) {
-            const auto name = ai::to_string(classification->fastenerClass);
-            std::printf("  class:  %.*s (confidence %.2f)\n", static_cast<int>(name.size()),
-                        name.data(), classification->confidence);
-            if (classification->nominal)
-                std::printf("  nominal: %s (%s)\n", classification->nominal->designation.c_str(),
-                            classification->nominal->basis.c_str());
+        if (analyze && measurable) {
+            // Runs inside CaptureService's all-or-nothing write: claims land in
+            // the same record as the image, or nothing is written at all. A
+            // scene the analyzer rejects is not an error here — it yields an
+            // honest capture-only record and a reported scene condition.
+            config.enrich = [&](const hal::Frame& frame,
+                                observation::EngineeringObservation& record) {
+                const auto outcome = vision::analyzeFrame(frame, spec);
+                if (!outcome.ok()) {
+                    sceneError = outcome.error;
+                    return;
+                }
+                vision::appendEvidence(record, *outcome.analysis, spec, "source-image");
+                classification = ai::classify(*outcome.analysis);
+                ai::appendClassification(record, *classification);
+                analysis = *outcome.analysis;
+            };
         }
-    } else if (analyze && measurable) {
-        const auto reason = vision::to_string(sceneError);
-        std::printf("  analysis: no measurement — %.*s\n", static_cast<int>(reason.size()),
-                    reason.data());
+
+        const auto result = service.capture(*camera, config);
+        if (!result) {
+            fail("capture", result.error());
+            return false;
+        }
+
+        const auto& r = result.value();
+        std::printf("observation: %s\n", r.record.observationId.c_str());
+        std::printf("  image:  %s\n", r.imagePath.string().c_str());
+        std::printf("  record: %s\n", r.recordPath.string().c_str());
+
+        if (analysis) {
+            std::printf("  scale:  %.4f mm/px (reference %.2f mm)\n", analysis->mmPerPixel,
+                        referenceMm);
+            std::printf("  subject: %.2f x %.2f mm\n", analysis->subjectLengthMm,
+                        analysis->subjectWidthMm);
+            if (classification) {
+                const auto name = ai::to_string(classification->fastenerClass);
+                std::printf("  class:  %.*s (confidence %.2f)\n", static_cast<int>(name.size()),
+                            name.data(), classification->confidence);
+                if (classification->nominal)
+                    std::printf("  nominal: %s (%s)\n",
+                                classification->nominal->designation.c_str(),
+                                classification->nominal->basis.c_str());
+            }
+        } else if (analyze && measurable) {
+            const auto reason = vision::to_string(sceneError);
+            std::printf("  analysis: no measurement — %.*s\n", static_cast<int>(reason.size()),
+                        reason.data());
+        }
+        std::fflush(stdout);
+        return true;
+    };
+
+    if (const auto status = camera->open(selected); !status)
+        return fail("camera open", status.error());
+
+    int exitCode = 0;
+    if (!watch) {
+        exitCode = captureOnce() ? 0 : 1;
+    } else {
+#ifdef __linux__
+        // A fixed --id would make every press overwrite the same record.
+        if (!id.empty()) {
+            std::fprintf(stderr, "error: --watch allocates an id per capture; drop --id\n");
+            camera->close();
+            return 2;
+        }
+        const auto node = bench::findEventDevice("gpio-keys");
+        if (!node) {
+            std::fprintf(stderr, "error: no gpio-keys input device found\n");
+            camera->close();
+            return 1;
+        }
+        bench::ButtonTrigger button;
+        if (!button.open(*node)) {
+            std::fprintf(stderr, "error: open %s: %s\n", node->c_str(), button.error().c_str());
+            camera->close();
+            return 1;
+        }
+        const bench::StatusLed led("green");
+        led.off();
+
+        std::printf("watching %s — press a board button to capture, Ctrl-C to stop\n",
+                    node->c_str());
+        std::fflush(stdout);
+        while (button.waitForPress()) {
+            // The camera stays open across presses, so auto-exposure stays
+            // settled and only the first frame pays the warm-up discard.
+            led.on();
+            const bool ok = captureOnce();
+            led.off();
+            if (!ok) {
+                exitCode = 1;
+                break;
+            }
+        }
+        if (!button.error().empty()) {
+            std::fprintf(stderr, "error: %s: %s\n", node->c_str(), button.error().c_str());
+            exitCode = 1;
+        }
+#else
+        std::fprintf(stderr, "error: --watch needs Linux evdev\n");
+        exitCode = 2;
+#endif
     }
-    return 0;
+
+    camera->close();
+    return exitCode;
 }
