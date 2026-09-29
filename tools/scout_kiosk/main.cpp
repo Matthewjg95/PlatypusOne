@@ -394,6 +394,8 @@ int main(int argc, char** argv) {
             outDir = next();
         else if (arg == "--offscreen")
             offscreen = next();
+        else if (arg == "--fake")
+            fake = true;
         else if (arg == "--reference-mm")
             referenceMm = std::atof(next().c_str());
         else if (arg == "--prefer") {
