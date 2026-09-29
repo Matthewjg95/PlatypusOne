@@ -4,7 +4,7 @@
 //   classified evidence record saved -> Scout result card -> tap to go back.
 //
 //   scout_kiosk [--device /dev/videoN] [--out DIR] [--reference-mm MM]
-//               [--prefer dp|dsi] [--offscreen DIR]
+//               [--prefer dp|dsi] [--offscreen DIR] [--fake]
 //
 // A composition root, like apps/launcher/src/main.cpp: the only file here that
 // knows concrete types. Everything it shows comes from pieces that are already
@@ -15,7 +15,10 @@
 //
 // --offscreen renders into memory instead of DRM, runs one preview frame and
 // one simulated capture, and writes preview.ppm and card.ppm to DIR: the whole
-// loop, verifiable with no panel attached.
+// loop, verifiable with no panel attached. --fake swaps the webcam for the
+// validation battery's M8 bolt scene, served as YUYV exactly like the real
+// camera; its records name the camera "synthetic" so they can never pass
+// for bench evidence.
 //
 // The display needs DRM master: stop the desktop first (sudo systemctl stop
 // lightdm). The camera is found by capability, never by a remembered node
@@ -26,6 +29,7 @@
 
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
+#include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/observation/CaptureService.hpp>
 #include <platypus/renderer/Renderer.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
@@ -232,6 +236,47 @@ std::string guidanceFor(vision::AnalyzeError error) {
     }
 }
 
+// --- synthetic camera -------------------------------------------------------
+
+/// Development source for --fake: the validation battery's M8 case — a 20 mm
+/// square and an 8 x 40 mm shaft at 45 degrees, at 0.25 mm/px — served as YUYV,
+/// the webcam's own format, so preview and analysis take the hardware path.
+class SceneCamera final : public hal::ICamera {
+   public:
+    SceneCamera() {
+        constexpr double pxPerMm = 4.0;
+        scene_.addSquare(80, 80, static_cast<std::int32_t>(20.0 * pxPerMm));
+        scene_.addRect(400.0, 280.0, 40.0 * pxPerMm, 8.0 * pxPerMm,
+                       45.0 * 3.14159265358979 / 180.0);
+    }
+    [[nodiscard]] std::vector<hal::CameraMode> supportedModes() const override { return {kMode}; }
+    hal::Status open(const hal::CameraMode&) override {
+        open_ = true;
+        return {};
+    }
+    hal::Status close() override {
+        open_ = false;
+        return {};
+    }
+    [[nodiscard]] bool isOpen() const noexcept override { return open_; }
+    hal::Status setControls(const hal::CameraControls&) override { return {}; }
+    hal::Result<hal::Frame> capture(std::chrono::milliseconds) override {
+        if (!open_) return hal::Error::NotInitialized;
+        return scene_.yuyvFrame();
+    }
+    hal::Status startStream(std::function<void(const hal::Frame&)> onFrame) override {
+        onFrame(scene_.yuyvFrame());
+        return {};
+    }
+    hal::Status stopStream() override { return {}; }
+
+    static constexpr hal::CameraMode kMode{640, 480, hal::PixelFormat::YUYV, 30.0f};
+
+   private:
+    hal::testing::SyntheticScene scene_;
+    bool open_ = false;
+};
+
 // --- offscreen display --------------------------------------------------------
 
 /// IDisplay that keeps the last frame so it can be written to a file.
@@ -336,6 +381,7 @@ int main(int argc, char** argv) {
     std::string device;
     std::string outDir = "observations";
     std::string offscreen;
+    bool fake = false;
     double referenceMm = vision::CalibrationSpec{}.referenceSideMm;
     drm::DrmDisplayConfig displayConfig;
 
@@ -368,22 +414,37 @@ int main(int argc, char** argv) {
     std::signal(SIGTERM, handleSignal);
 
     // --- camera
-    const auto choice = findCamera(device);
-    if (!choice) {
-        std::fprintf(stderr, "error: no V4L2 camera with a YUYV mode found\n");
-        return 1;
+    std::unique_ptr<hal::ICamera> camera;
+    std::string cameraPath, identity;
+    hal::CameraMode mode;
+    if (fake) {
+        camera = std::make_unique<SceneCamera>();
+        cameraPath = identity = "synthetic";
+        mode = SceneCamera::kMode;
+    } else {
+        const auto choice = findCamera(device);
+        if (!choice) {
+            std::fprintf(stderr, "error: no V4L2 camera with a YUYV mode found
+");
+            return 1;
+        }
+        auto v4l2 = std::make_unique<unoq::V4l2Camera>(choice->path);
+        cameraPath = choice->path;
+        identity = v4l2->deviceIdentity().empty() ? choice->path : v4l2->deviceIdentity();
+        mode = choice->mode;
+        camera = std::move(v4l2);
     }
-    unoq::V4l2Camera camera(choice->path);
-    const std::string identity =
-        camera.deviceIdentity().empty() ? choice->path : camera.deviceIdentity();
-    if (const auto s = camera.open(choice->mode); !s) {
+    if (const auto s = camera->open(mode); !s) {
         const auto reason = hal::to_string(s.error());
-        std::fprintf(stderr, "error: open %s: %.*s\n", choice->path.c_str(),
-                     static_cast<int>(reason.size()), reason.data());
+        std::fprintf(stderr,
+                     "error: open %s: %.*s
+                     ", cameraPath.c_str(), static_cast<int>(reason.size()),
+                     reason.data());
         return 1;
     }
-    const std::int32_t camW = choice->mode.width, camH = choice->mode.height;
-    std::printf("camera:  %s %s %dx%d yuyv\n", choice->path.c_str(), identity.c_str(), camW, camH);
+    const std::int32_t camW = mode.width, camH = mode.height;
+    std::printf("camera:  %s (%s) %dx%d yuyv
+", cameraPath.c_str(), identity.c_str(), camW, camH);
 
     // --- display
     std::shared_ptr<hal::IDisplay> display;
@@ -441,12 +502,12 @@ int main(int argc, char** argv) {
     // Offscreen: one preview frame, one capture, two screenshots, done.
     if (snapshot) {
         for (int k = 0; k < 3 && lastRgb.empty(); ++k)
-            if (auto f = camera.capture(std::chrono::milliseconds(2000)); f)
+            if (auto f = camera->capture(std::chrono::milliseconds(2000)); f)
                 lastRgb = yuyvToRgb(f.value());
         drawPreviewScreen(r, layout, lastRgb, camW, camH, status, statusColour, false);
         (void)r.present();
         snapshot->writePpm(std::filesystem::path(offscreen) / "preview.ppm");
-        auto outcome = captureOnce(camera, service, spec, choice->path, identity);
+        auto outcome = captureOnce(*camera, service, spec, cameraPath, identity);
         std::printf("capture: %s\n", outcome.status.c_str());
         if (outcome.record)
             apps::drawObservationCard(r, *outcome.record, outcome.thumbnail);
@@ -455,14 +516,14 @@ int main(int argc, char** argv) {
                               false);
         (void)r.present();
         snapshot->writePpm(std::filesystem::path(offscreen) / "card.ppm");
-        camera.close();
+        camera->close();
         return 0;
     }
 
     std::printf("running: tap CAPTURE or press a board button; Ctrl-C to quit\n");
     std::fflush(stdout);
     while (g_running) {
-        const auto frame = camera.capture(std::chrono::milliseconds(200));
+        const auto frame = camera->capture(std::chrono::milliseconds(200));
         if (screen == Screen::Card) {
             if (dismissRequested.exchange(false)) {
                 screen = Screen::Preview;
@@ -475,7 +536,7 @@ int main(int argc, char** argv) {
         if (captureRequested.exchange(false)) {
             drawPreviewScreen(r, layout, lastRgb, camW, camH, "Measuring...", kAccent, true);
             (void)r.present();
-            auto outcome = captureOnce(camera, service, spec, choice->path, identity);
+            auto outcome = captureOnce(*camera, service, spec, cameraPath, identity);
             std::printf("capture: %s\n", outcome.status.c_str());
             std::fflush(stdout);
             status = outcome.status;
@@ -495,6 +556,6 @@ int main(int argc, char** argv) {
     // Join the display's input thread before the state its handlers capture
     // goes out of scope; close() also hands the screen back.
     if (drmDisplay) drmDisplay->close();
-    camera.close();
+    camera->close();
     return 0;
 }
