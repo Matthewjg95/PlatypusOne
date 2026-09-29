@@ -50,6 +50,7 @@ add_subdirectory(tools/scout_validation)
 add_subdirectory(tools/ui_preview)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_subdirectory(tools/display_probe)
+    add_subdirectory(tools/scout_kiosk)
 endif()
 
 if(PLATYPUS_BUILD_TESTS)
