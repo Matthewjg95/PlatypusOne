@@ -371,7 +371,7 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
 int usage() {
     std::fprintf(stderr,
                  "usage: scout_kiosk [--device /dev/videoN] [--out DIR] [--reference-mm MM]\n"
-                 "                   [--prefer dp|dsi] [--offscreen DIR]\n");
+                 "                   [--prefer dp|dsi] [--offscreen DIR] [--fake]\n");
     return 2;
 }
 
@@ -424,8 +424,7 @@ int main(int argc, char** argv) {
     } else {
         const auto choice = findCamera(device);
         if (!choice) {
-            std::fprintf(stderr, "error: no V4L2 camera with a YUYV mode found
-");
+            std::fprintf(stderr, "error: no V4L2 camera with a YUYV mode found\n");
             return 1;
         }
         auto v4l2 = std::make_unique<unoq::V4l2Camera>(choice->path);
@@ -436,15 +435,12 @@ int main(int argc, char** argv) {
     }
     if (const auto s = camera->open(mode); !s) {
         const auto reason = hal::to_string(s.error());
-        std::fprintf(stderr,
-                     "error: open %s: %.*s
-                     ", cameraPath.c_str(), static_cast<int>(reason.size()),
-                     reason.data());
+        std::fprintf(stderr, "error: open %s: %.*s\n", cameraPath.c_str(),
+                     static_cast<int>(reason.size()), reason.data());
         return 1;
     }
     const std::int32_t camW = mode.width, camH = mode.height;
-    std::printf("camera:  %s (%s) %dx%d yuyv
-", cameraPath.c_str(), identity.c_str(), camW, camH);
+    std::printf("camera:  %s (%s) %dx%d yuyv\n", cameraPath.c_str(), identity.c_str(), camW, camH);
 
     // --- display
     std::shared_ptr<hal::IDisplay> display;
