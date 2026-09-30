@@ -143,23 +143,34 @@ Everything that needed no password:
 - If the board stops booting or leaves the network: USB-C straight to the PC
   (no hub) brings back ADB — `C:\Users\Public\adb\adb.exe`.
 
-## Bench result, 2026-09-29 — panel not electrically present
+## Bench result, 2026-09-29 — the cause was FFC orientation
 
-After the OS update (Arduino kernel `7.0.0-g122c2c22d838`, carrier overlays
-installed) and `arduino-linux-config carrier enable media-carrier`:
+The panel was absent on the carrier's I²C bus (clean NAK at `0x45`, no
+backlight) until the cable was re-seated to match Waveshare's reference.
+Ruled out along the way: board power, a switched connector rail (the carrier
+expander only gates the camera rails), the wrong bus (both CCI masters
+probed), the cable type, and the connector pinout — the carrier's DISPLAY
+connector is the Pi 5 layout (+3V3 on pin 22, I²C on 20/21), which is what
+the Waveshare cable is built for.
 
-- **Carrier bus healthy.** The carrier's CCI bus appears and its GPIO
-  expander binds at `0x26`; zero `cci ... timeout` lines in `dmesg`.
-- **Panel absent on both CCI buses.** `detect-panel.sh --scan` on the first
-  CCI bus and `i2cdetect -r` / a 1-byte read on the second show nothing at
-  `0x45` (the panel's ATTINY) — a clean NAK, not a wedge. No backlight glow.
-- **Ruled out:** board power (laptop USB-C PD charger, direct); a switched
-  connector rail (the expander only gates `cam-pwr-csi0/1`, the rest drive
-  LEDs); FFC orientation (checked pin by pin by the owner, several
-  combinations tried); the wrong bus (both CCI masters probed).
-- **Remaining causes:** the 15→22 adapter cable (fault, or a pinout that does
-  not match the carrier's DISPLAY connector), or the panel itself. Neither is
-  testable from the UNO Q.
+**The trap: the Waveshare `MIPI-DSI-Cable-12cm` is opposite-sided.**
+
+| End | Gold fingers are on the face printed… |
+|---|---|
+| 22-pin 0.5 mm (carrier) | **"MIPI-DSI-Cable-12cm" / "22PIN 0.5mm"** |
+| 15-pin 1.0 mm (panel) | **"15PIN 1.0mm"** — the *reverse* face |
+
+So laying the same face up at both ends puts the fingers on opposite sides.
+Waveshare's Pi 5 reference photo shows the "DSI-Cable-12cm" label facing up
+at the panel, i.e. **the 15-pin fingers face into the panel's PCB**. The
+failing setup had the "15PIN 1.0mm" face up at the panel — fingers away
+from the contacts, so no 3.3 V, no I²C, no glow. At the carrier end, insert
+the 22-pin fingers toward the connector's springs (printed face up, as on a
+Pi 5).
+
+A continuity beeper is enough to prove seating before power: with the board
+off, one outer pin of the panel's connector must beep steadily to a UNO Q
+header GND.
 
 Two findings for upstream (`dcuartielles/uno_q_dsi_displays`):
 
@@ -169,9 +180,5 @@ Two findings for upstream (`dcuartielles/uno_q_dsi_displays`):
   wrong bus. An `*-aux` adapter should never count as the carrier bus, and a
   missing CCI adapter should say "enable the carrier" instead.
 - `scripts/detect-panel.sh` is committed without its execute bit.
-
-**Decision:** the Dream Lab demo runs on HDMI through the USB-C hub
-(`carrier disable`, which restores DisplayPort over USB-C). `DrmDisplay` and
-`scout_kiosk` drive either connector unchanged. The panel goes to the PSOC
-Edge E84 kit's Raspberry Pi–compatible DSI header as the tie-breaker between
-a bad cable and a bad panel, after the deadline.
+- Worth adding to their troubleshooting: the Waveshare 15→22 cable is
+  opposite-sided (above).
