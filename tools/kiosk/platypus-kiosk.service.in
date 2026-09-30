@@ -1,0 +1,29 @@
+# PlatypusOne Engineering Scout kiosk on the UNO Q's local display.
+#
+# Installed by tools/kiosk/install.sh, which fills in @REPO@ and @USER@.
+# Switch with `platypus-mode`, not by hand: it also sets the boot target.
+#
+# Conflicts= is the point of this unit: the kiosk needs DRM master, and the
+# stock image's lightdm/Xorg holds it. Starting the kiosk stops the desktop;
+# starting the desktop stops the kiosk. They can never fight over the screen.
+[Unit]
+Description=PlatypusOne Engineering Scout kiosk (local display)
+Conflicts=display-manager.service
+After=display-manager.service uno-q-dsi-panel-recover.service
+
+[Service]
+User=@USER@
+Group=@USER@
+# /dev/dri/card0 and /dev/video* are group video; evdev touch/buttons group input.
+SupplementaryGroups=video input
+WorkingDirectory=@REPO@
+ExecStart=@REPO@/build-bench/tools/scout_kiosk/scout_kiosk --out @REPO@/observations
+# The kiosk exits if no camera is attached; retry until one is plugged in.
+Restart=on-failure
+RestartSec=5
+# SIGTERM makes the kiosk leave its loop and hand the CRTC back.
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

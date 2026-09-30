@@ -1,0 +1,58 @@
+#!/bin/sh
+# platypus-mode — switch the UNO Q between the Debian desktop and the
+# PlatypusOne kiosk on the local display.
+#
+#   sudo platypus-mode kiosk          kiosk now, and on every boot
+#   sudo platypus-mode kiosk --once   kiosk now; desktop again after a reboot
+#   sudo platypus-mode desktop        desktop now, and on every boot
+#        platypus-mode status         which mode is active and which boots
+#
+# The boot default is the systemd target: graphical.target starts the display
+# manager, multi-user.target does not. The kiosk unit conflicts with the display
+# manager, so whichever is started stops the other.
+set -eu
+
+KIOSK=platypus-kiosk.service
+DM=display-manager.service
+
+need_root() {
+    [ "$(id -u)" -eq 0 ] || { echo "platypus-mode: run with sudo" >&2; exit 1; }
+}
+
+state() { systemctl is-active "$1" 2>/dev/null || true; }
+
+case "${1:-status}" in
+    kiosk)
+        need_root
+        if [ "${2:-}" = "--once" ]; then
+            systemctl start "$KIOSK"          # Conflicts= stops the desktop
+            echo "kiosk running; the desktop comes back on the next boot"
+        else
+            systemctl set-default multi-user.target >/dev/null
+            systemctl enable "$KIOSK" >/dev/null 2>&1
+            systemctl start "$KIOSK"
+            echo "kiosk running, and it will start on every boot"
+        fi
+        ;;
+    desktop)
+        need_root
+        systemctl disable "$KIOSK" >/dev/null 2>&1 || true
+        systemctl stop "$KIOSK" || true
+        systemctl set-default graphical.target >/dev/null
+        systemctl start "$DM"
+        echo "desktop running, and it will start on every boot"
+        ;;
+    status)
+        default=$(systemctl get-default)
+        boot="desktop"
+        if [ "$default" = "multi-user.target" ] && systemctl is-enabled --quiet "$KIOSK" 2>/dev/null; then
+            boot="kiosk"
+        fi
+        echo "now:  kiosk $(state "$KIOSK"), desktop $(state "$DM")"
+        echo "boot: $boot ($default)"
+        ;;
+    *)
+        echo "usage: platypus-mode kiosk [--once] | desktop | status" >&2
+        exit 2
+        ;;
+esac
