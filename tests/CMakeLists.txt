@@ -16,6 +16,7 @@ add_executable(platypus_tests
     test_scout_capture.cpp
     test_scout_card.cpp
     test_scout_validation.cpp
+    test_session.cpp
     test_settings_store.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
@@ -28,6 +29,7 @@ target_link_libraries(platypus_tests PRIVATE
     platypus::observation
     platypus::renderer
     platypus::scout_validation
+    platypus::session
     platypus::vision)
 
 platypus_set_warnings(platypus_tests)
