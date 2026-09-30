@@ -40,6 +40,13 @@ constexpr double kMinReferenceFill = 0.85;
 /// A second square candidate at least this fraction of the best one's area
 /// makes the reference ambiguous instead of silently picking one.
 constexpr double kAmbiguityAreaRatio = 0.5;
+/// Smallest physical silhouette accepted as the subject. The MVP scope is M3
+/// and up; the smallest in-scope part, an M3 nut, is ~26 mm^2 seen flat.
+/// Anything under 10 mm^2 is dust, a glint or a print flaw — and with the
+/// fastener out of frame it would otherwise be "measured" with full
+/// confidence (bench, 2026-09-29: 2.1 x 1.8 mm reported for a square-only
+/// frame). Scaled through the reference so it holds at any camera height.
+constexpr double kMinSubjectAreaMm2 = 10.0;
 
 /// Luma extraction. Gray8 passes through; YUYV keeps the luma byte that leads
 /// every pixel; RGB888 uses integer Rec.601-style weights.
@@ -470,13 +477,16 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
         return {std::nullopt, AnalyzeError::ReferenceAmbiguous};
     const LabeledBlob* reference = squares.front();
 
-    // Subject: largest remaining blob.
+    // Subject: largest remaining blob, if it is big enough to be a part.
     const LabeledBlob* subject = nullptr;
     for (const auto& blob : blobs) {
         if (blob.label == reference->label) continue;
         if (!subject || blob.stats.areaPx > subject->stats.areaPx) subject = &blob;
     }
-    if (!subject) return {std::nullopt, AnalyzeError::NoSubject};
+    const double mm2PerPx = (spec.referenceSideMm * spec.referenceSideMm) /
+                            static_cast<double>(reference->stats.areaPx);
+    if (!subject || static_cast<double>(subject->stats.areaPx) * mm2PerPx < kMinSubjectAreaMm2)
+        return {std::nullopt, AnalyzeError::NoSubject};
 
     ScoutAnalysis analysis;
     analysis.binarizationThreshold = threshold;

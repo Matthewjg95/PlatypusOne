@@ -191,6 +191,29 @@ void test_measures_through_uneven_lighting() {
     assert(std::abs(a.subjectWidthMm - 18.0) < 1.5);
 }
 
+/// Bench evidence (2026-09-29): with the fastener out of frame, a speck on the
+/// paper was "measured" as a 2.1 x 1.8 mm subject. Anything smaller than the
+/// smallest in-scope part is refused; an M3-nut-sized silhouette is not.
+void test_rejects_specks_as_subjects() {
+    const CalibrationSpec spec{20.0};
+    // 100 px reference -> 0.2 mm/px, 0.04 mm^2/px.
+    {
+        SyntheticScene scene;
+        scene.addSquare(60, 60, 100);
+        scene.addSquare(400, 300, 12);  // 144 px (> the 64 px blob floor) = 5.8 mm^2
+        const auto outcome = vision::analyzeFrame(scene.frame(), spec);
+        assert(!outcome.ok());
+        assert(outcome.error == AnalyzeError::NoSubject);
+    }
+    {
+        SyntheticScene scene;
+        scene.addSquare(60, 60, 100);
+        scene.addRect(400.0, 300.0, 30.0, 27.5, 0.0);  // 6 x 5.5 mm, M3-nut sized
+        const auto outcome = vision::analyzeFrame(scene.frame(), spec);
+        assert(outcome.ok());
+    }
+}
+
 }  // namespace
 
 void test_scout_analyzer() {
@@ -199,5 +222,6 @@ void test_scout_analyzer() {
     test_scene_conditions_are_reported();
     test_evidence_emission();
     test_measures_through_uneven_lighting();
+    test_rejects_specks_as_subjects();
     std::puts("test_scout_analyzer: OK");
 }
