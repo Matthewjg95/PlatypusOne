@@ -17,7 +17,17 @@ Group=@USER@
 # /dev/dri/card0 and /dev/video* are group video; evdev touch/buttons group input.
 SupplementaryGroups=video input
 WorkingDirectory=@REPO@
+# USB-C host mode for the webcam. With a DSI panel enabled the ANX7625 USB-C
+# bridge loses its DSI input and fails to probe, so nothing manages the port
+# and it stays in device (ADB gadget) mode: no hub, no webcam. Forcing the
+# dwc3 role to host is safe on this board because the only VBUS source
+# (the PMIC usb_vbus regulator) is referenced solely by a disabled Type-C
+# node — the board stays a power sink fed by the hub. Stopping the kiosk
+# puts the port back in device mode, which restores ADB for recovery.
+# '+' runs these as root; the kiosk itself does not.
+ExecStartPre=+/bin/sh -c 'for r in /sys/class/usb_role/*/role; do [ -w "$r" ] && echo host > "$r"; done; sleep 2; true'
 ExecStart=@REPO@/build-bench/tools/scout_kiosk/scout_kiosk --out @REPO@/observations
+ExecStopPost=+/bin/sh -c 'for r in /sys/class/usb_role/*/role; do [ -w "$r" ] && echo device > "$r"; done; true'
 # The kiosk exits if no camera is attached; retry until one is plugged in.
 Restart=on-failure
 RestartSec=5

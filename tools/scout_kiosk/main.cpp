@@ -45,6 +45,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -209,7 +210,7 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
     if (!status.empty()) drawWrapped(r, tx, y, tw, status, statusColour, std::max(1, s - 1));
 
     r.fillRect(l.button, busy ? kMuted : kAccent);
-    const std::string label = busy ? "WORKING" : "CAPTURE";
+    const std::string label = busy ? "WAIT" : "CAPTURE";
     const std::int32_t ls =
         std::max(1, std::min(s + 1, l.button.w / renderer::Renderer::textWidth(label, 1)));
     const auto lw = renderer::Renderer::textWidth(label, ls);
@@ -415,36 +416,7 @@ int main(int argc, char** argv) {
     std::signal(SIGINT, handleSignal);
     std::signal(SIGTERM, handleSignal);
 
-    // --- camera
-    std::unique_ptr<hal::ICamera> camera;
-    std::string cameraPath, identity;
-    hal::CameraMode mode;
-    if (fake) {
-        camera = std::make_unique<SceneCamera>();
-        cameraPath = identity = "synthetic";
-        mode = SceneCamera::kMode;
-    } else {
-        const auto choice = findCamera(device);
-        if (!choice) {
-            std::fprintf(stderr, "error: no V4L2 camera with a YUYV mode found\n");
-            return 1;
-        }
-        auto v4l2 = std::make_unique<unoq::V4l2Camera>(choice->path);
-        cameraPath = choice->path;
-        identity = v4l2->deviceIdentity().empty() ? choice->path : v4l2->deviceIdentity();
-        mode = choice->mode;
-        camera = std::move(v4l2);
-    }
-    if (const auto s = camera->open(mode); !s) {
-        const auto reason = hal::to_string(s.error());
-        std::fprintf(stderr, "error: open %s: %.*s\n", cameraPath.c_str(),
-                     static_cast<int>(reason.size()), reason.data());
-        return 1;
-    }
-    const std::int32_t camW = mode.width, camH = mode.height;
-    std::printf("camera:  %s (%s) %dx%d yuyv\n", cameraPath.c_str(), identity.c_str(), camW, camH);
-
-    // --- display
+    // --- display (first, so a missing camera can be reported on screen)
     std::shared_ptr<hal::IDisplay> display;
     std::shared_ptr<SnapshotDisplay> snapshot;
     std::shared_ptr<drm::DrmDisplay> drmDisplay;
@@ -469,7 +441,59 @@ int main(int argc, char** argv) {
     std::fflush(stdout);
 
     renderer::Renderer r(display);
+    // Laid out for 4:3 — the analyzer's validated 640x480, which findCamera
+    // prefers; another aspect is scaled into the same preview rect.
+    std::int32_t camW = 640, camH = 480;
     const auto layout = computeLayout(r.displayInfo(), camW, camH);
+
+    // --- camera: acquired in a loop, so the kiosk waits for a webcam (and
+    // recovers if it is unplugged) instead of exiting to a blank console.
+    std::unique_ptr<hal::ICamera> camera;
+    std::string cameraPath, identity;
+    const auto acquireCamera = [&]() -> bool {
+        if (fake) {
+            camera = std::make_unique<SceneCamera>();
+            cameraPath = identity = "synthetic";
+            camW = SceneCamera::kMode.width;
+            camH = SceneCamera::kMode.height;
+            return static_cast<bool>(camera->open(SceneCamera::kMode));
+        }
+        bool announced = false;
+        while (g_running) {
+            if (const auto choice = findCamera(device)) {
+                auto v4l2 = std::make_unique<unoq::V4l2Camera>(choice->path);
+                if (v4l2->open(choice->mode)) {
+                    cameraPath = choice->path;
+                    identity =
+                        v4l2->deviceIdentity().empty() ? choice->path : v4l2->deviceIdentity();
+                    camW = choice->mode.width;
+                    camH = choice->mode.height;
+                    camera = std::move(v4l2);
+                    std::printf("camera:  %s (%s) %dx%d yuyv\n", cameraPath.c_str(),
+                                identity.c_str(), camW, camH);
+                    std::fflush(stdout);
+                    return true;
+                }
+            }
+            if (snapshot) return false;  // offscreen runs never wait
+            if (!announced) {
+                std::printf("camera:  none yet - waiting\n");
+                std::fflush(stdout);
+                announced = true;
+            }
+            drawPreviewScreen(r, layout, {}, camW, camH,
+                              "Waiting for the webcam. Plug it into the USB-C hub.", kWarn, true);
+            (void)r.present();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        return false;
+    };
+    if (!acquireCamera()) {
+        if (g_running) std::fprintf(stderr, "error: no V4L2 camera with a YUYV mode found\n");
+        if (drmDisplay) drmDisplay->close();
+        return g_running ? 1 : 0;
+    }
+
     observation::CaptureService service(outDir);
     const vision::CalibrationSpec spec{referenceMm};
 
@@ -520,8 +544,25 @@ int main(int argc, char** argv) {
 
     std::printf("running: tap CAPTURE or press a board button; Ctrl-C to quit\n");
     std::fflush(stdout);
+    int missedFrames = 0;
     while (g_running) {
         const auto frame = camera->capture(std::chrono::milliseconds(200));
+        // ~5 s without a frame means the webcam went away (unplugged, or the
+        // hub dropped). Go back to waiting rather than freezing the preview.
+        missedFrames = frame ? 0 : missedFrames + 1;
+        if (missedFrames >= 25) {
+            std::printf("camera:  lost - waiting for it to come back\n");
+            std::fflush(stdout);
+            camera->close();
+            camera.reset();
+            lastRgb.clear();
+            screen = Screen::Preview;
+            if (!acquireCamera()) break;
+            missedFrames = 0;
+            status = "Camera reconnected.";
+            statusColour = kGood;
+            continue;
+        }
         if (screen == Screen::Card) {
             if (dismissRequested.exchange(false)) {
                 screen = Screen::Preview;
@@ -554,6 +595,6 @@ int main(int argc, char** argv) {
     // Join the display's input thread before the state its handlers capture
     // goes out of scope; close() also hands the screen back.
     if (drmDisplay) drmDisplay->close();
-    camera->close();
+    if (camera) camera->close();
     return 0;
 }
