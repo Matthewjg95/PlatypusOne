@@ -1,6 +1,6 @@
 # Platypus One — Bill of Materials (rev B, planning — merged)
 
-Status date: **2026-09-01**. This is the **master planning and inventory superset**, not the frozen hardware-request BOM or the bounded Contest Core build (scope layers are governed in the private planning overlay). It merges the original planning BOM with the
+Status date: **2026-09-30**. This is the **master planning and inventory superset**, not the frozen hardware-request BOM or the bounded Contest Core build (scope layers are governed in the private planning overlay). It merges the original planning BOM with the
 envelope BOM from `industrial_design/bounding_boxes/BOM_v0_1.md` (which stays
 as the packaging-envelope tracker). **Alternates are kept deliberately** —
 selection analysis is pending; do not delete an option without a decision
@@ -44,8 +44,8 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 | 7b | Camera: 13 MP autofocus module | 1 | $40 | 25×25×10 | TBD | Higher fidelity for ShadowScan; confirm UVC or MIPI-CSI availability on UNO Q before choosing | PLANNED |
 | 8a | ToF: VL53L1X (single-zone, 4 m) | 1 | $12 | 13×18×2 (breakout) | Pololu/Adafruit | FALLBACK — proven, cheap single distance channel if multizone integration threatens schedule | HOLD |
 | 8b | **ToF: VL53L8CX (8×8 multizone)** ✦ | 1 | $20 | 6×6×3 IC; breakout envelope TBD | ST/SparkFun | PREFERRED — 64-zone coarse depth, target/background separation, multiple-target handling, and camera-geometry cross-check; not a precision CAD scanner | PLANNED |
-| 9a | IMU: BNO055 (fused orientation on-chip) ✦ | 1 | $25 | 20×27×4 (breakout) | Adafruit | No sensor-fusion code needed — fastest to a working level/angle app | PLANNED |
-| 9b | IMU: BMI270 | 1 | $8 | 10×10×3 | DigiKey | Cheaper/smaller; fusion runs on our side | PLANNED |
+| 9a | **IMU: BMI270** ✦ | 1 | $8 | 2.5×3.0×0.8 IC; breakout TBD | DigiKey/Bosch | Rev A primary candidate: current device, I²C/SPI, 3.3 V-compatible VDD/VDDIO range; fusion runs on our side | PLANNED |
+| 9b | BNO055 fused IMU | 1 | $25 | 20×27×4 (breakout) | Adafruit/Bosch | DEV/FALLBACK ONLY — Bosch marks BNO055 not recommended for new designs; do not anchor custom carrier to it | HOLD |
 | 10 | Color: TCS34725 | 1 | $8 | 20×20×3 | Adafruit | Multi-measure lineage feature | PLANNED |
 | 11 | Radar: Grove BGT24LTR11 Doppler | 1 | $30 | 40×20×12 | Seeed | **V2 candidate** (machine-health app per utilities roadmap) — envelope reserved, not in Rev A build | DEFERRED |
 | 12 | White LED high-CRI + driver | 2 | $2 | — | DigiKey | Controlled shadow casting + illumination | PLANNED |
@@ -106,4 +106,4 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 3. **ToF architecture selected: 8b preferred.** VL53L8CX multizone depth now supports
    the contest capture-to-Fusion workflow; VL53L1X remains the schedule fallback.
    Final breakout, interface choice, optical window, calibration, and bench proof remain open.
-4. IMU 9a vs 9b — selection pending; both candidates remain carrier-compatible.
+4. **IMU direction updated:** BMI270 is the Rev A primary candidate. BNO055 is retained only as a development fallback because Bosch marks it not recommended for new designs. Bench/software validation of BMI270 remains required before schematic freeze.
