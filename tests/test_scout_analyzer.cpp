@@ -155,6 +155,42 @@ void test_evidence_emission() {
     assert(decoded.record->derived.size() == 3);
 }
 
+/// Bench evidence (2026-09-29, late-night desk lamp): the paper in one corner
+/// of a real webcam frame was ~7x darker than at the centre. With one global
+/// Otsu threshold the dim paper merged with the square and the screw into a
+/// single blob touching the frame edge, and the scene was refused as "no
+/// reference". The same measurement scene under an equally harsh vignette
+/// must measure as if evenly lit.
+void test_measures_through_uneven_lighting() {
+    const CalibrationSpec spec{20.0};
+    const auto evenFrame = measurementScene().frame();  // Gray8
+    const auto& mode = evenFrame.mode();
+    const auto src = evenFrame.pixels();
+
+    // Radial falloff: 1.0 at the centre down to 0.15 at the corners (~7x).
+    auto shaded = std::make_shared<std::vector<std::byte>>(src.size());
+    const double cx = (mode.width - 1) / 2.0, cy = (mode.height - 1) / 2.0;
+    const double halfDiagonal = std::sqrt(cx * cx + cy * cy);
+    for (std::uint16_t y = 0; y < mode.height; ++y)
+        for (std::uint16_t x = 0; x < mode.width; ++x) {
+            const double r = std::hypot(x - cx, y - cy) / halfDiagonal;
+            const double gain = 1.0 - 0.85 * r * r;
+            const std::size_t i = std::size_t{y} * mode.width + x;
+            const auto v = std::to_integer<int>(src[i]);
+            (*shaded)[i] = static_cast<std::byte>(static_cast<int>(std::lround(v * gain)));
+        }
+    const hal::Frame frame(mode, shaded, evenFrame.timestamp());
+
+    const auto outcome = vision::analyzeFrame(frame, spec);
+    assert(outcome.ok());
+    const auto& a = *outcome.analysis;
+    // Same tolerances as the evenly lit scene: the lighting must not move the
+    // measurement, only stop hiding it.
+    assert(std::abs(a.mmPerPixel - 0.5) < 0.01);
+    assert(std::abs(a.subjectLengthMm - 120.0) < 1.5);
+    assert(std::abs(a.subjectWidthMm - 18.0) < 1.5);
+}
+
 }  // namespace
 
 void test_scout_analyzer() {
@@ -162,5 +198,6 @@ void test_scout_analyzer() {
     test_determinism();
     test_scene_conditions_are_reported();
     test_evidence_emission();
+    test_measures_through_uneven_lighting();
     std::puts("test_scout_analyzer: OK");
 }
