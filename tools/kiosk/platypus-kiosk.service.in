@@ -26,9 +26,10 @@ WorkingDirectory=@REPO@
 # puts the port back in device mode, which restores ADB for recovery.
 # '+' runs these as root; the kiosk itself does not.
 ExecStartPre=+/bin/sh -c 'for r in /sys/class/usb_role/*/role; do [ -w "$r" ] && echo host > "$r"; done; sleep 2; true'
-ExecStart=@REPO@/build-bench/tools/scout_kiosk/scout_kiosk --out @REPO@/observations
+ExecStart=@REPO@/build-bench/tools/scout_kiosk/scout_kiosk --out @REPO@/observations --sessions @REPO@/sessions
 ExecStopPost=+/bin/sh -c 'for r in /sys/class/usb_role/*/role; do [ -w "$r" ] && echo device > "$r"; done; true'
-# The kiosk exits if no camera is attached; retry until one is plugged in.
+# The kiosk waits for a camera on screen by itself; a restart only covers a
+# display that could not be opened (e.g. the desktop still holding DRM master).
 Restart=on-failure
 RestartSec=5
 # SIGTERM makes the kiosk leave its loop and hand the CRTC back.
