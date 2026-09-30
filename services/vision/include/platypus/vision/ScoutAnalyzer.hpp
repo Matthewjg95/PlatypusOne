@@ -17,6 +17,7 @@
 //   - reference and subject do not touch
 #pragma once
 
+#include <platypus/geometry/Types.hpp>
 #include <platypus/hal/ICamera.hpp>
 #include <platypus/observation/Observation.hpp>
 
@@ -57,6 +58,10 @@ struct ScoutAnalysis {
     double mmPerPixel = 0.0;  ///< referenceSideMm / sqrt(reference.areaPx)
     double subjectLengthMm = 0.0;
     double subjectWidthMm = 0.0;
+    /// The subject's silhouette in pixel coordinates: outer boundary plus
+    /// bores, glints filtered out. Scale by mmPerPixel for millimetres; this
+    /// is what leaves PlatypusOne as a CAD sketch (services/export).
+    geometry::Outline2 subjectOutlinePx;
 };
 
 enum class AnalyzeError : std::uint8_t {

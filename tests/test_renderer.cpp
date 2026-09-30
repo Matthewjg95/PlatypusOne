@@ -129,6 +129,7 @@ void test_kms_helpers();
 void test_linked_display();
 void test_mcu_framing();
 void test_observation();
+void test_outline();
 void test_presentation_framing();
 void test_scout_analyzer();
 void test_scout_capture();
@@ -144,6 +145,7 @@ int main() {
     test_linked_display();
     test_mcu_framing();
     test_observation();
+    test_outline();
     test_presentation_framing();
     test_renderer();
     test_renderer_geometry();

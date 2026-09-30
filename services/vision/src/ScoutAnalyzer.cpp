@@ -1,5 +1,7 @@
 #include "platypus/vision/ScoutAnalyzer.hpp"
 
+#include "platypus/vision/Outline.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -47,6 +49,10 @@ constexpr double kAmbiguityAreaRatio = 0.5;
 /// confidence (bench, 2026-09-29: 2.1 x 1.8 mm reported for a square-only
 /// frame). Scaled through the reference so it holds at any camera height.
 constexpr double kMinSubjectAreaMm2 = 10.0;
+/// Smallest enclosed region kept as a bore in the exported outline. An M3
+/// nut's bore is ~7 mm^2; glints on bright steel read as holes of 1-2 mm^2
+/// (bench, 2026-09-29) and must not reach a CAD sketch as features.
+constexpr double kMinBoreAreaMm2 = 4.0;
 
 /// Luma extraction. Gray8 passes through; YUYV keeps the luma byte that leads
 /// every pixel; RGB888 uses integer Rec.601-style weights.
@@ -501,6 +507,9 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
         spec.referenceSideMm / std::sqrt(static_cast<double>(reference->stats.areaPx));
     analysis.subjectLengthMm = analysis.subject.lengthPx * analysis.mmPerPixel;
     analysis.subjectWidthMm = analysis.subject.widthPx * analysis.mmPerPixel;
+    analysis.subjectOutlinePx = outlineOf(
+        labels, mode.width, mode.height, subject->label, subject->stats.minX, subject->stats.minY,
+        subject->stats.maxX, subject->stats.maxY, kMinBoreAreaMm2 / mm2PerPx);
     return {analysis, AnalyzeError::None};
 }
 

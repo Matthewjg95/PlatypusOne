@@ -8,6 +8,7 @@ add_executable(platypus_tests
     test_linked_display.cpp
     test_mcu_framing.cpp
     test_observation.cpp
+    test_outline.cpp
     test_presentation_framing.cpp
     test_renderer.cpp
     test_scout_analyzer.cpp
