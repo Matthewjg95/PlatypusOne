@@ -153,20 +153,29 @@ probed), the cable type, and the connector pinout — the carrier's DISPLAY
 connector is the Pi 5 layout (+3V3 on pin 22, I²C on 20/21), which is what
 the Waveshare cable is built for.
 
-**The trap: the Waveshare `MIPI-DSI-Cable-12cm` is opposite-sided.**
+**The trap: the Waveshare `MIPI-DSI-Cable-12cm` is opposite-sided** — its
+gold fingers are on one face at the 22-pin end and on the other face at the
+15-pin end, so there is exactly one working way round and "same face up at
+both ends" is wrong.
 
-| End | Gold fingers are on the face printed… |
+### Verified orientation (photographed on the working bench, 2026-09-30)
+
+These two photos are the reference. If a future note disagrees with them, the
+photos win.
+
+| Carrier end — UNO Media Carrier `DISPLAY` (22-pin 0.5 mm) | Panel end — Waveshare 5inch DSI LCD Rev2.2 (15-pin 1.0 mm) |
 |---|---|
-| 22-pin 0.5 mm (carrier) | **"MIPI-DSI-Cable-12cm" / "22PIN 0.5mm"** |
-| 15-pin 1.0 mm (panel) | **"15PIN 1.0mm"** — the *reverse* face |
+| ![Carrier end](../media/hardware/dsi-cable-carrier-end.jpg) | ![Panel end](../media/hardware/dsi-cable-panel-end.jpg) |
+| Carrier component side up. The cable enters the `DISPLAY` connector from the board edge with its **dotted-mesh face up**, fully inserted and the dark actuator latched down. | Looking at the back of the panel. The cable's **"15PIN 1.0mm" printed face points away from the panel PCB** (readable from behind the panel), fully inserted under the white latch. |
 
-So laying the same face up at both ends puts the fingers on opposite sides.
-Waveshare's Pi 5 reference photo shows the "DSI-Cable-12cm" label facing up
-at the panel, i.e. **the 15-pin fingers face into the panel's PCB**. The
-failing setup had the "15PIN 1.0mm" face up at the panel — fingers away
-from the contacts, so no 3.3 V, no I²C, no glow. At the carrier end, insert
-the 22-pin fingers toward the connector's springs (printed face up, as on a
-Pi 5).
+What this corrects: the first version of this section (commit `1b4148e`,
+written from the bench notes) described the fix as the "MIPI-DSI-Cable-12cm"
+label facing up at the panel. The photographed working assembly has the
+"15PIN 1.0mm" face outward instead. Go by the photos.
+
+Wrong orientation is not dangerous and is unambiguous: a clean NAK at `0x45`
+on the carrier's CCI bus and no backlight. Right orientation: the ATTINY
+answers at `0x45`, the backlight comes up, and touch appears at `0x38`.
 
 A continuity beeper is enough to prove seating before power: with the board
 off, one outer pin of the panel's connector must beep steadily to a UNO Q
