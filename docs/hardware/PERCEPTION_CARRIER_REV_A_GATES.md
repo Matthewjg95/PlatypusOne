@@ -118,3 +118,44 @@ Layout/fab may start only when:
 - autonomous robotics
 
 Those can use future modules. Rev A proves the Platypus One perception head.
+
+
+## Verified interface matrix — 2026-09-30
+
+Sources for this section are manufacturer documentation; bench proof is still required before schematic freeze.
+
+| Function | Rev A direction | Verified facts | Design consequence | Status |
+|---|---|---|---|---|
+| RGB camera | Media Carrier MIPI-CSI preferred; USB UVC remains known-good fallback | UNO Media Carrier provides two 22-pin, 4-lane MIPI-CSI connectors and explicitly lists IMX219 compatibility. UNO Q native camera path is four-lane MIPI-CSI-2 at 1.8 V I/O. | Prototype the supported IMX219-class CSI path before selecting a custom camera sensor. Keep UVC available until CSI capture is physically proven. | INTERFACE VERIFIED; SENSOR TBD |
+| Display | Existing Media Carrier DSI path | Media Carrier provides 22-pin 4-lane MIPI-DSI. Physical 800×480 Waveshare panel path is documented separately in DSI_BRINGUP.md. | Carrier Rev A must coexist with Media Carrier rather than consume its display path. | PROVEN/STAGED |
+| MCU sensor bus | MCU I2C4 / Qwiic candidate | UNO Q Qwiic is I2C4 / Wire1 and 3.3 V only. Media Carrier preserves host signals and exposes MCU I2C4. | Use this bus for 3.3-V-compatible sensor interfaces; do not connect low-voltage bare-die I/O without translation. | VERIFIED |
+| MCU control | MCU GPIO/PWM | Media Carrier exposes MCU GPIO at 3.3 V; UNO Q has additional STM32-controlled digital pins. | Prefer MCU control for illumination enable/PWM and deterministic sensor reset/interrupt handling. | VERIFIED; PIN ASSIGNMENT TBD |
+| SoC GPIO | Linux-side control where required | Media Carrier exposes SoC GPIO at 1.8 V. | Never assume 3.3-V tolerance; use only where Linux ownership is necessary and level-match explicitly. | VERIFIED |
+| ToF | VL53L8CX primary | 8×8 / 64-zone, up to 4 m, I2C up to 1 MHz or SPI up to 3 MHz, 3.3 V AVDD + 1.8 V core, IOVDD 1.2/1.8 V; GPIO1 interrupt and LPn control; ST publishes C API and Linux driver. | Bare IC requires low-voltage rail(s) and level compatibility. Rev A must either include regulation/translation or deliberately use a module that already solves them. Reserve INT + LPn. | PART DIRECTION STRONG; ELECTRICAL IMPLEMENTATION OPEN |
+| IMU | BMI270 primary candidate | Current Bosch device; 1.7–3.6 V VDD, 1.2–3.6 V VDDIO, I2C/SPI, two interrupts, ~685 µA full ODR. | Native 3.3-V MCU-bus integration is plausible with VDD/VDDIO chosen accordingly. Fusion can run in software; no reason to anchor Rev A to BNO055. | PRIMARY CANDIDATE |
+| IMU fallback | BNO055 removed as primary | Bosch marks BNO055 not recommended for new designs. | Keep only as dev inventory/fallback if already owned; do not design a new production carrier around it. | DEPRECATED FOR REV A |
+
+### Immediate interface decisions
+
+1. **Keep the UNO Media Carrier in Rev A architecture for now.** It already solves DSI and exposes two CSI camera connectors while preserving JMEDIA/JMISC signals. The custom perception carrier should initially complement it, not replace it.
+2. **Prove an IMX219-class CSI camera on the Media Carrier before choosing a bare/custom RGB sensor.** A supported CSI module gives us a reference image pipeline and de-risks Linux/ISP support.
+3. **Use the STM32 side for illumination/reset/interrupt ownership.** This keeps timing-sensitive physical control deterministic and avoids unnecessary dependence on 1.8-V SoC GPIO.
+4. **Treat VL53L8CX voltage translation/regulation as a first-class schematic problem.** Its functionality fits the product, but the bare IC is not a 3.3-V Qwiic drop-in.
+5. **Move BMI270 ahead of BNO055 for Rev A.** BNO055's integrated fusion is convenient, but its lifecycle status makes it the wrong anchor for a new custom PCB.
+
+## Preliminary power ledger
+
+This is intentionally incomplete. Unknowns are gates, not guessed numbers.
+
+| Load | Rail / source | Known value | Budget status |
+|---|---|---|---|
+| UNO Q | 5 V system input | Arduino specifies 5 V / 3 A USB-C supply for board operation; whole-system measured load TBD | MEASURE |
+| Media Carrier + DSI display | via UNO Q/carrier | system measured idle/active load TBD | MEASURE |
+| RGB CSI camera | carrier camera rail(s) | depends on selected supported module | SELECT + MEASURE |
+| VL53L8CX AVDD | 3.3 V | HP idle typ ~1 mA on AVDD; ranging value still to be entered from datasheet table before regulator sizing | INCOMPLETE |
+| VL53L8CX CORE | 1.8 V | HP idle typ ~3 mA; ranging/peak still required | INCOMPLETE |
+| VL53L8CX IOVDD | 1.2/1.8 V | low interface current; exact max from datasheet before freeze | INCOMPLETE |
+| BMI270 | 1.7–3.6 V VDD; 1.2–3.6 V VDDIO | ~685 µA at full ODR | LOW RISK |
+| White illumination | TBD switched rail | LED current/duty/thermal limit not selected | MAJOR OPEN ITEM |
+
+**Power gate:** do not size the battery or carrier regulators from this table yet. First measure the proven UNO Q + Media Carrier + display baseline, select the CSI reference camera, and select the LED topology.
