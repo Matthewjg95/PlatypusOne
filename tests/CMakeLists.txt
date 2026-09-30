@@ -3,6 +3,7 @@
 add_executable(platypus_tests
     test_app_registry.cpp
     test_event_queue.cpp
+    test_export.cpp
     test_fastener_classifier.cpp
     test_kms_helpers.cpp
     test_linked_display.cpp
@@ -22,6 +23,7 @@ target_link_libraries(platypus_tests PRIVATE
     platypus::app_engineering_scout
     platypus::appfw
     platypus::display_kms
+    platypus::export
     platypus::display_linked
     platypus::observation
     platypus::renderer

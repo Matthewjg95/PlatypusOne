@@ -31,6 +31,7 @@ add_subdirectory(platform/audio)
 
 add_subdirectory(services/renderer)
 add_subdirectory(services/geometry)
+add_subdirectory(services/export)
 add_subdirectory(services/filesystem)
 add_subdirectory(services/observation)
 add_subdirectory(services/vision)
