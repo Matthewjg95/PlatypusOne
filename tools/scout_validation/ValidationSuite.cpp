@@ -47,16 +47,17 @@ std::vector<CaseSpec> buildCases() {
     struct Bolt {
         const char* nominal;
         double diameterMm;
+        double headAcrossFlatsMm;  ///< ISO 4017; the head is the widest extent
         double lengthMm;
         double angleDeg;
         double mmPerPx;
     };
     // Shaft diameters per ISO 262; lengths and poses varied deliberately.
     const Bolt bolts[] = {
-        {"M3", 3.0, 16.0, 10.0, 0.125}, {"M4", 4.0, 20.0, 35.0, 0.2},
-        {"M5", 5.0, 25.0, 60.0, 0.25},  {"M6", 6.0, 30.0, 0.0, 0.25},
-        {"M8", 8.0, 40.0, 45.0, 0.25},  {"M10", 10.0, 50.0, 20.0, 0.5},
-        {"M12", 12.0, 60.0, 75.0, 0.5},
+        {"M3", 3.0, 5.5, 16.0, 10.0, 0.125},  {"M4", 4.0, 7.0, 20.0, 35.0, 0.2},
+        {"M5", 5.0, 8.0, 25.0, 60.0, 0.25},   {"M6", 6.0, 10.0, 30.0, 0.0, 0.25},
+        {"M8", 8.0, 13.0, 40.0, 45.0, 0.25},  {"M10", 10.0, 16.0, 50.0, 20.0, 0.5},
+        {"M12", 12.0, 18.0, 60.0, 75.0, 0.5},
     };
     for (const auto& bolt : bolts) {
         char name[64];
@@ -65,11 +66,14 @@ std::vector<CaseSpec> buildCases() {
         cases.push_back({name, "measurement", bolt.mmPerPx,
                          [bolt](SyntheticScene& scene, double pxPerMm) {
                              addReference(scene, pxPerMm);
-                             scene.addRect(400.0, 300.0, bolt.lengthMm * pxPerMm,
-                                           bolt.diameterMm * pxPerMm, deg(bolt.angleDeg));
+                             // Head height ~0.65 d (ISO 4017 k).
+                             scene.addBolt(400.0, 300.0, bolt.lengthMm * pxPerMm,
+                                           bolt.diameterMm * pxPerMm, deg(bolt.angleDeg),
+                                           bolt.headAcrossFlatsMm * pxPerMm,
+                                           0.65 * bolt.diameterMm * pxPerMm);
                          },
                          std::nullopt, FastenerClass::BoltOrScrew, bolt.nominal, bolt.lengthMm,
-                         bolt.diameterMm, ""});
+                         bolt.headAcrossFlatsMm, "nominal from the shank; width is the head"});
     }
 
     struct Nut {
@@ -164,10 +168,39 @@ std::vector<CaseSpec> buildCases() {
     cases.push_back({"rod with off-table width (15 mm)", "measurement", 0.5,
                      [](SyntheticScene& scene, double pxPerMm) {
                          addReference(scene, pxPerMm);
-                         scene.addRect(400.0, 300.0, 80.0 * pxPerMm, 15.0 * pxPerMm, deg(30.0));
+                         scene.addBolt(400.0, 300.0, 80.0 * pxPerMm, 15.0 * pxPerMm, deg(30.0),
+                                       24.0 * pxPerMm, 10.0 * pxPerMm);
                      },
-                     std::nullopt, FastenerClass::BoltOrScrew, std::nullopt, 80.0, 15.0,
+                     std::nullopt, FastenerClass::BoltOrScrew, std::nullopt, 80.0, 24.0,
                      "no ISO shaft nominal within tolerance; nominal correctly withheld"});
+
+    // Out-of-library refusals: a class is claimed only on positive evidence.
+    cases.push_back({"headless rod (pin / pen)", "measurement", 0.25,
+                     [](SyntheticScene& scene, double pxPerMm) {
+                         addReference(scene, pxPerMm);
+                         scene.addRect(400.0, 300.0, 50.0 * pxPerMm, 10.0 * pxPerMm, deg(25.0));
+                     },
+                     std::nullopt, FastenerClass::Unknown, std::nullopt, 50.0, 10.0,
+                     "rod-like but no head: not claimed as a screw"});
+    cases.push_back(
+        {"PCB-like plate with two holes", "measurement", 0.25,
+         [](SyntheticScene& scene, double pxPerMm) {
+             addReference(scene, pxPerMm);
+             scene.addRect(400.0, 300.0, 40.0 * pxPerMm, 25.0 * pxPerMm, 0.0);
+             scene.addBore(400.0 - 15.0 * pxPerMm, 300.0 - 8.0 * pxPerMm, 1.5 * pxPerMm);
+             scene.addBore(400.0 + 15.0 * pxPerMm, 300.0 + 8.0 * pxPerMm, 1.5 * pxPerMm);
+         },
+         std::nullopt, FastenerClass::Unknown, std::nullopt, 40.0, 25.0,
+         "not a fastener: outside the library, said so"});
+    cases.push_back({"square plate with a centred hole", "measurement", 0.25,
+                     [](SyntheticScene& scene, double pxPerMm) {
+                         addReference(scene, pxPerMm);
+                         // Well above reference size, so it cannot pass for a second square.
+                         scene.addRect(400.0, 300.0, 34.0 * pxPerMm, 31.0 * pxPerMm, 0.0);
+                         scene.addBore(400.0, 300.0, 4.0 * pxPerMm);
+                     },
+                     std::nullopt, FastenerClass::Unknown, std::nullopt, 34.0, 31.0,
+                     "squared-off outline: not a nut or washer"});
 
     return cases;
 }
@@ -219,7 +252,19 @@ ValidationRun runValidation() {
 
             const bool classOk =
                 caseSpec.expectedClass && *caseSpec.expectedClass == classified.fastenerClass;
-            const bool nominalOk = result.actualNominal == caseSpec.expectedNominal;
+            // A hit when the true size is the claim, or one of the named
+            // candidates when metric and UNC are equally consistent ("M6 or
+            // 1/4-20 UNC"): the silhouette cannot separate those, the pitch can.
+            const auto candidate = [&](const std::string& want) {
+                const auto& got = *result.actualNominal;
+                return got == want || got.rfind(want + " or ", 0) == 0 ||
+                       (got.size() > want.size() + 4 &&
+                        got.compare(got.size() - want.size() - 4, std::string::npos,
+                                    " or " + want) == 0);
+            };
+            const bool nominalOk = result.actualNominal == caseSpec.expectedNominal ||
+                                   (result.actualNominal && caseSpec.expectedNominal &&
+                                    candidate(*caseSpec.expectedNominal));
             result.behaved = classOk && nominalOk;
 
             ++run.summary.classApplicable;

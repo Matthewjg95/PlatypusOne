@@ -170,7 +170,7 @@ int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
         scene.addHexagon(400.0, 280.0, 20.0, 15.0 * 3.14159265358979 / 180.0);
         scene.addBore(400.0, 280.0, 5.0);
     } else {
-        scene.addRect(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0);
+        scene.addBolt(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0, 36.0, 16.0);
     }
 
     const vision::CalibrationSpec spec{20.0};

@@ -428,7 +428,10 @@ bool isSquareCandidate(const BlobStats& stats) {
     const auto boxW = static_cast<double>(stats.maxX - stats.minX + 1);
     const auto boxH = static_cast<double>(stats.maxY - stats.minY + 1);
     const double aspect = boxW < boxH ? boxW / boxH : boxH / boxW;
-    return aspect >= kMinReferenceAspect && stats.fillRatio >= kMinReferenceFill;
+    // The printed reference is solid: a square-ish part with a hole (a plate,
+    // a PCB) must never be mistaken for it and silently rescale the scene.
+    return aspect >= kMinReferenceAspect && stats.fillRatio >= kMinReferenceFill &&
+           stats.holeCount == 0;
 }
 
 std::string decimalClaim(double value) {
