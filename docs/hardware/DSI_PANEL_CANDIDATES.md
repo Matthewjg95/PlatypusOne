@@ -1,5 +1,10 @@
 # UNO Q DSI panel candidates
 
+> **Bench reality, 2026-09-28:** the panel actually in hand is the Waveshare
+> *5inch DSI LCD* (800×480, ICN6211, 15-pin FPC), not Candidate A below, and the
+> board image predates the carrier overlays. The executable plan for the
+> hardware on the bench is [DSI_BRINGUP.md](DSI_BRINGUP.md).
+
 **Research date:** 2026-08-25  
 **Decision state:** DSI architecture remains selected; exact panel selection is conditional.
 

@@ -294,6 +294,7 @@ std::vector<LabeledBlob> labelComponents(const std::vector<std::uint8_t>& gray,
         const auto boxArea =
             static_cast<double>(s.maxX - s.minX + 1) * static_cast<double>(s.maxY - s.minY + 1);
         s.fillRatio = area / boxArea;
+        s.touchesBorder = s.minX == 0 || s.minY == 0 || s.maxX == width - 1 || s.maxY == height - 1;
         blobs.push_back(std::move(blob));
     }
     return blobs;
@@ -460,6 +461,13 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
         blob.stats.holeCount = holes[static_cast<std::size_t>(blob.label)];
     std::erase_if(blobs,
                   [](const LabeledBlob& blob) { return blob.stats.areaPx < kMinBlobAreaPx; });
+    // A blob running off the frame edge is only partly visible: a clipped
+    // square yields a wrong scale and a clipped subject a wrong length, both
+    // silently. Uneven lighting also turns the vignetted rim of the scene into
+    // one large border blob that would otherwise win the subject contest. Drop
+    // them here so the scene reports NoReferenceTarget/NoSubject and the
+    // operator reframes, instead of receiving a confident wrong measurement.
+    std::erase_if(blobs, [](const LabeledBlob& blob) { return blob.stats.touchesBorder; });
     if (blobs.empty()) return {std::nullopt, AnalyzeError::NoReferenceTarget};
 
     // Reference: the largest square candidate; a comparable runner-up means
