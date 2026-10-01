@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "event": "Engineering Scout Q / UNO Q Dream Lab 2026",
+  "archive_review_date": "2026-10-01",
+  "archive_status": "partial; raw final-run evidence not yet recovered",
+  "submission": {
+    "status": "submitted",
+    "date": "2026-09-30",
+    "confirmation_source": "Matthew, user request on 2026-10-01",
+    "published_post_url": null,
+    "final_submitted_text_path": null,
+    "confirmation_artifact_path": null
+  },
+  "source_identity": {
+    "audit_start_main_sha": "d64cad1340142c25c822e57098f53e0fa8f64a4b",
+    "post_submission_baseline_sha": "ea5e82a36c21de395f347425b8bfa5a7e1638fc2",
+    "final_submission_tested_sha": null,
+    "final_submission_local_changes": null,
+    "baseline_native_replay_status": "pending; host and synthetic checks are not physical acceptance"
+  },
+  "artifacts": [
+    {
+      "repository_path": "docs/contest/evidence/dreamlab-2026-09-30/WRITEUP_BRANCH_SNAPSHOT.md",
+      "evidence_type": "reported_working_draft",
+      "sha256": "c44a9e633d8556970b0a241db25d5e2fbf570ae4a744cd81089777f7e159c996",
+      "bytes": 14819,
+      "source_commit": "48e028a4749d5c2dc33a844d56f07affb59d33ea",
+      "source_path": "docs/contest/DREAMLAB_MAKERIO_POST.md"
+    },
+    {
+      "repository_path": "docs/media/hardware/dsi-cable-carrier-end.jpg",
+      "evidence_type": "physical_setup_photo",
+      "sha256": "7a6483c055235705cdc0487f4f700841adccee9ff740d14ff4709fc87871b255",
+      "bytes": 256947,
+      "source_commit": "ea5e82a36c21de395f347425b8bfa5a7e1638fc2",
+      "source_path": "docs/media/hardware/dsi-cable-carrier-end.jpg"
+    },
+    {
+      "repository_path": "docs/media/hardware/dsi-cable-panel-end.jpg",
+      "evidence_type": "physical_setup_photo",
+      "sha256": "131d77fad471f5221d149563781fbbe42011a67cad703730b03f93c958fad174",
+      "bytes": 229507,
+      "source_commit": "ea5e82a36c21de395f347425b8bfa5a7e1638fc2",
+      "source_path": "docs/media/hardware/dsi-cable-panel-end.jpg"
+    },
+    {
+      "repository_path": "docs/contest/media/scout-kiosk-preview.png",
+      "evidence_type": "synthetic_offscreen_render",
+      "sha256": "e0242b5ea51b015127e38e3451eb1f8a344b40a21e07db160e32224eb84770a8",
+      "bytes": 4057,
+      "source_commit": "ea5e82a36c21de395f347425b8bfa5a7e1638fc2",
+      "source_path": "docs/contest/media/scout-kiosk-preview.png"
+    },
+    {
+      "repository_path": "docs/contest/media/scout-kiosk-card.png",
+      "evidence_type": "synthetic_offscreen_render",
+      "sha256": "1931b6c05b378ae3a89c0145a29df509d13563b1473bd73da1f6e7bfcac03ba3",
+      "bytes": 6723,
+      "source_commit": "ea5e82a36c21de395f347425b8bfa5a7e1638fc2",
+      "source_path": "docs/contest/media/scout-kiosk-card.png"
+    }
+  ],
+  "reported_physical_object": {
+    "identity": "1/4-20 UNC screw",
+    "identity_status": "corrected by Matthew; M6/M8 labels were earlier inferences",
+    "reported_caliper_overall_length_mm": 44.45,
+    "reported_caliper_head_diameter_mm": 9.48,
+    "reported_caliper_threaded_section_width_mm": 6.3,
+    "standard_nominal_major_diameter_mm": 6.35,
+    "standard_nominal_pitch_mm": 1.27
+  },
+  "reported_runs": [
+    {
+      "date": "2026-09-29",
+      "status": "reported real webcam/touch/result/save workflow; raw pair not archived",
+      "source_snapshot_commit": "48e028a4749d5c2dc33a844d56f07affb59d33ea",
+      "reported_on_device_size_mm": [
+        49.6,
+        12.1
+      ],
+      "capture_ids": null,
+      "tested_sha": null,
+      "raw_pair_paths": null,
+      "condition": "late night, poor lighting; focus/pose details incomplete",
+      "accuracy_acceptance": "not established"
+    },
+    {
+      "date": "2026-09-30",
+      "status": "reported focused/tilted screw comparisons; raw pair not archived",
+      "source_snapshot_commit": "48e028a4749d5c2dc33a844d56f07affb59d33ea",
+      "capture_ids": null,
+      "tested_sha": null,
+      "raw_pair_paths": null,
+      "on_device_and_offline_outputs": "separate tables in WRITEUP_BRANCH_SNAPSHOT.md; corner correction/thread pitch not baseline on-device outputs"
+    },
+    {
+      "date": "2026-09-30",
+      "status": "reported OV5640 camera-board width comparisons; raw pairs not archived",
+      "source_snapshot_commit": "48e028a4749d5c2dc33a844d56f07affb59d33ea",
+      "reported_scan_labels": [
+        "0045",
+        "0046",
+        "0047"
+      ],
+      "tested_sha": null,
+      "raw_pair_paths": null,
+      "reported_caliper_width_mm": 22.83
+    }
+  ],
+  "unresolved": {
+    "original_source_images_and_observation_json": null,
+    "capture_linked_calibration_lighting_focus_pose_truth": null,
+    "final_physical_result_photos_and_video_references": null,
+    "native_session_finish_export_evidence": null,
+    "offline_corner_pitch_analysis_code_and_method": null,
+    "complete_varied_lighting_repeatability_matrix": null
+  }
+}

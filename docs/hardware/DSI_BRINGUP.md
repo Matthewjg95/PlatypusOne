@@ -5,6 +5,14 @@ The concrete plan for linking the three boards on the bench, written
 procedure in [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md), which assumed a
 different panel and a newer board image than the ones on the bench.
 
+**Current-state note, 2026-10-01:** #26/#27/#28 are merged; panel/touch
+detection and the on-glass Scout loop are recorded in the later bench notes.
+The launch-era image diagnosis and "next session" instructions below are
+historical, not a request to repeat an OS/panel installation on the working rig.
+The final FFC result/photos supersede the earlier cable hypotheses.
+Use [UNO_Q_SCOUT_BASELINE.md](UNO_Q_SCOUT_BASELINE.md) to replay the existing
+rig; final raw run evidence and the submission-night tested SHA remain pending.
+
 ## As-built hardware (from photographs, 2026-09-28)
 
 | Board | Identification | DSI connector |

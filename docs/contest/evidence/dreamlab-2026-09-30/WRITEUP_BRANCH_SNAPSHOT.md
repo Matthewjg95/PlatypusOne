@@ -3,16 +3,6 @@
 Working draft for the **Arduino UNO Q Dream Lab Challenge** entry. Written
 2026-09-30 against the official rules and the state of the bench that day.
 
-**Archive note, 2026-10-01:** Dream Lab was submitted September 30 (Matthew's
-confirmation). This file is the original merged draft, not a verified copy
-of the published submission. Its M6 label for the real test screw was wrong:
-Matthew identified it as **1/4-20 UNC**. Sessions/export, corner correction,
-thread-pitch analysis and #35's classifier must not be read as merged or
-physically accepted baseline features. The newer branch draft is preserved
-verbatim in [the evidence archive](evidence/dreamlab-2026-09-30/README.md),
-which distinguishes on-device reports, offline analysis and missing raw proof.
-The pre-submission placeholders and shot list below are historical.
-
 ## The rules that shape this post
 
 From DigiKey's challenge page and official rules (read 2026-09-30):
@@ -102,7 +92,15 @@ tool, not an object-detection demo.
    edge, or a speck too small to be a part gives a plain instruction ("No part
    found beside the square. Keep it fully in frame.") and no number. The
    attempt is still saved as evidence.
-5. **Sessions.** Captures of one object are grouped. Scout asks for more
+5. **It never forces a part into a class.** A bolt or screw needs a head
+   (one end of the outline clearly wider than the shank); a nut or washer
+   needs one centred hole in a round or hex outline. When I put a PCB down,
+   Scout measured it (41.8 × 25.7 mm) and recorded *"not a recognized
+   fastener"*, with no thread or size questions. My test screw is a
+   1/4-20 UNC. From above, a 6.35 mm shank can't be told from an M6 (6.00 mm)
+   at ±0.5 mm, so Scout says **"1/4-20 UNC or M6"** and names the thread pitch
+   (1.27 vs 1.0 mm, side view) as the thing that decides.
+6. **Sessions.** Captures of one object are grouped. Scout asks for more
    ("shift or rotate the part") until three captures agree within 0.5 mm,
    then FINISH writes a CAD handoff bundle: the silhouette as **DXF (mm)** for
    Fusion 360 / KiCad, as JSON for a mesh-to-CAD tool, the source image and a
@@ -141,26 +139,57 @@ illumination, and a turntable for multi-view capture.
 
 #### 5. Results — honest numbers
 
-**Synthetic ground-truth battery (21 cases):** 21/21 behave as specified;
-classification 17/17, nominal size 15/15; length error 0.30 mm mean / 0.49 mm
-max; width 0.27 / 0.50 mm; all 4 intentional failure cases refuse for the
-right reason.
+**Synthetic ground-truth battery (24 cases):** 24/24 behave as specified;
+classification 20/20, nominal size 15/15 (the true size among the named
+candidates); length error 0.32 mm mean / 0.66 mm max; width 0.25 / 0.49 mm;
+all 4 intentional failure cases refuse for the right reason, and the 3
+out-of-library parts come out "unknown".
 
 **First light on real hardware (29 Sep, late night, poor lighting):** the
 pipeline ran end to end on the UNO Q with the real webcam. The reference
-square was found correctly. An M6 screw (calipers: 44.45 mm long, 9.48 mm
-head) measured **49.6 × 12.1 mm** — a large over-read, most likely from the
-part's shadow under a single low light. Refusals worked as designed (for
+square was found correctly. A 1/4-20 UNC screw (calipers: 44.45 mm long,
+9.48 mm head, 6.3 mm thread) measured **49.6 × 12.1 mm** — a large
+over-read, from the part's shadow under a single low light and, it turned
+out, an out-of-focus lens (below). Refusals worked as designed (for
 example, a frame with the square but no part → "No part found").
 **(update)** with the lighting matrix below if run before posting.
 
-| Condition | Captures | Result / refusal |
-|---|---|---|
-| Even desk light | **(update)** | |
-| Uneven overhead | **(update)** | |
-| Moderate shadow | **(update)** | |
-| Part rotated | **(update)** | |
-| No part / square hidden | **(update)** | refusal + guidance |
+**Tonight's bench, against calipers (30 Sep, focus fixed, camera tilted).**
+A hand-held instrument will never look straight down, so I measured how much
+the tilt costs and how much the reference square can win back. "Today" is the
+kiosk's scale from the square's area; "corrected" uses the square's four
+corners to undo the tilt of the table plane (offline analysis of the same
+frames; the board's analyzer gets it next).
+
+*1/4-20 UNC socket-head screw*
+
+| | Today | Corrected from the square's corners | Calipers / standard |
+|---|---|---|---|
+| Head diameter | 10.17 / 10.45 mm | **9.73 / 9.62 mm** | 9.48 mm |
+| Shank (threaded section) | 6.72 / 7.30 mm | **6.08 / 6.20 mm** | 6.35 mm major |
+| Thread pitch | 1.452 / 1.447 mm | **1.284 / 1.230 mm** | 1.270 mm (20 TPI) |
+| Length | 52.9 / 55.9 mm | 49.3 / 50.4 mm | 44.45 mm |
+
+The square's sides measured 145–164 px in the same frame: the camera was
+tilted roughly 20°. The thread pitch is readable from a part lying flat, with
+no side view, once the lens is focused: the edge of the thread gives a
+period 20–30× above the noise.
+
+*Adafruit OV5640 camera board (an out-of-library part, correctly reported as
+"not a recognized fastener")*
+
+| Scan | Width today | Width corrected | Calipers |
+|---|---|---|---|
+| 0045 | 24.84 mm (+8.8%) | 23.31 mm (+2.1%) | 22.83 mm |
+| 0046 | 24.88 mm (+9.0%) | 24.45 mm (+7.1%) | 22.83 mm |
+| 0047 | 24.43 mm (+7.0%) | 23.69 mm (+3.8%) | 22.83 mm |
+
+(Length is left out: the pin headers stick out past the 35.90 mm board.)
+
+What's left after the correction is height, not tilt. A screw lying down
+sits a few millimetres above the paper and a PCB's components stand proud,
+and anything nearer the camera looks bigger. That is the next correction
+(below).
 
 #### 6. What went wrong (and what I learned)
 
@@ -172,15 +201,38 @@ example, a frame with the square but no part → "No part found").
 - **Enabling DSI turns off DisplayPort over USB-C** and left the port in
   device mode, so no webcam. The kiosk service forces the port to host mode
   and hands it back on exit.
+- **My captures were soft, and I blamed the webcam.** Sharpness scores (the
+  variance of a Laplacian filter) were 3–6, against hundreds for a sharp frame. Blur
+  widens every edge, and a silhouette measured from blurred edges reads big:
+  the shank came out 7.2 mm instead of 6.35. The fix was physical: the
+  camera has a manual focus ring.
+- **The classifier assumed.** The first version called anything long and thin
+  a screw, and asked thread questions about a PCB. Now every class needs
+  positive evidence, and the validation battery includes a headless rod, a
+  PCB-like plate and a square plate with a hole, all of which must come out
+  "unknown". The battery also caught an analyzer bug: a large square plate
+  could be mistaken for the 20 mm reference and silently rescale everything.
 - **Shadows are the enemy of silhouettes.** Illumination flattening fixed a
   lighting-gradient failure; shadows still inflate measurements. Controlled
   light from the MCU is the next fix.
 
 #### 7. What's next
 
+- **Tilt on screen.** Scout reads the reference square's distortion and tells
+  the operator when the camera is tilted, before anyone trusts a number.
+- **Undo the tilt automatically** from the square's corners (proven above on
+  the bench frames), then **correct for height**: the corner correction also
+  gives the camera's pose, and a part's own width tells how far its outline
+  sits above the paper.
+- **Depth sensing in the handheld.** The PlatypusOne handheld adds a
+  multizone time-of-flight sensor: the table plane's tilt and distance come
+  from depth, and the square becomes a cross-check rather than the only
+  source of scale.
+
 - STM32 capture trigger and ring light; bench validation across lighting
   conditions.
-- Side-view capture for thread pitch and bolt vs screw.
+- Thread pitch measured on the board (it is readable from a part lying flat
+  once focused); a side view only for bolt vs screw.
 - More object profiles (PCBs, flat brackets, turned parts), and multi-view
   capture toward 3D.
 
