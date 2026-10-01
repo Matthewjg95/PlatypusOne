@@ -136,8 +136,8 @@ void test_evidence_emission() {
     const auto violations = observation::validate(record);
     assert(violations.empty());
     assert(record.inferred.empty());
-    assert(record.observed.size() == 7);
-    assert(record.derived.size() == 3);
+    assert(record.observed.size() == 8);  // + reference_keystone
+    assert(record.derived.size() == 4);   // + camera_tilt
     assert(record.unresolved.size() == 3);
     assert(record.recommendedNextObservations.size() == 1);
 
@@ -152,7 +152,7 @@ void test_evidence_emission() {
     const auto decoded = observation::fromJson(observation::toJson(record));
     assert(decoded.ok());
     assert(observation::validate(*decoded.record).empty());
-    assert(decoded.record->derived.size() == 3);
+    assert(decoded.record->derived.size() == 4);
 }
 
 /// Bench evidence (2026-09-29, late-night desk lamp): the paper in one corner
