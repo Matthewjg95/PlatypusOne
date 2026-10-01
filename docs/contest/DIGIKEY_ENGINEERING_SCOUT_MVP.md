@@ -1,6 +1,9 @@
 # Engineering Scout Q — DigiKey Dream Lab MVP
 
-Deadline: **September 30, 2026**
+**Submitted September 30, 2026** (confirmed October 1). Historical deadline:
+September 30, 2026. The acceptance criteria below remain the original scope;
+their presence is not a claim that every physical check was completed.
+Open evidence and reproduction work now lives in [#32 stabilization](POST_DREAMLAB_STABILIZATION.md).
 
 Engineering Scout Q is the first working PlatypusOne perception vertical slice. It is not a separate product architecture. It proves the core PlatypusOne thesis: convert imperfect physical observations into structured, useful engineering information.
 

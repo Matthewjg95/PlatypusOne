@@ -4,7 +4,7 @@ Working map across the sub-projects and their contests. Update as work lands;
 STATUS.md stays the single source for overall project state — this document
 answers one question per contest: **what does the demo still need?**
 
-Last reviewed: **2026-09-30**.
+Last reviewed: **2026-10-01**.
 
 ## 1. AU 2027 product contest (Hackster × Autodesk) — the flagship
 
@@ -26,6 +26,9 @@ Optional/stretch capabilities stay out of the critical path.
 
 ## 2. DigiKey Dream Lab — Engineering Scout Q
 
+**Submitted September 30, 2026** (Matthew's confirmation, October 1).
+The deadline sprint is over. Remaining checks belong to [#32 stabilization](POST_DREAMLAB_STABILIZATION.md), not a new submission sprint.
+
 **Demo = real fastener + in-frame scale reference → trigger/capture → useful measurement + classification + uncertainty → saved evidence record.**
 
 The Dream Lab build now explicitly optimizes for **workflow robustness, not calibration perfection**.
@@ -35,18 +38,19 @@ The Dream Lab build now explicitly optimizes for **workflow robustness, not cali
 | Observation contract + serializer | ✅ merged |
 | Host-side capture/analyzer/classifier | ✅ |
 | Scout result UI | ✅ |
-| Synthetic validation battery | ✅ 21/21 |
+| Synthetic validation battery | ✅ baseline 21/21; #35's 24-case battery is staged |
 | UNO Q camera capture | ✅ USB webcam, 640×480 YUYV (2026-09-28) |
 | DSI panel + touch on the Media Carrier | ✅ 2026-09-29 (cable orientation, see `docs/hardware/DSI_BRINGUP.md`) |
-| Real part → record → UI/save loop | ✅ on glass, touch-triggered (`scout_kiosk`, PR #28) |
+| Real part → record → UI/save loop | reported on glass, touch-triggered; #28 baseline merged; final raw records/tested SHA pending archive |
 | Sessions: repeat captures → CAD bundle | host-verified (PR #29); on-board run pending |
-| Varied-lighting physical validation | **open — the main evidence gap** (first light only, 2026-09-29) |
+| Varied-lighting physical validation | **open**; September 29 first light and September 30 focused/tilted comparisons are recorded in the write-up, but no raw captures or complete lighting matrix are archived |
 | MCU physical trigger | open (bridge written, not on the board) |
 | Controlled illumination | open |
-| Documentation/video | draft post in [DREAMLAB_MAKERIO_POST.md](DREAMLAB_MAKERIO_POST.md) |
+| Documentation/video | original draft plus [later branch snapshot and evidence gaps](evidence/dreamlab-2026-09-30/README.md); final published URL/video reference still needed |
 
-**Deadline:** 11:59 p.m. CT, 2026-09-30 — maker.io post with #UNOQDreamLab
-plus the official form.
+**Submission deadline (historical):** 11:59 p.m. CT, 2026-09-30.
+Submission completion does not establish physical accuracy, completion of the
+session/export workflow, or that a repository draft matches the posted text.
 
 Acceptance is ordinary bench reality: uneven lighting, moderate shadows, exposure differences, and rotated parts. Severe glare/darkness/arbitrary clutter are outside MVP scope.
 
