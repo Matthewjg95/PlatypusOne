@@ -154,13 +154,42 @@ out, an out-of-focus lens (below). Refusals worked as designed (for
 example, a frame with the square but no part → "No part found").
 **(update)** with the lighting matrix below if run before posting.
 
-| Condition | Captures | Result / refusal |
-|---|---|---|
-| Even desk light | **(update)** | |
-| Uneven overhead | **(update)** | |
-| Moderate shadow | **(update)** | |
-| Part rotated | **(update)** | |
-| No part / square hidden | **(update)** | refusal + guidance |
+**Tonight's bench, against calipers (30 Sep, focus fixed, camera tilted).**
+A hand-held instrument will never look straight down, so I measured how much
+the tilt costs and how much the reference square can win back. "Today" is the
+kiosk's scale from the square's area; "corrected" uses the square's four
+corners to undo the tilt of the table plane (offline analysis of the same
+frames; the board's analyzer gets it next).
+
+*1/4-20 UNC socket-head screw*
+
+| | Today | Corrected from the square's corners | Calipers / standard |
+|---|---|---|---|
+| Head diameter | 10.17 / 10.45 mm | **9.73 / 9.62 mm** | 9.48 mm |
+| Shank (threaded section) | 6.72 / 7.30 mm | **6.08 / 6.20 mm** | 6.35 mm major |
+| Thread pitch | 1.452 / 1.447 mm | **1.284 / 1.230 mm** | 1.270 mm (20 TPI) |
+| Length | 52.9 / 55.9 mm | 49.3 / 50.4 mm | 44.45 mm |
+
+The square's sides measured 145–164 px in the same frame: the camera was
+tilted roughly 20°. The thread pitch is readable from a part lying flat, with
+no side view, once the lens is focused: the edge of the thread gives a
+period 20–30× above the noise.
+
+*Adafruit OV5640 camera board (an out-of-library part, correctly reported as
+"not a recognized fastener")*
+
+| Scan | Width today | Width corrected | Calipers |
+|---|---|---|---|
+| 0045 | 24.84 mm (+8.8%) | 23.31 mm (+2.1%) | 22.83 mm |
+| 0046 | 24.88 mm (+9.0%) | 24.45 mm (+7.1%) | 22.83 mm |
+| 0047 | 24.43 mm (+7.0%) | 23.69 mm (+3.8%) | 22.83 mm |
+
+(Length is left out: the pin headers stick out past the 35.90 mm board.)
+
+What's left after the correction is height, not tilt. A screw lying down
+sits a few millimetres above the paper and a PCB's components stand proud,
+and anything nearer the camera looks bigger. That is the next correction
+(below).
 
 #### 6. What went wrong (and what I learned)
 
@@ -188,6 +217,17 @@ example, a frame with the square but no part → "No part found").
   light from the MCU is the next fix.
 
 #### 7. What's next
+
+- **Tilt on screen.** Scout reads the reference square's distortion and tells
+  the operator when the camera is tilted, before anyone trusts a number.
+- **Undo the tilt automatically** from the square's corners (proven above on
+  the bench frames), then **correct for height**: the corner correction also
+  gives the camera's pose, and a part's own width tells how far its outline
+  sits above the paper.
+- **Depth sensing in the handheld.** The PlatypusOne handheld adds a
+  multizone time-of-flight sensor: the table plane's tilt and distance come
+  from depth, and the square becomes a cross-check rather than the only
+  source of scale.
 
 - STM32 capture trigger and ring light; bench validation across lighting
   conditions.
