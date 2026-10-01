@@ -53,6 +53,10 @@ constexpr double kMinSubjectAreaMm2 = 10.0;
 /// nut's bore is ~7 mm^2; glints on bright steel read as holes of 1-2 mm^2
 /// (bench, 2026-09-29) and must not reach a CAD sketch as features.
 constexpr double kMinBoreAreaMm2 = 4.0;
+/// Enclosed background regions smaller than this are glints, not holes. It is
+/// in pixels because holes are counted before the scale is known: ~1 mm² at
+/// the bench's 0.13 mm/px, far below the smallest in-scope bore (M3, ~7 mm²).
+constexpr std::size_t kMinHoleCountPx = 40;
 
 /// Luma extraction. Gray8 passes through; YUYV keeps the luma byte that leads
 /// every pixel; RGB888 uses integer Rec.601-style weights.
@@ -323,9 +327,11 @@ std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std
         stack.push_back(index);
     };
     const auto drain = [&](std::int32_t* owner) {
+        std::size_t drained = 0;
         while (!stack.empty()) {
             const std::size_t index = stack.back();
             stack.pop_back();
+            ++drained;
             const auto x = static_cast<std::int32_t>(index % static_cast<std::size_t>(width));
             const auto y = static_cast<std::int32_t>(index / static_cast<std::size_t>(width));
             const std::array<std::pair<std::int32_t, std::int32_t>, 4> neighbours{
@@ -345,6 +351,7 @@ std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std
                 }
             }
         }
+        return drained;
     };
 
     for (std::int32_t x = 0; x < width; ++x) {
@@ -363,8 +370,10 @@ std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std
         std::int32_t owner = -1;
         visited[seed] = 1;
         stack.push_back(seed);
-        drain(&owner);
-        if (owner >= 0 && static_cast<std::size_t>(owner) < blobCount)
+        // Specular glints on polished metal punch tiny background-coloured
+        // pockets into a part (a shiny screw showed 42); they are not bores.
+        const auto area = drain(&owner);
+        if (area >= kMinHoleCountPx && owner >= 0 && static_cast<std::size_t>(owner) < blobCount)
             ++holes[static_cast<std::size_t>(owner)];
     }
     return holes;

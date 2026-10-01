@@ -34,6 +34,9 @@ constexpr double kMaxCompactAspect = 1.4;
 /// this much wider than the shank. A rod without one (pin, dowel, pen) is not
 /// claimed as a fastener.
 constexpr double kMinHeadToShank = 1.2;
+/// Holes in a rod-like part: a glare spot on a polished head can survive as a
+/// small one; holes covering this share of the outline mean a bar or bracket.
+constexpr double kMaxRodHoleShare = 0.03;
 /// Outer-outline area over the inscribed-ellipse area of its extents: 1.0 for
 /// a circle, ~0.96 for a hex nut, ~1.27 for a rectangle. Nuts and washers are
 /// round or hexagonal; a rectangular part with a hole is not one.
@@ -232,15 +235,25 @@ FastenerClassification classify(const vision::ScoutAnalysis& analysis) {
     }
     const double aspect = lengthMm / widthMm;
     const auto& outline = analysis.subjectOutlinePx;
-    const std::size_t holes = analysis.subject.holeCount;
+    // The outline keeps only bores of at least 4 mm²; prefer it to the raw
+    // count, which is in pixels and made before the scale was known.
+    const std::size_t holes = outline.empty() ? analysis.subject.holeCount : outline.holes.size();
 
     // Every fastener claim needs positive evidence for that family, not just
     // a proportion: anything else is outside this build's library and is said
     // to be, rather than forced into the nearest class.
     if (aspect >= kMinRodAspect) {
-        if (holes > 0)
+        // A reflection on a polished head can survive as one small "hole";
+        // a bar or bracket has real holes covering a meaningful share of it.
+        double holeArea = 0.0;
+        for (const auto& h : outline.holes)
+            holeArea += polygonArea(h);
+        const double outerArea = outline.empty() ? 0.0 : polygonArea(outline.outer);
+        const double holeShare = outerArea > 0.0 ? holeArea / outerArea : (holes > 0 ? 1.0 : 0.0);
+        if (holes > 2 || holeShare >= kMaxRodHoleShare)
             return unknown("rod-like (aspect " + formatMm(aspect) + ") but with " +
-                           std::to_string(holes) + " hole(s); bolts and screws have none");
+                           std::to_string(holes) + " hole(s) covering " +
+                           formatMm(100.0 * holeShare) + "% of it; not a bolt or screw");
         const auto profile = widthProfile(outline, analysis.subject.majorAxisAngleRad);
         if (!profile) return unknown("rod-like but no outline to check for a head");
         if (profile->endToShank < kMinHeadToShank)
