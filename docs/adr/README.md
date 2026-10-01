@@ -31,3 +31,5 @@ enough.
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-dynamic-linked-prototype-display.md) | Dynamic display target via a linked external prototype display | Accepted (2026-08-24) |
+| [0002](0002-dsi-production-display.md) | MIPI-DSI panel is the production display path | Accepted (2026-08-24) |
+| [0003](0003-depth-sensing-selection-gate.md) | Gate depth-sensor selection on captured evidence | Proposed (2026-09-20) |
