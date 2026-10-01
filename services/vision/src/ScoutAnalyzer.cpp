@@ -40,6 +40,13 @@ constexpr double kMinReferenceFill = 0.85;
 /// A second square candidate at least this fraction of the best one's area
 /// makes the reference ambiguous instead of silently picking one.
 constexpr double kAmbiguityAreaRatio = 0.5;
+/// Smallest physical silhouette accepted as the subject. The MVP scope is M3
+/// and up; the smallest in-scope part, an M3 nut, is ~26 mm^2 seen flat.
+/// Anything under 10 mm^2 is dust, a glint or a print flaw — and with the
+/// fastener out of frame it would otherwise be "measured" with full
+/// confidence (bench, 2026-09-29: 2.1 x 1.8 mm reported for a square-only
+/// frame). Scaled through the reference so it holds at any camera height.
+constexpr double kMinSubjectAreaMm2 = 10.0;
 
 /// Luma extraction. Gray8 passes through; YUYV keeps the luma byte that leads
 /// every pixel; RGB888 uses integer Rec.601-style weights.
@@ -68,6 +75,124 @@ std::vector<std::uint8_t> toGray(const hal::Frame& frame) {
         gray[i] = static_cast<std::uint8_t>((77 * r + 150 * g + 29 * b) >> 8);
     }
     return gray;
+}
+
+/// Flattens uneven lighting before thresholding.
+///
+/// One global Otsu threshold separates dark parts from white paper only if the
+/// paper is equally bright everywhere. On the bench it is not: a desk lamp's
+/// falloff plus the webcam's vignetting left one corner of the 2026-09-29
+/// frame about 7x darker than the centre, the dim paper fell below the
+/// threshold, and it merged with the square and the screw into one blob
+/// touching the frame edge — so no square was found.
+///
+/// The paper is modelled as a smooth cubic surface in (x, y), fitted by least
+/// squares to a grid of samples, iteratively rejecting samples far below the
+/// fit (the parts are dark outliers). Dividing it out leaves the paper evenly
+/// bright and the parts dark. Vignetting and lamp falloff are smooth, so a
+/// cubic follows them; unlike a max-filter background, the fit is not fooled
+/// by parts larger than a filter window. On a uniformly lit frame the fitted
+/// surface is flat and this is the identity, which is why the synthetic
+/// validation scenes measure exactly as before.
+void flattenIllumination(std::vector<std::uint8_t>& gray, std::int32_t width, std::int32_t height) {
+    constexpr std::size_t kTerms = 10;
+    constexpr double kPaperLevel = 235.0;  // what the paper normalizes to
+    if (width < 16 || height < 16) return;
+
+    const auto terms = [](double x, double y, std::array<double, kTerms>& t) {
+        t = {1.0, x, y, x * x, x * y, y * y, x * x * x, x * x * y, x * y * y, y * y * y};
+    };
+    const auto nx = [&](double x) { return 2.0 * x / (width - 1) - 1.0; };
+    const auto ny = [&](double y) { return 2.0 * y / (height - 1) - 1.0; };
+
+    // Sample grid: ~60 samples across the short side.
+    const std::int32_t step = std::max(4, std::min(width, height) / 60);
+    struct Sample {
+        std::array<double, kTerms> t;
+        double value;
+    };
+    std::vector<Sample> samples;
+    for (std::int32_t y = 0; y < height; y += step)
+        for (std::int32_t x = 0; x < width; x += step) {
+            Sample s{};
+            terms(nx(x), ny(y), s.t);
+            s.value = gray[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) +
+                           static_cast<std::size_t>(x)];
+            samples.push_back(s);
+        }
+    if (samples.size() < 4 * kTerms) return;
+
+    // Start from the brighter 80%: the parts are the darkest pixels.
+    std::vector<double> values;
+    values.reserve(samples.size());
+    for (const auto& s : samples)
+        values.push_back(s.value);
+    auto cut = values.begin() + static_cast<std::ptrdiff_t>(values.size() / 5);
+    std::nth_element(values.begin(), cut, values.end());
+    const double floor = *cut;
+    std::vector<bool> keep(samples.size());
+    for (std::size_t i = 0; i < samples.size(); ++i)
+        keep[i] = samples[i].value >= floor;
+
+    std::array<double, kTerms> coeff{};
+    for (int iteration = 0; iteration < 5; ++iteration) {
+        // Normal equations, solved by Gaussian elimination with partial pivoting.
+        std::array<std::array<double, kTerms + 1>, kTerms> m{};
+        std::size_t kept = 0;
+        for (std::size_t i = 0; i < samples.size(); ++i) {
+            if (!keep[i]) continue;
+            ++kept;
+            const auto& t = samples[i].t;
+            for (std::size_t r = 0; r < kTerms; ++r) {
+                for (std::size_t c = 0; c < kTerms; ++c)
+                    m[r][c] += t[r] * t[c];
+                m[r][kTerms] += t[r] * samples[i].value;
+            }
+        }
+        if (kept < 4 * kTerms) return;
+        for (std::size_t col = 0; col < kTerms; ++col) {
+            std::size_t pivot = col;
+            for (std::size_t r = col + 1; r < kTerms; ++r)
+                if (std::abs(m[r][col]) > std::abs(m[pivot][col])) pivot = r;
+            if (std::abs(m[pivot][col]) < 1e-12) return;  // degenerate: leave the frame alone
+            std::swap(m[col], m[pivot]);
+            for (std::size_t r = 0; r < kTerms; ++r) {
+                if (r == col) continue;
+                const double f = m[r][col] / m[col][col];
+                for (std::size_t c = col; c <= kTerms; ++c)
+                    m[r][c] -= f * m[col][c];
+            }
+        }
+        for (std::size_t r = 0; r < kTerms; ++r)
+            coeff[r] = m[r][kTerms] / m[r][r];
+
+        // Reject what sits well below the surface: that is the parts.
+        double sumSq = 0.0;
+        std::vector<double> residual(samples.size());
+        for (std::size_t i = 0; i < samples.size(); ++i) {
+            double fit = 0.0;
+            for (std::size_t k = 0; k < kTerms; ++k)
+                fit += coeff[k] * samples[i].t[k];
+            residual[i] = samples[i].value - fit;
+            if (keep[i]) sumSq += residual[i] * residual[i];
+        }
+        const double sigma = std::sqrt(sumSq / static_cast<double>(kept));
+        for (std::size_t i = 0; i < samples.size(); ++i)
+            keep[i] = residual[i] > -2.5 * sigma - 1.0;  // -1: exact-flat frames keep all paper
+    }
+
+    std::array<double, kTerms> t{};
+    for (std::int32_t y = 0; y < height; ++y)
+        for (std::int32_t x = 0; x < width; ++x) {
+            terms(nx(x), ny(y), t);
+            double paper = 0.0;
+            for (std::size_t k = 0; k < kTerms; ++k)
+                paper += coeff[k] * t[k];
+            auto& px = gray[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) +
+                            static_cast<std::size_t>(x)];
+            const double flattened = px * kPaperLevel / std::max(paper, 1.0);
+            px = static_cast<std::uint8_t>(std::clamp(std::lround(flattened), 0L, 255L));
+        }
 }
 
 /// Otsu's method over a 256-bin histogram. Returns the threshold that
@@ -325,7 +450,8 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
     const std::size_t expected = static_cast<std::size_t>(mode.width) * mode.height * bytesPerPixel;
     if (frame.pixels().size() != expected) return {std::nullopt, AnalyzeError::InvalidFrame};
 
-    const auto gray = toGray(frame);
+    auto gray = toGray(frame);
+    flattenIllumination(gray, mode.width, mode.height);
     const auto threshold = otsuThreshold(gray);
 
     std::vector<std::int32_t> labels;
@@ -359,13 +485,16 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
         return {std::nullopt, AnalyzeError::ReferenceAmbiguous};
     const LabeledBlob* reference = squares.front();
 
-    // Subject: largest remaining blob.
+    // Subject: largest remaining blob, if it is big enough to be a part.
     const LabeledBlob* subject = nullptr;
     for (const auto& blob : blobs) {
         if (blob.label == reference->label) continue;
         if (!subject || blob.stats.areaPx > subject->stats.areaPx) subject = &blob;
     }
-    if (!subject) return {std::nullopt, AnalyzeError::NoSubject};
+    const double mm2PerPx = (spec.referenceSideMm * spec.referenceSideMm) /
+                            static_cast<double>(reference->stats.areaPx);
+    if (!subject || static_cast<double>(subject->stats.areaPx) * mm2PerPx < kMinSubjectAreaMm2)
+        return {std::nullopt, AnalyzeError::NoSubject};
 
     ScoutAnalysis analysis;
     analysis.binarizationThreshold = threshold;
@@ -386,7 +515,7 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
 void appendEvidence(observation::EngineeringObservation& record, const ScoutAnalysis& analysis,
                     const CalibrationSpec& spec, std::string_view sourceArtifactId) {
     const std::string source(sourceArtifactId);
-    const std::string method = "vision.scout_analyzer.v2";
+    const std::string method = "vision.scout_analyzer.v3";  // v3: illumination flattening
 
     const auto observed = [&](std::string id, std::string name, double value,
                               std::optional<std::string> unit) {

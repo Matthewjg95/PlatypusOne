@@ -155,6 +155,65 @@ void test_evidence_emission() {
     assert(decoded.record->derived.size() == 3);
 }
 
+/// Bench evidence (2026-09-29, late-night desk lamp): the paper in one corner
+/// of a real webcam frame was ~7x darker than at the centre. With one global
+/// Otsu threshold the dim paper merged with the square and the screw into a
+/// single blob touching the frame edge, and the scene was refused as "no
+/// reference". The same measurement scene under an equally harsh vignette
+/// must measure as if evenly lit.
+void test_measures_through_uneven_lighting() {
+    const CalibrationSpec spec{20.0};
+    const auto evenFrame = measurementScene().frame();  // Gray8
+    const auto& mode = evenFrame.mode();
+    const auto src = evenFrame.pixels();
+
+    // Radial falloff: 1.0 at the centre down to 0.15 at the corners (~7x).
+    auto shaded = std::make_shared<std::vector<std::byte>>(src.size());
+    const double cx = (mode.width - 1) / 2.0, cy = (mode.height - 1) / 2.0;
+    const double halfDiagonal = std::sqrt(cx * cx + cy * cy);
+    for (std::uint16_t y = 0; y < mode.height; ++y)
+        for (std::uint16_t x = 0; x < mode.width; ++x) {
+            const double r = std::hypot(x - cx, y - cy) / halfDiagonal;
+            const double gain = 1.0 - 0.85 * r * r;
+            const std::size_t i = std::size_t{y} * mode.width + x;
+            const auto v = std::to_integer<int>(src[i]);
+            (*shaded)[i] = static_cast<std::byte>(static_cast<int>(std::lround(v * gain)));
+        }
+    const hal::Frame frame(mode, shaded, evenFrame.timestamp());
+
+    const auto outcome = vision::analyzeFrame(frame, spec);
+    assert(outcome.ok());
+    const auto& a = *outcome.analysis;
+    // Same tolerances as the evenly lit scene: the lighting must not move the
+    // measurement, only stop hiding it.
+    assert(std::abs(a.mmPerPixel - 0.5) < 0.01);
+    assert(std::abs(a.subjectLengthMm - 120.0) < 1.5);
+    assert(std::abs(a.subjectWidthMm - 18.0) < 1.5);
+}
+
+/// Bench evidence (2026-09-29): with the fastener out of frame, a speck on the
+/// paper was "measured" as a 2.1 x 1.8 mm subject. Anything smaller than the
+/// smallest in-scope part is refused; an M3-nut-sized silhouette is not.
+void test_rejects_specks_as_subjects() {
+    const CalibrationSpec spec{20.0};
+    // 100 px reference -> 0.2 mm/px, 0.04 mm^2/px.
+    {
+        SyntheticScene scene;
+        scene.addSquare(60, 60, 100);
+        scene.addSquare(400, 300, 12);  // 144 px (> the 64 px blob floor) = 5.8 mm^2
+        const auto outcome = vision::analyzeFrame(scene.frame(), spec);
+        assert(!outcome.ok());
+        assert(outcome.error == AnalyzeError::NoSubject);
+    }
+    {
+        SyntheticScene scene;
+        scene.addSquare(60, 60, 100);
+        scene.addRect(400.0, 300.0, 30.0, 27.5, 0.0);  // 6 x 5.5 mm, M3-nut sized
+        const auto outcome = vision::analyzeFrame(scene.frame(), spec);
+        assert(outcome.ok());
+    }
+}
+
 /// A blob running off the frame edge is only partly visible. Measuring it
 /// silently reports a wrong size, so segmentation drops it before anything is
 /// selected. Bench evidence (2026-09-21): uneven hand-held lighting turned the
@@ -204,6 +263,8 @@ void test_scout_analyzer() {
     test_determinism();
     test_scene_conditions_are_reported();
     test_evidence_emission();
+    test_measures_through_uneven_lighting();
+    test_rejects_specks_as_subjects();
     test_clipped_blobs_are_not_measured();
     std::puts("test_scout_analyzer: OK");
 }

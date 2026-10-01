@@ -109,3 +109,31 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+      - name: Smoke-test Scout kiosk (synthetic, offscreen)
+        run: |
+          mkdir -p build/kiosk-smoke/screens
+          ./build/tools/scout_kiosk/scout_kiosk --fake \
+            --offscreen build/kiosk-smoke/screens \
+            --out build/kiosk-smoke/observations
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("build/kiosk-smoke")
+          scan = root / "observations/scan-0001"
+          record = json.loads((scan / "observation.json").read_text())
+          assert record["source"]["camera"] == "synthetic"
+          assert record["source"]["camera_identity"] == "synthetic"
+          assert record["source"]["pixel_format"] == "yuyv"
+          assert record["derived"], "no measurement evidence saved"
+          assert record["unresolved"], "unsupported fields must stay unresolved"
+          image = next(a for a in record["artifacts"] if a["id"] == "source-image")
+          assert (scan / image["path"]).stat().st_size == 640 * 480 * 2
+          for name in ("preview.ppm", "card.ppm"):
+              data = (root / "screens" / name).read_bytes()
+              header = b"P6\n800 480\n255\n"
+              assert data.startswith(header)
+              assert len(data) == len(header) + 800 * 480 * 3
+          print("synthetic kiosk: source + JSON + preview + card preserved")
+          PY

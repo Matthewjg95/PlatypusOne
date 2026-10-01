@@ -1,0 +1,39 @@
+# PlatypusOne Engineering Scout kiosk on the UNO Q's local display.
+#
+# Installed by tools/kiosk/install.sh, which fills in @REPO@ and @USER@.
+# Switch with `platypus-mode`, not by hand: it also sets the boot target.
+#
+# Conflicts= is the point of this unit: the kiosk needs DRM master, and the
+# stock image's lightdm/Xorg holds it. Starting the kiosk stops the desktop;
+# starting the desktop stops the kiosk. They can never fight over the screen.
+[Unit]
+Description=PlatypusOne Engineering Scout kiosk (local display)
+Conflicts=display-manager.service
+After=display-manager.service uno-q-dsi-panel-recover.service
+
+[Service]
+User=@USER@
+Group=@USER@
+# /dev/dri/card0 and /dev/video* are group video; evdev touch/buttons group input.
+SupplementaryGroups=video input
+WorkingDirectory=@REPO@
+# USB-C host mode for the webcam. With a DSI panel enabled the ANX7625 USB-C
+# bridge loses its DSI input and fails to probe, so nothing manages the port
+# and it stays in device (ADB gadget) mode: no hub, no webcam. Forcing the
+# dwc3 role to host is safe on this board because the only VBUS source
+# (the PMIC usb_vbus regulator) is referenced solely by a disabled Type-C
+# node — the board stays a power sink fed by the hub. Stopping the kiosk
+# puts the port back in device mode, which restores ADB for recovery.
+# '+' runs these as root; the kiosk itself does not.
+ExecStartPre=+/bin/sh -c 'for r in /sys/class/usb_role/*/role; do [ -w "$r" ] && echo host > "$r"; done; sleep 2; true'
+ExecStart=@REPO@/build-bench/tools/scout_kiosk/scout_kiosk --out @REPO@/observations
+ExecStopPost=+/bin/sh -c 'for r in /sys/class/usb_role/*/role; do [ -w "$r" ] && echo device > "$r"; done; true'
+# The kiosk waits for a camera; restart if a different startup/runtime failure exits it.
+Restart=on-failure
+RestartSec=5
+# SIGTERM makes the kiosk leave its loop and hand the CRTC back.
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
