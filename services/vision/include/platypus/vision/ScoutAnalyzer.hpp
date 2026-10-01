@@ -58,6 +58,13 @@ struct ScoutAnalysis {
     double mmPerPixel = 0.0;  ///< referenceSideMm / sqrt(reference.areaPx)
     double subjectLengthMm = 0.0;
     double subjectWidthMm = 0.0;
+    /// Camera tilt against the table, read from how the square is squashed:
+    /// the ratio of the singular values of its two edge vectors (independent
+    /// of how the card is rotated). A lower bound: tilts under ~10 deg are
+    /// within corner noise at bench scale.
+    double cameraTiltDeg = 0.0;
+    /// Largest opposite-side length ratio minus one: perspective keystone.
+    double referenceKeystone = 0.0;
     /// The subject's silhouette in pixel coordinates: outer boundary plus
     /// bores, glints filtered out. Scale by mmPerPixel for millimetres; this
     /// is what leaves PlatypusOne as a CAD sketch (services/export).
@@ -74,6 +81,10 @@ enum class AnalyzeError : std::uint8_t {
 };
 
 [[nodiscard]] std::string_view to_string(AnalyzeError error) noexcept;
+
+/// Tilt at or above which the operator is warned: sizes read high because the
+/// square and the part are no longer at the same scale.
+inline constexpr double kTiltWarningDeg = 12.0;
 
 /// DecodeOutcome-style result: vision failures are scene conditions the UI
 /// must explain to the operator, not HAL faults, so they carry their own enum.

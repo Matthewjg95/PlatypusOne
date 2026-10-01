@@ -328,6 +328,14 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
     if (out.measured) {
         out.status = "saved " + out.record->observationId;
         out.statusColour = kGood;
+        if (out.analysis && out.analysis->cameraTiltDeg >= vision::kTiltWarningDeg) {
+            // Hand-held reality: say so before anyone trusts the number.
+            char tilt[64];
+            std::snprintf(tilt, sizeof(tilt), "; tilted ~%.0f deg: aim straight down",
+                          out.analysis->cameraTiltDeg);
+            out.status += tilt;
+            out.statusColour = kWarn;
+        }
     } else {
         // The capture-only record is still written — honest evidence that the
         // attempt happened. The operator is told what to change through the
