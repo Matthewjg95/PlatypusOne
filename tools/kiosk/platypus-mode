@@ -3,7 +3,7 @@
 # PlatypusOne kiosk on the local display.
 #
 #   sudo platypus-mode kiosk          kiosk now, and on every boot
-#   sudo platypus-mode kiosk --once   kiosk now; desktop again after a reboot
+#   sudo platypus-mode kiosk --once   kiosk now; keep the existing boot default
 #   sudo platypus-mode desktop        desktop now, and on every boot
 #        platypus-mode status         which mode is active and which boots
 #
@@ -26,7 +26,7 @@ case "${1:-status}" in
         need_root
         if [ "${2:-}" = "--once" ]; then
             systemctl start "$KIOSK"          # Conflicts= stops the desktop
-            echo "kiosk running; the desktop comes back on the next boot"
+            echo "kiosk running; boot configuration unchanged (check platypus-mode status)"
         else
             systemctl set-default multi-user.target >/dev/null
             systemctl enable "$KIOSK" >/dev/null 2>&1

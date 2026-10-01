@@ -214,6 +214,48 @@ void test_rejects_specks_as_subjects() {
     }
 }
 
+/// A blob running off the frame edge is only partly visible. Measuring it
+/// silently reports a wrong size, so segmentation drops it before anything is
+/// selected. Bench evidence (2026-09-21): uneven hand-held lighting turned the
+/// vignetted rim of the sheet into one huge border blob, which then won the
+/// "largest remaining blob" subject contest and produced a confident
+/// 119 x 70 mm for what should have been a 40 x 8 mm bar.
+void test_clipped_blobs_are_not_measured() {
+    const CalibrationSpec spec{20.0};
+
+    // Subject clipped: valid square, but the only other blob leaves the frame.
+    {
+        SyntheticScene scene;
+        scene.addSquare(50, 50, 40);
+        scene.addRect(620.0, 280.0, 240.0, 36.0, 0.0);  // runs past the right edge
+        const auto outcome = vision::analyzeFrame(scene.rgbFrame(), spec);
+        assert(!outcome.ok());
+        assert(outcome.error == AnalyzeError::NoSubject);
+    }
+
+    // Reference clipped: a partly visible square would yield a wrong scale.
+    {
+        SyntheticScene scene;
+        scene.addSquare(-10, 50, 40);
+        scene.addRect(400.0, 280.0, 240.0, 36.0, 0.0);
+        const auto outcome = vision::analyzeFrame(scene.rgbFrame(), spec);
+        assert(!outcome.ok());
+        assert(outcome.error == AnalyzeError::NoReferenceTarget);
+    }
+
+    // A border blob no longer outranks a valid interior subject.
+    {
+        SyntheticScene scene;
+        scene.addSquare(50, 50, 40);
+        scene.addRect(400.0, 280.0, 240.0, 36.0, 0.0);
+        scene.addRect(320.0, 476.0, 600.0, 40.0, 0.0);  // large, along the bottom edge
+        const auto outcome = vision::analyzeFrame(scene.rgbFrame(), spec);
+        assert(outcome.ok());
+        assert(!outcome.analysis->subject.touchesBorder);
+        assert(std::abs(outcome.analysis->subjectLengthMm - 120.0) < 1.5);
+    }
+}
+
 }  // namespace
 
 void test_scout_analyzer() {
@@ -223,5 +265,6 @@ void test_scout_analyzer() {
     test_evidence_emission();
     test_measures_through_uneven_lighting();
     test_rejects_specks_as_subjects();
+    test_clipped_blobs_are_not_measured();
     std::puts("test_scout_analyzer: OK");
 }

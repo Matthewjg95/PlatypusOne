@@ -4,7 +4,7 @@ Working map across the sub-projects and their contests. Update as work lands;
 STATUS.md stays the single source for overall project state — this document
 answers one question per contest: **what does the demo still need?**
 
-Last reviewed: **2026-09-25**.
+Last reviewed: **2026-09-30**.
 
 ## 1. AU 2027 product contest (Hackster × Autodesk) — the flagship
 
@@ -35,13 +35,18 @@ The Dream Lab build now explicitly optimizes for **workflow robustness, not cali
 | Observation contract + serializer | ✅ merged |
 | Host-side capture/analyzer/classifier | ✅ |
 | Scout result UI | ✅ |
-| Synthetic validation battery | ✅ |
-| UNO Q camera capture | **next physical gate** |
-| Real part → record → UI/save loop | **critical path** |
-| Varied-lighting physical validation | **required after first loop works** |
-| MCU physical trigger | open |
-| Controlled illumination | useful, **not required for first success** |
-| Documentation/video | build continuously from physical testing |
+| Synthetic validation battery | ✅ 21/21 |
+| UNO Q camera capture | ✅ USB webcam, 640×480 YUYV (2026-09-28) |
+| DSI panel + touch on the Media Carrier | ✅ 2026-09-29 (cable orientation, see `docs/hardware/DSI_BRINGUP.md`) |
+| Real part → record → UI/save loop | ✅ on glass, touch-triggered (`scout_kiosk`, PR #28) |
+| Sessions: repeat captures → CAD bundle | host-verified (PR #29); on-board run pending |
+| Varied-lighting physical validation | **open — the main evidence gap** (first light only, 2026-09-29) |
+| MCU physical trigger | open (bridge written, not on the board) |
+| Controlled illumination | open |
+| Documentation/video | draft post in [DREAMLAB_MAKERIO_POST.md](DREAMLAB_MAKERIO_POST.md) |
+
+**Deadline:** 11:59 p.m. CT, 2026-09-30 — maker.io post with #UNOQDreamLab
+plus the official form.
 
 Acceptance is ordinary bench reality: uneven lighting, moderate shadows, exposure differences, and rotated parts. Severe glare/darkness/arbitrary clutter are outside MVP scope.
 

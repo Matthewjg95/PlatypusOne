@@ -47,6 +47,8 @@ struct BlobStats {
     double lengthPx = 0.0;           ///< support extent along the length axis
     double widthPx = 0.0;            ///< MINIMUM support width over a 1-deg sweep —
                                      ///< rotation-invariant (hexagon: across-flats)
+    bool touchesBorder = false;      ///< runs off the frame edge, so it is only
+                                     ///< partly visible and cannot be measured
 };
 
 /// Everything measured from one frame. Pixel facts are OBSERVED evidence;

@@ -3,7 +3,7 @@
 Rolling snapshot of where Platypus One actually is. Updated as work lands —
 if this file disagrees with the code, the code wins and this file is stale.
 
-**Last updated: 2026-09-25**
+**Last updated: 2026-09-30**
 
 ## Right now
 
@@ -12,10 +12,10 @@ if this file disagrees with the code, the code wins and this file is stale.
 | **Autodesk hardware request** | **SELECTED — 2026-09-25** |
 | **Mode** | **EXECUTION MODE** — shortest path to a demonstrable PlatypusOne core prototype |
 | **Critical path** | Minimum viable enclosure/packaging → Rev A architecture lock → early PCB/fab orders → one physical end-to-end measurement workflow |
-| **Hardware in hand** | Arduino UNO Q + UNO Media Carrier + Waveshare 5-DSI-TOUCH-A + USB webcam + printed 20 mm reference sheets. M5Stack Tab5 remains a fallback/dev fixture. |
+| **Hardware in hand** | Arduino UNO Q + UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 (800×480) + USB webcam + printed 20 mm reference sheets. M5Stack Tab5 remains a fallback/dev fixture. |
 | **Software state** | Host architecture, observation contract, Scout analyzer/classifier/UI and validation are substantially ahead of physical bring-up; the priority is now hardware proof, not more host-side feature breadth |
 | **Shared Autodesk + Dream Lab slice** | camera → capture → useful measurement → observation record → UI → saved artifact |
-| **Display** | Rev A display candidate is physically in hand: UNO Media Carrier + Waveshare 5-DSI-TOUCH-A. Tonight's gate is DSI/touch proof-of-life and Scout UI on this panel. |
+| **Display** | Physical display path is now identified correctly: UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 (800×480, 15-pin FPC via 15→22 adapter). PR #26 records successful panel/touch detection after correcting the opposite-sided FFC orientation; local KMS display support is staged in PR #27. |
 
 ## Execution rules
 
@@ -72,9 +72,9 @@ Deferred from critical path:
 
 ## Immediate next action
 
-**Tonight: prove the complete physical loop on the UNO Q with the Media Carrier + Waveshare display + webcam + printed reference: touch trigger → capture → measure/classify → render result → save evidence.**
+**Finish and preserve the Dream Lab evidence, then stabilize the proven physical loop before expanding scope.**
 
-Do not improve calibration further until that end-to-end physical attempt has produced failure data.
+The current PR stack records the transition from bring-up to a local-display Scout kiosk and session/export work. Treat those capabilities as staged until their PRs merge; do not rewrite main's architecture around unmerged code.
 
 ## Existing software foundation
 
@@ -85,8 +85,8 @@ Do not improve calibration further until that end-to-end physical attempt has pr
 - Engineering Scout host capture/analyzer/classifier/result UI — merged.
 - 21-case synthetic validation battery — merged and useful as regression coverage.
 - Webcam capture on UNO Q — already proven at 640×480 YUYV; reuse that path tonight.
-- UNO Media Carrier + Waveshare 5-DSI-TOUCH-A — hardware in hand; proof-of-life still required.
-- Touch input is the accepted first-pass trigger; MCU/physical trigger is deferred until after the end-to-end loop works.
+- UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 — hardware in hand; PR #26 records the successful FFC-orientation fix, ATTINY response at `0x45`, backlight, and touch at `0x38`.
+- Touch input is the accepted first-pass trigger; dedicated MCU/physical trigger remains deferred until the local-display loop is stable.
 - Printed reference sheets — ready for physical testing.
 - Linked-display / Tab5 path — fallback development fixture, not final product dependency.
 
@@ -101,3 +101,16 @@ From this point forward, every physical session should leave durable evidence:
 - blocker and next action
 
 The repo should tell the build story as it happens, not reconstruct it at the end.
+
+
+## Staged work not yet on main (2026-09-30)
+
+Do not mistake open-PR capability for merged baseline:
+
+- PR #27 — local Linux/KMS `DrmDisplay` backend and display probe.
+- PR #28 — Scout kiosk composition: live preview → touch/button capture → evidence card → saved record.
+- PR #29 — multi-capture sessions, guidance, repeat statistics, and outline/DXF export.
+- PR #30 — geometry header self-containment/formatting fix required by the stacked session work.
+- PR #31 — Dream Lab Maker.io draft/readiness documentation.
+
+Before the next architecture expansion, stabilize/merge the dependency stack in order and preserve the physical evidence that justified it.
