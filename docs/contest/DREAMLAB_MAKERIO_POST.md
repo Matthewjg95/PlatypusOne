@@ -231,7 +231,8 @@ and anything nearer the camera looks bigger. That is the next correction
 
 - STM32 capture trigger and ring light; bench validation across lighting
   conditions.
-- Side-view capture for thread pitch and bolt vs screw.
+- Thread pitch measured on the board (it is readable from a part lying flat
+  once focused); a side view only for bolt vs screw.
 - More object profiles (PCBs, flat brackets, turned parts), and multi-view
   capture toward 3D.
 
