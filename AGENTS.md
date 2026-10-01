@@ -16,6 +16,9 @@ Before changing PlatypusOne:
 8. The canonical Tab5/M024/Pololu VL53L8CX experiment now lives in
    `Matthewjg95/platypus-lab`, issue #3. Platypus Lab owns its raw evidence;
    PlatypusOne consumes that evidence through issue #33.
-9. Prefer deterministic, replayable engineering logic before opaque AI.
-10. Leave a durable handoff in the relevant issue/doc so another agent can
+9. ShadowScan Mobile (`Matthewjg95/shadowscan-mobile`, issue #1) is the
+   active Pixel 4 planar-RGB evidence path. Reuse compatible provenance,
+   geometry and constraint concepts with issue #37 rather than forking them.
+10. Prefer deterministic, replayable engineering logic before opaque AI.
+11. Leave a durable handoff in the relevant issue/doc so another agent can
     continue without chat history.
