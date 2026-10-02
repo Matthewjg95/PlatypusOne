@@ -15,7 +15,7 @@ ssh -t arduino@192.168.1.32 "sudo platypus-mode kiosk"
 | Task | Command |
 |---|---|
 | Log in to the board | `ssh arduino@192.168.1.32` |
-| Kiosk now **and on every boot** (desktop suppressed) | `ssh -t arduino@192.168.1.32 "sudo platypus-mode kiosk"` |
+| Kiosk now **and on every boot** (desktop suppressed); power through the hub first | `ssh -t arduino@192.168.1.32 "sudo platypus-mode kiosk"` |
 | Kiosk now, desktop again after a reboot | `ssh -t arduino@192.168.1.32 "sudo platypus-mode kiosk --once"` |
 | Back to the desktop (now and on boot) | `ssh -t arduino@192.168.1.32 "sudo platypus-mode desktop"` |
 | Which mode is running / boots | `ssh arduino@192.168.1.32 platypus-mode status` |
@@ -74,11 +74,15 @@ arduino-cli upload -p COM7 --fqbn arduino:zephyr:unoq firmware/led_matrix_platyp
 
 ## When something is wrong
 
+Harmless boot message: `gpucc-qcm2290 5990000.clock-controller: sync_state() pending due to 596a000.gmu`. The GPU (Adreno 702) has no real GMU; nothing binds to that node, so the clock controller logs this after the 30 s probe timeout. The GPU and display still work.
+
+
 | Symptom | Fix |
 |---|---|
 | Black screen, kiosk never appears | `ssh -t arduino@192.168.1.32 "sudo platypus-mode desktop"`, then read `journalctl -u platypus-kiosk -b` |
 | Kiosk says no camera | Webcam goes through the hub; the kiosk forces USB-C to host mode itself. Replug the hub, then restart the kiosk |
 | Panel dark, no backlight | Cable orientation: see the photos in `docs/hardware/DSI_BRINGUP.md` |
+| Screen empty after boot; `platypus-mode status` says NOTHING on screen | A mode switch was interrupted (board rebooted mid-command). Plug in through the hub, then `ssh -t arduino@192.168.1.32 "sudo platypus-mode kiosk"` |
 | Desktop comes back after every reboot | Kiosk was started with `--once` or `systemctl start`; run `sudo platypus-mode kiosk` (no `--once`) |
 | Captures blurry | Turn the lens focus ring until the square's edges are crisp on the preview |
 | Screen warns "tilted" | Aim the camera straight down at the card; sizes read high when tilted |

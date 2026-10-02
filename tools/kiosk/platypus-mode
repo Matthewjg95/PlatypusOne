@@ -28,8 +28,13 @@ case "${1:-status}" in
             systemctl start "$KIOSK"          # Conflicts= stops the desktop
             echo "kiosk running; the desktop comes back on the next boot"
         else
-            systemctl set-default multi-user.target >/dev/null
-            systemctl enable "$KIOSK" >/dev/null 2>&1
+            # Enable before dropping the desktop target, and sync before the
+            # start: starting the kiosk flips USB-C to host mode, and a board
+            # powered straight from a PC can lose power there. Interrupted
+            # anywhere, the board must still boot to something on screen.
+            systemctl enable "$KIOSK"
+            systemctl set-default multi-user.target
+            sync
             systemctl start "$KIOSK"
             echo "kiosk running, and it will start on every boot"
         fi
@@ -45,8 +50,12 @@ case "${1:-status}" in
     status)
         default=$(systemctl get-default)
         boot="desktop"
-        if [ "$default" = "multi-user.target" ] && systemctl is-enabled --quiet "$KIOSK" 2>/dev/null; then
-            boot="kiosk"
+        if [ "$default" = "multi-user.target" ]; then
+            if systemctl is-enabled --quiet "$KIOSK" 2>/dev/null; then
+                boot="kiosk"
+            else
+                boot="NOTHING on screen (kiosk disabled, desktop off): run sudo platypus-mode kiosk"
+            fi
         fi
         echo "now:  kiosk $(state "$KIOSK"), desktop $(state "$DM")"
         echo "boot: $boot ($default)"
