@@ -3,7 +3,7 @@
 Reads the preserved raw frame and the on-device record, then:
   * segments the washer from the paper (midpoint between metal and paper levels);
   * fits circles (algebraic least squares) to its outer edge and its bore;
-  * measures the 6-fold harmonic of the outer edge (round washer ~0, hex nut ~7 %);
+  * measures the 6-fold harmonic of the outer edge (round washer ~0, regular hexagon 6.0 %);
 using the on-device mm/px (the reference square's area scale) unchanged.
 
     python washer_circle_fit.py            # from this directory

@@ -48,8 +48,8 @@
     {
       "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/offline/washer_circle_fit.py",
       "evidence_type": "offline_method",
-      "sha256": "a8ae3a62856d9b3d02c9d8ebc4375a1180302b46240a291a7c0daec76ea46861",
-      "bytes": 3602,
+      "sha256": "e16acb9837e1ff7f679337b0ea05fcc8386b73b3aa42d3203e542da191b023d2",
+      "bytes": 3611,
       "note": "Self-contained offline re-analysis script"
     },
     {
@@ -62,8 +62,8 @@
     {
       "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/RUN_RECORD.md",
       "evidence_type": "run_record",
-      "sha256": "31d4947d090ed2793c1804618136ff017f631560c9b497bfd36e8925f776d03f",
-      "bytes": 5406,
+      "sha256": "63d5505d9469254dcd84b1d65afc510f7bbb0a58007c96f4da7bd96a9d00936e",
+      "bytes": 5405,
       "note": "Filled run record"
     }
   ]

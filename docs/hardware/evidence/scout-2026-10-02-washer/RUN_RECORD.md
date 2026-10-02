@@ -63,7 +63,7 @@ frame, on-device mm/px unchanged. Output: `offline/washer_circle_fit.out.txt`.
 | Outer diameter | 18.61 mm (edge rms 0.27 mm) | 19.12 | −0.51 |
 | Bore diameter | 8.58 mm (edge rms 0.21 mm) | 8.71 | −0.13 |
 | Bore offset from outer centre | 0.15 mm | — | — |
-| 6-fold harmonic of the outer edge | 0.43 % of radius (a regular hexagon ≈ 7 %) | — | round, not hex |
+| 6-fold harmonic of the outer edge | 0.43 % of radius (a regular hexagon: 6.0 %) | — | round, not hex |
 
 A square-corner (homography) correction tried during the same session gave
 17.92 / 8.25 mm, worse than the area scale at this small tilt; that quick
