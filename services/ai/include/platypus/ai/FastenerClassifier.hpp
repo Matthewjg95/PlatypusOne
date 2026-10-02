@@ -25,8 +25,10 @@ namespace platypus::ai {
 
 enum class FastenerClass : std::uint8_t {
     Unknown = 0,
-    BoltOrScrew,  ///< rod-like silhouette; head style unresolved from above
-    NutOrWasher,  ///< compact silhouette with a bore; thickness unresolved
+    BoltOrScrew,  ///< rod-like silhouette with a head; head style unresolved from above
+    NutOrWasher,  ///< compact with a centred bore, outline between round and hex
+    Washer,       ///< round outline with a centred bore
+    Nut,          ///< hexagonal outline with a centred bore
 };
 
 [[nodiscard]] std::string_view to_string(FastenerClass value) noexcept;
@@ -36,7 +38,7 @@ struct NominalMatch {
     std::string designation;   ///< e.g. "M6"
     double referenceMm = 0.0;  ///< the table value the measurement matched
     double fitError = 0.0;     ///< relative error |measured - reference| / reference
-    std::string basis;         ///< "shaft_diameter" or "hex_across_flats"
+    std::string basis;         ///< "shaft_diameter", "hex_across_flats" or "bore_clearance"
     /// Set when a size from the other standard (metric vs UNC) is equally
     /// consistent with the measurement; designation then names both.
     std::string alternative;
@@ -49,6 +51,7 @@ struct FastenerClassification {
     std::optional<NominalMatch> nominal;  ///< absent when no table entry fits
     std::optional<double> shankWidthMm;   ///< bolts/screws: the shank, not the head
     double endToShank = 0.0;              ///< bolts/screws: head width over shank width
+    std::optional<double> boreMm;         ///< nuts/washers: the centred hole's diameter
     std::string rationale;                ///< deterministic, human-readable why
 };
 
@@ -73,12 +76,13 @@ struct WidthProfile {
 ///   INFERRED   — fastener_class and, when matched, nominal_size; confidence,
 ///                provenance to the analyzer's claims, and method are always
 ///                present
-///   UNRESOLVED — the analyzer's "not attempted" placeholders for
-///                fastener_class / nominal_size are replaced by what genuinely
-///                remains open (bolt vs screw, nut vs washer, or the reason
-///                nothing could be inferred)
-/// plus a recommended observation when the remaining ambiguity has a concrete
-/// next step.
+///   UNRESOLVED — only the questions the inferred family raises: thread pitch
+///                and bolt vs screw for a bolt; thickness for a washer; height
+///                and the internal thread for a nut; nut vs washer when the
+///                outline is neither clearly round nor hex; for an unknown
+///                part, what it is not and its thickness. The analyzer raises
+///                none (docs/architecture/AI_PIPELINE.md).
+/// plus a recommended observation when a capture would answer one.
 void appendClassification(observation::EngineeringObservation& record,
                           const FastenerClassification& classification);
 

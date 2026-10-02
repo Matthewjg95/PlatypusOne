@@ -500,6 +500,44 @@ void measureTilt(const std::vector<std::int32_t>& labels, std::int32_t width, co
     out.referenceKeystone = std::max(k1, k2) - 1.0;
 }
 
+/// Six-fold harmonic of a closed loop's radius about its area centroid,
+/// sampled every half pixel along the perimeter (simplified loops have long
+/// vertex-free edges), as a fraction of the mean radius.
+double sixFoldHarmonic(const std::vector<geometry::Vec2>& loop) {
+    if (loop.size() < 3) return 0.0;
+    std::vector<std::array<double, 2>> pts;
+    for (std::size_t i = 0; i < loop.size(); ++i) {
+        const auto& p = loop[i];
+        const auto& q = loop[(i + 1) % loop.size()];
+        const double len = std::hypot(q.x - p.x, q.y - p.y);
+        const int steps = std::max(1, static_cast<int>(std::ceil(len / 0.5)));
+        for (int k = 0; k < steps; ++k) {
+            const double f = static_cast<double>(k) / steps;
+            pts.push_back({p.x + (q.x - p.x) * f, p.y + (q.y - p.y) * f});
+        }
+    }
+    double cx = 0.0, cy = 0.0;
+    for (const auto& p : pts) {
+        cx += p[0];
+        cy += p[1];
+    }
+    cx /= static_cast<double>(pts.size());
+    cy /= static_cast<double>(pts.size());
+    double meanR = 0.0;
+    for (const auto& p : pts)
+        meanR += std::hypot(p[0] - cx, p[1] - cy);
+    meanR /= static_cast<double>(pts.size());
+    if (meanR <= 0.0) return 0.0;
+    double re = 0.0, im = 0.0;
+    for (const auto& p : pts) {
+        const double dev = std::hypot(p[0] - cx, p[1] - cy) / meanR - 1.0;
+        const double th = 6.0 * std::atan2(p[1] - cy, p[0] - cx);
+        re += dev * std::cos(th);
+        im += dev * std::sin(th);
+    }
+    return 2.0 * std::hypot(re, im) / static_cast<double>(pts.size());
+}
+
 }  // namespace
 
 AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec) {
@@ -572,6 +610,11 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
     analysis.subjectOutlinePx = outlineOf(
         labels, mode.width, mode.height, subject->label, subject->stats.minX, subject->stats.minY,
         subject->stats.maxX, subject->stats.maxY, kMinBoreAreaMm2 / mm2PerPx);
+    // Outline loops are in pixels, so hole areas scale by mm^2 per px^2.
+    for (const auto& hole : analysis.subjectOutlinePx.holes)
+        analysis.holeDiametersMm.push_back(
+            2.0 * std::sqrt(std::abs(signedArea(hole)) * mm2PerPx / 3.14159265358979));
+    analysis.outlineSixFold = sixFoldHarmonic(analysis.subjectOutlinePx.outer);
     return {analysis, AnalyzeError::None};
 }
 
@@ -646,15 +689,20 @@ void appendEvidence(observation::EngineeringObservation& record, const ScoutAnal
                                                   {tilt, {"camera_tilt"}});
     }
 
-    record.unresolved.push_back(
-        {"fastener_class", "classification is a later Scout chunk; not attempted"});
-    record.unresolved.push_back(
-        {"nominal_size", "requires fastener_class and thread evidence; not attempted"});
-    record.unresolved.push_back(
-        {"thread_pitch", "a single top-down silhouette cannot resolve the thread profile"});
-    record.recommendedNextObservations.push_back(
-        {"capture a side-on view so the thread profile is visible against the background",
-         {"thread_pitch"}});
+    // Geometry the reasoner needs to tell part families apart. Holes are
+    // reported as holes; calling one a bore is an inference.
+    observed("sa-six-fold", "outline_six_fold", analysis.outlineSixFold, std::nullopt);
+    for (std::size_t i = 0; i < analysis.holeDiametersMm.size() && i < 4; ++i) {
+        const auto n = std::to_string(i + 1);
+        record.derived.push_back(observation::Claim{
+            "sa-hole-" + n + "-dia-mm",
+            "hole_" + n + "_diameter",
+            analysis.holeDiametersMm[i],
+            "mm",
+            std::nullopt,
+            {"sa-mm-per-px"},
+            method + "; equal-area diameter of outline hole " + n + " (holes >= 4 mm^2)"});
+    }
 }
 
 }  // namespace platypus::vision

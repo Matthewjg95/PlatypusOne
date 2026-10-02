@@ -27,14 +27,14 @@ build. Failure cases PASS when the pipeline refuses for the expected reason.
 | bolt M8 x 40 mm @ 45 deg | bolt_or_screw M8 | bolt_or_screw 5/16-18 UNC or M8 | 40.20 x 12.98 | 40.00 x 13.00 | PASS | nominal from the shank; width is the head |
 | bolt M10 x 50 mm @ 20 deg | bolt_or_screw M10 | bolt_or_screw M10 or 3/8-16 UNC | 50.57 x 16.47 | 50.00 x 16.00 | PASS | nominal from the shank; width is the head |
 | bolt M12 x 60 mm @ 75 deg | bolt_or_screw M12 | bolt_or_screw M12 or 1/2-13 UNC | 60.66 x 18.45 | 60.00 x 18.00 | PASS | nominal from the shank; width is the head |
-| nut M4 (AF 7 mm) @ 0 deg | nut_or_washer M4 | nut_or_washer M4 | 8.19 x 7.12 | width 7.00 | PASS |  |
-| nut M5 (AF 8 mm) @ 15 deg | nut_or_washer M5 | nut_or_washer M5 | 9.25 x 8.12 | width 8.00 | PASS |  |
-| nut M6 (AF 10 mm) @ 0 deg | nut_or_washer M6 | nut_or_washer M6 | 11.66 x 10.25 | width 10.00 | PASS |  |
-| nut M8 (AF 13 mm) @ 30 deg | nut_or_washer M8 | nut_or_washer M8 | 15.26 x 13.24 | width 13.00 | PASS |  |
-| nut M10 (AF 16 mm) @ 10 deg | nut_or_washer M10 | nut_or_washer M10 | 18.28 x 16.48 | width 16.00 | PASS |  |
-| nut M12 (AF 18 mm) @ 45 deg | nut_or_washer M12 | nut_or_washer M12 | 20.30 x 18.18 | width 18.00 | PASS |  |
-| washer M6 (OD 12 mm) | nut_or_washer M8 | nut_or_washer M8 | 11.92 x 11.92 | - | PASS | AF-basis nominal is conditional on the nut interpretation |
-| washer M10 (OD 20 mm) | nut_or_washer M12 | nut_or_washer M12 | 20.20 x 20.20 | - | PASS | AF-basis nominal is conditional on the nut interpretation |
+| nut M4 (AF 7 mm) @ 0 deg | nut M4 | nut M4 | 8.19 x 7.12 | width 7.00 | PASS |  |
+| nut M5 (AF 8 mm) @ 15 deg | nut M5 | nut M5 or #6-32 UNC | 9.25 x 8.12 | width 8.00 | PASS |  |
+| nut M6 (AF 10 mm) @ 0 deg | nut M6 | nut M6 or #10-24 UNC | 11.66 x 10.25 | width 10.00 | PASS |  |
+| nut M8 (AF 13 mm) @ 30 deg | nut M8 | nut M8 or 5/16-18 UNC | 15.26 x 13.24 | width 13.00 | PASS |  |
+| nut M10 (AF 16 mm) @ 10 deg | nut M10 | nut M10 | 18.28 x 16.48 | width 16.00 | PASS |  |
+| nut M12 (AF 18 mm) @ 45 deg | nut M12 | nut M12 | 20.30 x 18.18 | width 18.00 | PASS |  |
+| washer M6 (OD 12 mm) | washer M6 | washer M6 | 11.92 x 11.92 | - | PASS | sized from the bore |
+| washer M10 (OD 20 mm) | washer M10 | washer M10 or 3/8 in | 20.20 x 20.20 | - | PASS | sized from the bore; 3/8 in fits the same bore |
 | no reference target | NoReferenceTarget | NoReferenceTarget | - | - | PASS | operator forgot the calibration square |
 | two comparable squares | ReferenceAmbiguous | ReferenceAmbiguous | - | - | PASS | a second square-ish object confuses calibration |
 | reference only | NoSubject | NoSubject | - | - | PASS | nothing to measure |

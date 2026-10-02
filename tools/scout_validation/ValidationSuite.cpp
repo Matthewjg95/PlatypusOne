@@ -97,37 +97,35 @@ std::vector<CaseSpec> buildCases() {
         char name[64];
         std::snprintf(name, sizeof(name), "nut %s (AF %.0f mm) @ %.0f deg", nut.nominal,
                       nut.acrossFlatsMm, nut.angleDeg);
-        cases.push_back(
-            {name, "measurement", nut.mmPerPx,
-             [nut](SyntheticScene& scene, double pxPerMm) {
-                 addReference(scene, pxPerMm);
-                 scene.addHexagon(400.0, 300.0, nut.acrossFlatsMm * pxPerMm, deg(nut.angleDeg));
-                 scene.addBore(400.0, 300.0, nut.boreMm * pxPerMm / 2.0);
-             },
-             std::nullopt, FastenerClass::NutOrWasher, std::optional<std::string>(nut.nominal), 0.0,
-             nut.acrossFlatsMm, nut.note});
+        cases.push_back({name, "measurement", nut.mmPerPx,
+                         [nut](SyntheticScene& scene, double pxPerMm) {
+                             addReference(scene, pxPerMm);
+                             scene.addHexagon(400.0, 300.0, nut.acrossFlatsMm * pxPerMm,
+                                              deg(nut.angleDeg));
+                             scene.addBore(400.0, 300.0, nut.boreMm * pxPerMm / 2.0);
+                         },
+                         std::nullopt, FastenerClass::Nut, std::optional<std::string>(nut.nominal),
+                         0.0, nut.acrossFlatsMm, nut.note});
     }
 
-    // Washers: class is nut_or_washer, and the classifier claims an AF-basis
-    // nominal that is only valid under the nut interpretation (nut_vs_washer
-    // stays unresolved in the record). The battery pins that documented
-    // behavior: an M6 washer's 12 mm OD reads as "M8" through the AF table.
+    // Washers: a round outline with a centred bore is a washer, sized by the
+    // bolt its bore fits (ISO 7089 bores: M6 6.4 mm, M10 10.5 mm), never by
+    // its outside diameter through a nut's across-flats table.
     cases.push_back({"washer M6 (OD 12 mm)", "measurement", 0.25,
                      [](SyntheticScene& scene, double pxPerMm) {
                          addReference(scene, pxPerMm);
                          scene.addDisc(400.0, 300.0, 6.0 * pxPerMm);
                          scene.addBore(400.0, 300.0, 3.2 * pxPerMm);
                      },
-                     std::nullopt, FastenerClass::NutOrWasher, "M8", 0.0, 0.0,
-                     "AF-basis nominal is conditional on the nut interpretation"});
+                     std::nullopt, FastenerClass::Washer, "M6", 0.0, 0.0, "sized from the bore"});
     cases.push_back({"washer M10 (OD 20 mm)", "measurement", 0.5,
                      [](SyntheticScene& scene, double pxPerMm) {
                          addReference(scene, pxPerMm);
                          scene.addDisc(400.0, 300.0, 10.0 * pxPerMm);
                          scene.addBore(400.0, 300.0, 5.3 * pxPerMm);
                      },
-                     std::nullopt, FastenerClass::NutOrWasher, "M12", 0.0, 0.0,
-                     "AF-basis nominal is conditional on the nut interpretation"});
+                     std::nullopt, FastenerClass::Washer, "M10", 0.0, 0.0,
+                     "sized from the bore; 3/8 in fits the same bore"});
 
     // Intentional failure cases: the pipeline must refuse, with the reason.
     cases.push_back({"no reference target", "failure", 0.25,

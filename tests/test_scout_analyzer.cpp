@@ -136,10 +136,11 @@ void test_evidence_emission() {
     const auto violations = observation::validate(record);
     assert(violations.empty());
     assert(record.inferred.empty());
-    assert(record.observed.size() == 8);  // + reference_keystone
+    assert(record.observed.size() == 9);  // + reference_keystone, outline_six_fold
     assert(record.derived.size() == 4);   // + camera_tilt
-    assert(record.unresolved.size() == 3);
-    assert(record.recommendedNextObservations.size() == 1);
+    // Perception states geometry only: no family questions before inference.
+    assert(record.unresolved.empty());
+    assert(record.recommendedNextObservations.empty());
 
     // The derived length is the observed pixel length through the scale.
     const auto& lengthClaim = record.derived[1];

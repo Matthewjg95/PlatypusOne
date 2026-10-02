@@ -123,7 +123,7 @@ void test_open_questions_are_honest_about_this_build() {
     const auto& q = g.openQuestions[0];
     assert(q.field == "thread_pitch");
     assert(!q.analyzerInBuild);  // requested, never claimed resolved
-    assert(q.resolvingView.find("side-on") != std::string::npos);
+    assert(q.resolvingView.find("lying flat") != std::string::npos);
 }
 
 void test_representative_capture_is_the_typical_one() {

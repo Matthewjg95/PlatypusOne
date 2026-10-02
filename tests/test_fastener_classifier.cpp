@@ -147,11 +147,52 @@ void test_nut_classification() {
     assert(analysis.subject.holeCount == 1);
 
     const auto result = ai::classify(analysis);
-    assert(result.fastenerClass == FastenerClass::NutOrWasher);
+    // The hexagonal outline is visible from above: a nut, sized by its flats.
+    assert(analysis.outlineSixFold >= 0.03);
+    assert(result.fastenerClass == FastenerClass::Nut);
     assert(result.confidence >= 0.6);
     assert(result.nominal.has_value());
-    assert(result.nominal->designation == "M6");
+    assert(result.nominal->designation.find("M6") != std::string::npos);
     assert(result.nominal->basis == "hex_across_flats");
+}
+
+void test_washer_is_sized_by_its_bore() {
+    // The bench washer (scan-0053, calipers OD 19.12 / bore 8.71 mm) was once
+    // recorded as nut_or_washer "M12" from its outside diameter, with thread
+    // questions. Round + centred bore is a washer: sized by the bolt its bore
+    // fits, asked only for its thickness.
+    auto scene = calibratedScene();
+    // Radii in px at 0.5 mm/px: a radius of D px is a diameter of D mm.
+    scene.addDisc(400.0, 280.0, 19.12);  // OD 19.12 mm
+    scene.addBore(400.0, 280.0, 8.71);   // bore 8.71 mm
+    const auto analysis = analyze(scene);
+    assert(analysis.outlineSixFold <= 0.015);
+    assert(analysis.holeDiametersMm.size() == 1);
+    assert(std::abs(analysis.holeDiametersMm.front() - 8.71) < 0.5);
+
+    observation::EngineeringObservation record;
+    record.observationId = "scan-0005";
+    record.timestampUtc = "2026-10-02T17:43:58Z";
+    record.source = {{"app", "test"}};
+    record.artifacts.push_back({"source-image", "image/x-portable-graymap", "source.pgm"});
+    vision::appendEvidence(record, analysis, CalibrationSpec{20.0}, "source-image");
+    const auto result = ai::classify(analysis);
+    ai::appendClassification(record, result);
+
+    assert(observation::validate(record).empty());
+    assert(result.fastenerClass == FastenerClass::Washer);
+    assert(result.nominal && result.nominal->basis == "bore_clearance");
+    assert(result.nominal->designation.find("M8") != std::string::npos);
+    bool thickness = false;
+    for (const auto& item : record.unresolved) {
+        assert(item.name != "thread_pitch");
+        assert(item.name != "nut_vs_washer");
+        if (item.name == "thickness") thickness = true;
+    }
+    assert(thickness);
+    for (const auto& r : record.recommendedNextObservations)
+        for (const auto& field : r.resolves)
+            assert(field != "thread_pitch");
 }
 
 void test_unknown_classification() {
@@ -243,6 +284,7 @@ void test_fastener_classifier() {
     test_nut_classification();
     test_unknown_classification();
     test_quarter_twenty_is_not_assumed_metric();
+    test_washer_is_sized_by_its_bore();
     test_headless_rod_is_not_a_screw();
     test_pcb_is_outside_the_library();
     test_square_plate_with_hole_is_not_a_nut();
