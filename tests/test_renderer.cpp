@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 
 namespace {
@@ -140,6 +141,11 @@ void test_session();
 void test_settings_store();
 
 int main() {
+#ifdef _MSC_VER
+    // A failed assert prints and exits; no modal "abort() has been called"
+    // dialog blocking an unattended or scripted run.
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
     test_app_registry();
     test_event_queue();
     test_export();

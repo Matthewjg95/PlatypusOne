@@ -20,10 +20,14 @@ ObjectProfile fastenerProfile() {
         // Answerable by another top-down capture with this build's analyzers.
         {"fastener_class", "a top-down capture with the part flat and fully in view", true},
         {"nominal_size", "a top-down capture with the part flat and fully in view", true},
-        // Need side-view analysis this build does not have yet.
-        {"thread_pitch", "a side-on view with the thread against a plain background", false},
+        {"nut_vs_washer", "a closer, in-focus top-down capture (round vs hex outline)", true},
+        // Not measured by this build's analyzers.
+        {"thread_pitch",
+         "a sharp top-down frame of the part lying flat (bolts); the mating "
+         "bolt (nuts)",
+         false},
         {"bolt_vs_screw", "a side-on view of the head", false},
-        {"nut_vs_washer", "a side-on view to measure thickness", false},
+        {"thickness", "a side profile of the part", false},
     };
     p.caveats = {
         "Measured as a silhouette at the paper plane: features standing above it, such as a "

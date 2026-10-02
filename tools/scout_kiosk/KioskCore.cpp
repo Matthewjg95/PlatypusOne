@@ -328,6 +328,14 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
     if (out.measured) {
         out.status = "saved " + out.record->observationId;
         out.statusColour = kGood;
+        if (out.analysis && out.analysis->cameraTiltDeg >= vision::kTiltWarningDeg) {
+            // Hand-held reality: say so before anyone trusts the number.
+            char tilt[64];
+            std::snprintf(tilt, sizeof(tilt), "; tilted ~%.0f deg: aim straight down",
+                          out.analysis->cameraTiltDeg);
+            out.status += tilt;
+            out.statusColour = kWarn;
+        }
     } else {
         // The capture-only record is still written — honest evidence that the
         // attempt happened. The operator is told what to change through the
@@ -371,7 +379,9 @@ void SceneCamera::setPose(int pose) {
     scene_.addSquare(80, 80, static_cast<std::int32_t>(20.0 * pxPerMm));
     if (pose < 0) return;  // part removed: exercises the refused-scene path
     const auto& p = poses[static_cast<std::size_t>(pose) % std::size(poses)];
-    scene_.addRect(p.cx, p.cy, 40.0 * pxPerMm, 8.0 * pxPerMm, p.degrees * kPi / 180.0);
+    // An M8 x 40 bolt: 8 mm shank, 13 mm across-flats head ~5 mm tall.
+    scene_.addBolt(p.cx, p.cy, 40.0 * pxPerMm, 8.0 * pxPerMm, p.degrees * kPi / 180.0,
+                   13.0 * pxPerMm, 5.2 * pxPerMm);
 }
 
 hal::Status SceneCamera::open(const hal::CameraMode&) {
