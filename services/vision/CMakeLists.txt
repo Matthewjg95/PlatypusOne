@@ -1,4 +1,5 @@
 add_library(platypus_vision STATIC
+    src/Outline.cpp
     src/ScoutAnalyzer.cpp)
 add_library(platypus::vision ALIAS platypus_vision)
 
@@ -9,6 +10,7 @@ target_include_directories(platypus_vision PUBLIC
 # vision depends on platform interfaces and a sibling service only.
 target_link_libraries(platypus_vision PUBLIC
     platypus::camera
+    platypus::geometry
     platypus::observation)
 
 platypus_set_warnings(platypus_vision)
