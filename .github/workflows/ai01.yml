@@ -1,0 +1,24 @@
+name: AI-01 deterministic observation
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  planar-observation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r tools/ai01/requirements.txt mypy==1.18.2 ruff==0.12.10
+      - run: python -m ruff check services/vision/python tools/ai01
+      - run: python -m ruff format --check services/vision/python tools/ai01
+      - run: python -m mypy --strict --explicit-package-bases services/vision/python/ai01.py tools/ai01
+      - run: python -m unittest tools.ai01.test_ai01 -v
+      - run: cmake -S . -B build-ai01 -DPLATYPUS_BUILD_APPS=OFF -DPLATYPUS_BUILD_TESTS=ON
+      - run: cmake --build build-ai01 --target ai01_validate_observation --parallel 2
+      - run: python -m tools.ai01.capture --image tools/ai01/fixtures/plate.png --reference-mm 20 --output build-ai01/fixture-capture
+      - run: build-ai01/tests/ai01_validate_observation build-ai01/fixture-capture/EngineeringObservation.json
