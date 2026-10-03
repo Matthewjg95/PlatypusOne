@@ -40,7 +40,10 @@ Milestone-ordered. Items are tagged `area/topic` for issue tracking.
       firmware + physical session (status board step 5)
 - [ ] `display/driver` — integrated panel driver + touch. **Deferred** until a
       production panel is selected; do not start before ADR-0001 is superseded
-- [ ] `camera/libcamera` — libcamera/V4L2 backend for ICamera
+- [x] `camera/v4l2` — direct V4L2 backend; webcam capture passed 2026-09-21
+      (see hardware/TEST_CHECKLISTS.md).
+- [ ] `camera/board-integration` — wire ICamera into UnoQBoard; calibrated
+      physical-scene measurement remains untested.
 - [ ] `sensors/imu` — first real ISensor driver via the MCU bridge
 - [ ] `infra/cross-compile` — aarch64 toolchain file + CI build
 - [ ] `infra/test-framework` — vendor Catch2 into third_party

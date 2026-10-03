@@ -38,7 +38,8 @@ UnoQBoard::UnoQBoard(Config config)
 
 std::shared_ptr<hal::IMcuBridge> UnoQBoard::mcuBridge() {
     if (!bridge_) {
-        auto bridge = std::make_shared<SerialMcuBridge>(config_.mcuDevice);
+        auto bridge =
+            std::make_shared<SerialMcuBridge>(config_.mcuDevice, 115200, config_.mcuTransport);
         if (!bridge->open()) return nullptr;  // MCU firmware absent: degrade
         bridge_ = std::move(bridge);
     }
