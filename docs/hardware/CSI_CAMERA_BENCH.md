@@ -95,7 +95,30 @@ Rules:
 | `20261004T221912Z-all`, `20261004T222234Z-all` | both ports `type1-2lanes`; white AWM 20624 cable in **CAMERA1**, two carrier-end orientations (blue stiffener up / contacts up) | driver probes both ports: `imx219 N-0010: Error reading reg 0x0000: -6` / `failed to read chip id 219` (ENXIO: nothing acknowledges at 0x10); panel and touch unaffected on the shared CCI bus |
 | `20261004T222854Z-all` | same, after re-seat | same ENXIO on both buses (`2-0010`, `3-0010`) |
 
-Reading: the camera bus and the carrier's camera power switching are
+| `20261004T224100Z-probe` (B0394) | CAMERA0, white cable re-seated per Arduino's diagram; yellow 15-22 cable does not physically fit | same ENXIO |
+| `B0390/20261004T224613Z-all` — **module was the B0393** (see `CORRECTION.txt`) | B0393 on CAMERA0 with its own cable | same ENXIO |
+| `B0390/20261004T224138Z-all` — module unconfirmed (`CORRECTION.txt`) | during the swap | same ENXIO |
+
+**Likely cause found (2026-10-04): the installed overlays predate
+[arduino/linux-qcom PR #5](https://github.com/arduino/linux-qcom/pull/5)**
+(merged 2026-09-28). Their `reset-gpios` drives the sensor's XCLR through the
+PCA9555, which sits on the same CCI bus as CAMERA0's sensor; third-party
+IMX219 modules load that bus while XCLR is low, the expander stops
+answering, and XCLR is never released. The PR's testing used this exact
+kernel (`7.0.0-g122c2c22d838`) and third-party modules on both ports. The
+live device tree here still has `reset-gpios = <pca9555 0>` / `<pca9555 2>`,
+and the bench shows CCI queue timeouts. Recovery needs a **cold** power
+cycle: the expander keeps its state across a warm reboot, and every reboot
+in the runs above was warm.
+
+Local application until Arduino ships it:
+`tools/csi_bench/imx219_overlay_fix.sh build` (user: rebuilds the four
+overlays without `reset-gpios` and test-composes them with the base,
+carrier and current panel overlays) → `sudo … install` (keeps originals as
+`.arduino-orig`, re-applies the current camera/display options) → unplug
+~10 s → `csi_bench.sh`. `sudo … rollback` restores Arduino's files.
+
+Reading before the fix: the camera bus and the carrier's camera power switching are
 configured (`cam-pwr-csi0`, `cam-pwr-csi1` on the TCA9555); the sensor never
 answers. Untested so far: CAMERA0 (Arduino's single-camera port), the
 camera-end contact orientation, and the yellow cable (Arduino's reference
@@ -106,7 +129,7 @@ are excluded.
 
 | Criterion | B0394 low-distortion, manual focus | B0393 autofocus | B0390 compact, fixed focus |
 |---|---|---|---|
-| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; see bench log) | UNRESOLVED | UNRESOLVED |
+| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; overlay fix pending) | not yet (same, 2026-10-04) | UNRESOLVED |
 | CSI port / lanes | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T2 working modes (format, size, fps) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T3 repeat capture after reboot / power cycle | UNRESOLVED | UNRESOLVED | UNRESOLVED |
