@@ -3,12 +3,18 @@
 //   ui_preview --font-specimen OUT.ppm
 //   ui_preview --scout-card RECORD.json OUT.ppm
 //   ui_preview --scout-card-demo OUT.ppm
+//   ui_preview --kiosk-session-demo OUTDIR
 //
 // Draws through the real Renderer into an in-memory display and writes the
 // frame as a P6 PPM. A bring-up tool (like engineering_scout_capture): UI
 // changes get eyeballed from a file without opening the interactive sim.
 // --scout-card-demo runs the real analyzer + classifier over a synthetic
 // bolt scene so the card shows a genuine end-to-end record.
+// --kiosk-session-demo scripts a whole Scout session through the kiosk's own
+// screens and the real capture, analyzer, session and export code, writing
+// one PPM per screen plus the session folder with its CAD artifacts.
+#include "KioskCore.hpp"
+
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
@@ -196,6 +202,79 @@ int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
     return renderCard(record, outPath, thumbnail);
 }
 
+int renderKioskSessionDemo(const std::string& outDir) {
+    namespace fs = std::filesystem;
+    const fs::path root(outDir);
+    std::error_code ec;
+    fs::remove_all(root / "observations", ec);
+    fs::remove_all(root / "sessions", ec);
+    fs::create_directories(root, ec);
+
+    auto display = std::make_shared<MemoryDisplay>(std::uint16_t{800}, std::uint16_t{480});
+    renderer::Renderer r(display);
+    const auto layout = kiosk::computeLayout(r.displayInfo(), 640, 480);
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    observation::CaptureService service(root / "observations");
+    session::SessionStore store(root / "sessions");
+    session::ObjectSession current(store.nextSessionId(), session::fastenerProfile(),
+                                   "2026-09-30T02:00:00Z");
+    const vision::CalibrationSpec spec{20.0};
+    std::string status;
+    renderer::Color statusColour = kiosk::kMuted;
+    int shot = 0;
+
+    const auto snap = [&](const std::string& name) {
+        (void)r.present();
+        char file[64];
+        std::snprintf(file, sizeof(file), "%02d-%s.ppm", ++shot, name.c_str());
+        return writePpm((root / file).string(), *display);
+    };
+    const auto preview = [&](const std::string& name) {
+        std::vector<std::uint8_t> rgb;
+        if (auto f = camera.capture(std::chrono::milliseconds(0)); f)
+            rgb = kiosk::yuyvToRgb(f.value());
+        kiosk::PanelState p;
+        p.sessionId = current.id();
+        p.guidance = current.guidance();
+        p.status = status;
+        p.statusColour = statusColour;
+        kiosk::drawPreviewScreen(r, layout, rgb, 640, 480, p);
+        return snap(name);
+    };
+    const auto capture = [&](int pose, const std::string& cardName) {
+        camera.setPose(pose);
+        const auto outcome = kiosk::captureOnce(camera, service, spec, "synthetic", "synthetic");
+        if (!outcome.record) return false;
+        current.add(kiosk::sessionCapture(outcome, current.profile()));
+        (void)store.save(current);
+        status = outcome.status;
+        statusColour = outcome.statusColour;
+        if (outcome.measured && !cardName.empty()) {
+            apps::drawObservationCard(r, *outcome.record, outcome.thumbnail);
+            if (!snap(cardName)) return false;
+        }
+        return true;
+    };
+
+    bool ok = preview("new-session");
+    ok = ok && capture(0, "card") && preview("after-1");
+    ok = ok && capture(-1, "") && preview("refused-no-part");  // part removed
+    ok = ok && capture(1, "") && capture(2, "") && preview("stable");
+    const auto g = current.guidance();
+    const auto reason = g.modelSatisfied ? session::CloseReason::ModelSatisfied
+                                         : session::CloseReason::ClosedByOperator;
+    const auto result = store.finish(current, reason, "2026-09-30T02:05:00Z");
+    kiosk::drawSessionSummary(r, current, result, reason);
+    ok = ok && snap("summary");
+    if (!ok || !result.ok()) {
+        std::fprintf(stderr, "error: demo failed %s\n", result.error.c_str());
+        return 1;
+    }
+    std::printf("wrote %d screens and %s\n", shot, result.directory.string().c_str());
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -204,9 +283,12 @@ int main(int argc, char** argv) {
     if (args.size() == 3 && args[0] == "--scout-card") return renderScoutCard(args[1], args[2]);
     if (args.size() >= 2 && args.size() <= 3 && args[0] == "--scout-card-demo")
         return renderScoutCardDemo(args[1], args.size() == 3 ? args[2] : "bolt");
+    if (args.size() == 2 && args[0] == "--kiosk-session-demo")
+        return renderKioskSessionDemo(args[1]);
     std::fprintf(stderr,
                  "usage: ui_preview --font-specimen OUT.ppm\n"
                  "       ui_preview --scout-card RECORD.json OUT.ppm\n"
-                 "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n");
+                 "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n"
+                 "       ui_preview --kiosk-session-demo OUTDIR\n");
     return 2;
 }

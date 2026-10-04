@@ -6,6 +6,7 @@ target_link_libraries(ui_preview PRIVATE
     platypus::ai
     platypus::app_engineering_scout
     platypus::renderer
+    platypus::scout_kiosk_core
     platypus::vision)
 
 platypus_set_warnings(ui_preview)

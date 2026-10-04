@@ -1,38 +1,29 @@
-// scout_kiosk — the Dream Lab demo loop on the UNO Q's own display.
+// scout_kiosk — Engineering Scout sessions on the UNO Q's own display.
 //
-//   live camera preview -> tap CAPTURE (or press a board button) -> measured,
-//   classified evidence record saved -> Scout result card -> tap to go back.
+//   live preview -> CAPTURE (tap, or board button A) -> evidence record saved
+//   and added to the session -> card -> back to preview with guidance on what
+//   to capture next -> FINISH (tap, or board button B) -> CAD artifacts
+//   exported -> summary -> tap for a new session.
 //
-//   scout_kiosk [--device /dev/videoN] [--out DIR] [--reference-mm MM]
-//               [--prefer dp|dsi] [--offscreen DIR] [--fake]
+//   scout_kiosk [--device /dev/videoN] [--out DIR] [--sessions DIR]
+//               [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR] [--fake]
 //
-// A composition root, like apps/launcher/src/main.cpp: the only file here that
-// knows concrete types. Everything it shows comes from pieces that are already
-// tested on their own — V4l2Camera, CaptureService, the vision analyzer and
-// fastener classifier (validation battery), drawObservationCard (the evidence
-// card), and DrmDisplay. The kiosk adds only the preview, the button, and the
-// operator guidance when the analyzer refuses a scene.
+// A composition root: this file knows the Linux hardware (V4L2 discovery, the
+// DRM display, evdev input) and nothing else. Screens, capture, and the
+// synthetic camera live in KioskCore (portable — tools/ui_preview renders the
+// same screens on any host); sessions live in services/session.
 //
-// --offscreen renders into memory instead of DRM, runs one preview frame and
-// one simulated capture, and writes preview.ppm and card.ppm to DIR: the whole
-// loop, verifiable with no panel attached. --fake swaps the webcam for the
-// validation battery's M8 bolt scene, served as YUYV exactly like the real
-// camera; its records name the camera "synthetic" so they can never pass
-// for bench evidence.
+// --offscreen renders into memory instead of DRM and writes preview.ppm,
+// card.ppm and summary.ppm after one capture and a finish. --fake swaps the
+// webcam for the validation battery's M8 scene (records name the camera
+// "synthetic", so they never pass for bench evidence).
 //
-// The display needs DRM master: stop the desktop first (sudo systemctl stop
-// lightdm). The camera is found by capability, never by a remembered node
-// number — node numbers move between boots on the UNO Q.
+// The display needs DRM master (the desktop must be stopped — platypus-mode
+// does it). The camera is found by capability, never by node number.
+#include "KioskCore.hpp"
 #include "drm/DrmDisplay.hpp"
 #include "drm/KmsHelpers.hpp"
 #include "v4l2/V4l2Camera.hpp"
-
-#include <platypus/ai/FastenerClassifier.hpp>
-#include <platypus/apps/EngineeringScoutApp.hpp>
-#include <platypus/hal/testing/SyntheticScene.hpp>
-#include <platypus/observation/CaptureService.hpp>
-#include <platypus/renderer/Renderer.hpp>
-#include <platypus/vision/ScoutAnalyzer.hpp>
 
 #include <algorithm>
 #include <atomic>
@@ -51,23 +42,12 @@
 namespace {
 
 using namespace platypus;
-using renderer::Color;
-using renderer::Rect;
+using namespace platypus::kiosk;
 
 std::atomic<bool> g_running{true};
 void handleSignal(int) {
     g_running = false;
 }
-
-constexpr Color kBackground{12, 14, 18};
-constexpr Color kPanel{28, 32, 40};
-constexpr Color kText{230, 232, 236};
-constexpr Color kMuted{140, 146, 158};
-constexpr Color kAccent{255, 196, 0};
-constexpr Color kGood{80, 200, 120};
-constexpr Color kWarn{255, 110, 90};
-
-// --- camera -----------------------------------------------------------------
 
 struct CameraChoice {
     std::string path;
@@ -75,8 +55,7 @@ struct CameraChoice {
 };
 
 /// First V4L2 node offering a measurable (YUYV) mode, preferring 640x480 —
-/// the analyzer's validated resolution and the webcam's full-rate YUYV mode.
-/// Codec and metadata nodes offer none, so they are skipped naturally.
+/// the analyzer's validated resolution. Codec and metadata nodes offer none.
 std::optional<CameraChoice> findCamera(const std::string& requested) {
     std::vector<std::string> paths;
     if (!requested.empty()) {
@@ -102,183 +81,6 @@ std::optional<CameraChoice> findCamera(const std::string& requested) {
     }
     return std::nullopt;
 }
-
-/// Packed YUYV (BT.601, limited range) to tightly packed RGB888.
-std::vector<std::uint8_t> yuyvToRgb(const hal::Frame& frame) {
-    const auto& m = frame.mode();
-    const auto px = frame.pixels();
-    std::vector<std::uint8_t> rgb(std::size_t{m.width} * m.height * 3);
-    if (px.size() < std::size_t{m.width} * m.height * 2) return {};
-    const auto clamp8 = [](int v) { return static_cast<std::uint8_t>(std::clamp(v, 0, 255)); };
-    for (std::size_t i = 0, o = 0; i + 3 < px.size() && o + 5 < rgb.size(); i += 4, o += 6) {
-        const int y0 = std::to_integer<int>(px[i]) - 16;
-        const int u = std::to_integer<int>(px[i + 1]) - 128;
-        const int y1 = std::to_integer<int>(px[i + 2]) - 16;
-        const int v = std::to_integer<int>(px[i + 3]) - 128;
-        for (int k = 0; k < 2; ++k) {
-            const int c = 298 * (k == 0 ? y0 : y1);
-            rgb[o + 3 * static_cast<std::size_t>(k) + 0] = clamp8((c + 409 * v + 128) >> 8);
-            rgb[o + 3 * static_cast<std::size_t>(k) + 1] =
-                clamp8((c - 100 * u - 208 * v + 128) >> 8);
-            rgb[o + 3 * static_cast<std::size_t>(k) + 2] = clamp8((c + 516 * u + 128) >> 8);
-        }
-    }
-    return rgb;
-}
-
-// --- layout -----------------------------------------------------------------
-
-/// Laid out against the display's real geometry (ADR-0001): the 800x480 panel
-/// and a 1080p bench monitor both come out right.
-struct Layout {
-    Rect preview;
-    Rect panel;
-    Rect button;
-    std::int32_t textScale = 2;
-};
-
-Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32_t camH) {
-    const std::int32_t w = info.width, h = info.height;
-    const std::int32_t margin = std::max(8, h / 30);
-    Layout l;
-    l.textScale = std::max(1, h / 240);
-    std::int32_t ph = h - 2 * margin;
-    std::int32_t pw = ph * camW / std::max(1, camH);
-    const std::int32_t maxPw = w * 3 / 4;
-    if (pw > maxPw) {
-        pw = maxPw;
-        ph = pw * camH / std::max(1, camW);
-    }
-    l.preview = {margin, (h - ph) / 2, pw, ph};
-    const std::int32_t px = margin + pw + margin;
-    l.panel = {px, margin, w - px - margin, h - 2 * margin};
-    const std::int32_t bh = h / 4;
-    l.button = {l.panel.x + margin / 2, l.panel.y + l.panel.h - bh - margin / 2, l.panel.w - margin,
-                bh};
-    return l;
-}
-
-bool inside(const Rect& r, std::int32_t x, std::int32_t y) {
-    return x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
-}
-
-/// Word-wraps `text` to `maxWidth` pixels and draws it from (x, y); returns the
-/// y below the last line.
-std::int32_t drawWrapped(renderer::Renderer& r, std::int32_t x, std::int32_t y,
-                         std::int32_t maxWidth, const std::string& text, Color colour,
-                         std::int32_t scale) {
-    std::string line, word;
-    const auto flush = [&] {
-        if (line.empty()) return;
-        r.drawText(x, y, line, colour, scale);
-        y += renderer::Renderer::textHeight(scale) + 3 * scale;
-        line.clear();
-    };
-    for (std::size_t i = 0; i <= text.size(); ++i) {
-        const char c = i < text.size() ? text[i] : ' ';
-        if (c != ' ') {
-            word += c;
-            continue;
-        }
-        if (word.empty()) continue;
-        const auto candidate = line.empty() ? word : line + " " + word;
-        if (renderer::Renderer::textWidth(candidate, scale) > maxWidth) flush();
-        line = line.empty() ? word : line + " " + word;
-        word.clear();
-    }
-    flush();
-    return y;
-}
-
-void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector<std::uint8_t>& rgb,
-                       std::int32_t camW, std::int32_t camH, const std::string& status,
-                       Color statusColour, bool busy) {
-    r.clear(kBackground);
-    if (!rgb.empty()) r.drawImage(l.preview, rgb, camW, camH, 3);
-    r.drawRect(l.preview, kMuted);
-    r.fillRect(l.panel, kPanel);
-
-    const std::int32_t s = l.textScale;
-    const std::int32_t tx = l.panel.x + 6 * s;
-    const std::int32_t tw = l.panel.w - 12 * s;
-    std::int32_t y = l.panel.y + 6 * s;
-    y = drawWrapped(r, tx, y, tw, "ENGINEERING SCOUT", kAccent, s);
-    y += 4 * s;
-    y = drawWrapped(r, tx, y, tw, "20 mm square + one fastener, flat, in view.", kMuted,
-                    std::max(1, s - 1));
-    y += 6 * s;
-    if (!status.empty()) drawWrapped(r, tx, y, tw, status, statusColour, std::max(1, s - 1));
-
-    r.fillRect(l.button, busy ? kMuted : kAccent);
-    const std::string label = busy ? "WAIT" : "CAPTURE";
-    const std::int32_t ls =
-        std::max(1, std::min(s + 1, l.button.w / renderer::Renderer::textWidth(label, 1)));
-    const auto lw = renderer::Renderer::textWidth(label, ls);
-    r.drawText(l.button.x + (l.button.w - lw) / 2,
-               l.button.y + (l.button.h - renderer::Renderer::textHeight(ls)) / 2, label,
-               kBackground, ls);
-}
-
-/// The analyzer refuses a scene rather than guess; the operator gets told what
-/// to change. This is the MVP's "active guidance" requirement at the moment it
-/// is needed most.
-std::string guidanceFor(vision::AnalyzeError error) {
-    switch (error) {
-        case vision::AnalyzeError::NoReferenceTarget:
-            return "No 20 mm square found. Put the whole square in view.";
-        case vision::AnalyzeError::ReferenceAmbiguous:
-            return "Two things look like the square. Leave only one.";
-        case vision::AnalyzeError::NoSubject:
-            return "No part found beside the square. Keep it fully in frame.";
-        case vision::AnalyzeError::UnsupportedFormat:
-            return "Camera mode cannot be measured.";
-        default:
-            return "Could not read the scene. Check light and focus.";
-    }
-}
-
-// --- synthetic camera -------------------------------------------------------
-
-/// Development source for --fake: the validation battery's M8 case — a 20 mm
-/// square and an 8 x 40 mm shaft at 45 degrees, at 0.25 mm/px — served as YUYV,
-/// the webcam's own format, so preview and analysis take the hardware path.
-class SceneCamera final : public hal::ICamera {
-   public:
-    SceneCamera() {
-        constexpr double pxPerMm = 4.0;
-        scene_.addSquare(80, 80, static_cast<std::int32_t>(20.0 * pxPerMm));
-        scene_.addRect(400.0, 280.0, 40.0 * pxPerMm, 8.0 * pxPerMm,
-                       45.0 * 3.14159265358979 / 180.0);
-    }
-    [[nodiscard]] std::vector<hal::CameraMode> supportedModes() const override { return {kMode}; }
-    hal::Status open(const hal::CameraMode&) override {
-        open_ = true;
-        return {};
-    }
-    hal::Status close() override {
-        open_ = false;
-        return {};
-    }
-    [[nodiscard]] bool isOpen() const noexcept override { return open_; }
-    hal::Status setControls(const hal::CameraControls&) override { return {}; }
-    hal::Result<hal::Frame> capture(std::chrono::milliseconds) override {
-        if (!open_) return hal::Error::NotInitialized;
-        return scene_.yuyvFrame();
-    }
-    hal::Status startStream(std::function<void(const hal::Frame&)> onFrame) override {
-        onFrame(scene_.yuyvFrame());
-        return {};
-    }
-    hal::Status stopStream() override { return {}; }
-
-    static constexpr hal::CameraMode kMode{640, 480, hal::PixelFormat::YUYV, 30.0f};
-
-   private:
-    hal::testing::SyntheticScene scene_;
-    bool open_ = false;
-};
-
-// --- offscreen display --------------------------------------------------------
 
 /// IDisplay that keeps the last frame so it can be written to a file.
 class SnapshotDisplay final : public hal::IDisplay {
@@ -314,65 +116,11 @@ class SnapshotDisplay final : public hal::IDisplay {
     std::vector<std::byte> frame_;
 };
 
-// --- capture ------------------------------------------------------------------
-
-struct CaptureOutcome {
-    std::optional<observation::EngineeringObservation> record;
-    std::optional<apps::CardImage> thumbnail;
-    std::string status;
-    Color statusColour = kText;
-};
-
-CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& service,
-                           const vision::CalibrationSpec& spec, const std::string& device,
-                           const std::string& identity) {
-    observation::CaptureConfig config;
-    config.observationId = service.nextObservationId();
-    config.timestampUtc = observation::CaptureService::currentUtcTimestamp();
-    config.source = {{"app", "scout_kiosk"}, {"camera", device}, {"camera_identity", identity}};
-
-    CaptureOutcome out;
-    auto sceneError = vision::AnalyzeError::None;
-    bool measured = false;
-    config.enrich = [&](const hal::Frame& frame, observation::EngineeringObservation& record) {
-        const auto& m = frame.mode();
-        out.thumbnail = apps::CardImage{m.width, m.height, 3, yuyvToRgb(frame)};
-        const auto analyzed = vision::analyzeFrame(frame, spec);
-        if (!analyzed.ok()) {
-            sceneError = analyzed.error;
-            return;
-        }
-        vision::appendEvidence(record, *analyzed.analysis, spec, "source-image");
-        ai::appendClassification(record, ai::classify(*analyzed.analysis));
-        measured = true;
-    };
-
-    const auto result = service.capture(camera, config);
-    if (!result) {
-        const auto reason = hal::to_string(result.error());
-        out.status = "Capture failed: " + std::string(reason);
-        out.statusColour = kWarn;
-        return out;
-    }
-    if (measured) {
-        out.record = result.value().record;
-        out.status = "Saved " + result.value().record.observationId;
-        out.statusColour = kGood;
-    } else {
-        // The capture-only record is still written — honest evidence that the
-        // attempt happened — but the operator sees what to change, not a card
-        // with nothing on it.
-        out.status =
-            guidanceFor(sceneError) + " (" + result.value().record.observationId + " saved)";
-        out.statusColour = kWarn;
-    }
-    return out;
-}
-
 int usage() {
     std::fprintf(stderr,
-                 "usage: scout_kiosk [--device /dev/videoN] [--out DIR] [--reference-mm MM]\n"
-                 "                   [--prefer dp|dsi] [--offscreen DIR] [--fake]\n");
+                 "usage: scout_kiosk [--device /dev/videoN] [--out DIR] [--sessions DIR]\n"
+                 "                   [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR]"
+                 " [--fake]\n");
     return 2;
 }
 
@@ -381,6 +129,7 @@ int usage() {
 int main(int argc, char** argv) {
     std::string device;
     std::string outDir = "observations";
+    std::string sessionsDir = "sessions";
     std::string offscreen;
     bool fake = false;
     double referenceMm = vision::CalibrationSpec{}.referenceSideMm;
@@ -393,6 +142,8 @@ int main(int argc, char** argv) {
             device = next();
         else if (arg == "--out")
             outDir = next();
+        else if (arg == "--sessions")
+            sessionsDir = next();
         else if (arg == "--offscreen")
             offscreen = next();
         else if (arg == "--fake")
@@ -441,8 +192,6 @@ int main(int argc, char** argv) {
     std::fflush(stdout);
 
     renderer::Renderer r(display);
-    // Laid out for 4:3 — the analyzer's validated 640x480, which findCamera
-    // prefers; another aspect is scaled into the same preview rect.
     std::int32_t camW = 640, camH = 480;
     const auto layout = computeLayout(r.displayInfo(), camW, camH);
 
@@ -454,8 +203,6 @@ int main(int argc, char** argv) {
         if (fake) {
             camera = std::make_unique<SceneCamera>();
             cameraPath = identity = "synthetic";
-            camW = SceneCamera::kMode.width;
-            camH = SceneCamera::kMode.height;
             return static_cast<bool>(camera->open(SceneCamera::kMode));
         }
         bool announced = false;
@@ -481,8 +228,11 @@ int main(int argc, char** argv) {
                 std::fflush(stdout);
                 announced = true;
             }
-            drawPreviewScreen(r, layout, {}, camW, camH,
-                              "Waiting for the webcam. Plug it into the USB-C hub.", kWarn, true);
+            PanelState waiting;
+            waiting.status = "Waiting for the webcam. Plug it into the USB-C hub.";
+            waiting.statusColour = kWarn;
+            waiting.busy = true;
+            drawPreviewScreen(r, layout, {}, camW, camH, waiting);
             (void)r.present();
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
@@ -495,60 +245,118 @@ int main(int argc, char** argv) {
     }
 
     observation::CaptureService service(outDir);
+    session::SessionStore store(sessionsDir);
     const vision::CalibrationSpec spec{referenceMm};
+    const auto newSession = [&] {
+        return std::make_unique<session::ObjectSession>(
+            store.nextSessionId(), session::fastenerProfile(),
+            observation::CaptureService::currentUtcTimestamp());
+    };
+    auto current = newSession();
+    std::printf("session: %s\n", current->id().c_str());
 
-    // --- input: handlers run on the display's input thread; the loop consumes.
-    enum class Screen { Preview, Card };
-    std::atomic<Screen> screen{Screen::Preview};
-    std::atomic<bool> captureRequested{false};
-    std::atomic<bool> dismissRequested{false};
-    display->onTouch([&](const hal::TouchEvent& e) {
-        if (e.type != hal::TouchEvent::Type::Down) return;
-        if (screen == Screen::Card)
-            dismissRequested = true;
-        else if (inside(layout.button, e.x, e.y))
-            captureRequested = true;
-    });
-    display->onButton([&](const hal::ButtonEvent& e) {
-        if (!e.pressed) return;
-        if (screen == Screen::Card)
-            dismissRequested = true;
-        else
-            captureRequested = true;
-    });
-
-    std::string status = "Ready.";
+    std::string status;
     Color statusColour = kMuted;
     std::vector<std::uint8_t> lastRgb;
 
-    // Offscreen: one preview frame, one capture, two screenshots, done.
+    const auto panelState = [&](bool busy) {
+        PanelState p;
+        p.sessionId = current->id();
+        p.guidance = current->guidance();
+        p.status = status;
+        p.statusColour = statusColour;
+        p.busy = busy;
+        return p;
+    };
+    const auto doCapture = [&]() -> CaptureOutcome {
+        drawPreviewScreen(r, layout, lastRgb, camW, camH, [&] {
+            auto p = panelState(true);
+            p.status = "Measuring...";
+            p.statusColour = kAccent;
+            return p;
+        }());
+        (void)r.present();
+        auto outcome = captureOnce(*camera, service, spec, cameraPath, identity);
+        if (outcome.record) {
+            current->add(sessionCapture(outcome, current->profile()));
+            std::string error;
+            if (!store.save(*current, &error))
+                std::fprintf(stderr, "session save: %s\n", error.c_str());
+        }
+        status = outcome.status;
+        statusColour = outcome.statusColour;
+        std::printf("capture: %s\n", outcome.status.c_str());
+        std::fflush(stdout);
+        return outcome;
+    };
+    const auto doFinish =
+        [&](session::FinishResult& result) -> std::optional<session::CloseReason> {
+        const auto g = current->guidance();
+        if (g.measured == 0) {
+            status = "Nothing measured yet - capture first.";
+            statusColour = kWarn;
+            return std::nullopt;
+        }
+        const auto reason = g.modelSatisfied ? session::CloseReason::ModelSatisfied
+                                             : session::CloseReason::ClosedByOperator;
+        result = store.finish(*current, reason, observation::CaptureService::currentUtcTimestamp());
+        std::printf("finish:  %s %s -> %s\n", current->id().c_str(),
+                    std::string(session::to_string(reason)).c_str(),
+                    result.ok() ? result.directory.string().c_str() : result.error.c_str());
+        std::fflush(stdout);
+        return reason;
+    };
+
+    // Offscreen: preview, one capture, the card, a finish, the summary.
     if (snapshot) {
-        for (int k = 0; k < 3 && lastRgb.empty(); ++k)
-            if (auto f = camera->capture(std::chrono::milliseconds(2000)); f)
-                lastRgb = yuyvToRgb(f.value());
-        drawPreviewScreen(r, layout, lastRgb, camW, camH, status, statusColour, false);
+        if (auto f = camera->capture(std::chrono::milliseconds(2000)); f)
+            lastRgb = yuyvToRgb(f.value());
+        drawPreviewScreen(r, layout, lastRgb, camW, camH, panelState(false));
         (void)r.present();
         snapshot->writePpm(std::filesystem::path(offscreen) / "preview.ppm");
-        auto outcome = captureOnce(*camera, service, spec, cameraPath, identity);
-        std::printf("capture: %s\n", outcome.status.c_str());
-        if (outcome.record)
-            apps::drawObservationCard(r, *outcome.record, outcome.thumbnail);
-        else
-            drawPreviewScreen(r, layout, lastRgb, camW, camH, outcome.status, outcome.statusColour,
-                              false);
+        const auto outcome = doCapture();
+        if (outcome.measured) apps::drawObservationCard(r, *outcome.record, outcome.thumbnail);
         (void)r.present();
         snapshot->writePpm(std::filesystem::path(offscreen) / "card.ppm");
+        session::FinishResult result;
+        if (const auto reason = doFinish(result)) {
+            drawSessionSummary(r, *current, result, *reason);
+            (void)r.present();
+            snapshot->writePpm(std::filesystem::path(offscreen) / "summary.ppm");
+        }
         camera->close();
         return 0;
     }
 
-    std::printf("running: tap CAPTURE or press a board button; Ctrl-C to quit\n");
+    // --- input: handlers run on the display's input thread; the loop consumes.
+    enum class Screen { Preview, Card, Summary };
+    std::atomic<Screen> screen{Screen::Preview};
+    std::atomic<bool> captureRequested{false}, finishRequested{false}, dismissRequested{false};
+    display->onTouch([&](const hal::TouchEvent& e) {
+        if (e.type != hal::TouchEvent::Type::Down) return;
+        if (screen != Screen::Preview)
+            dismissRequested = true;
+        else if (inside(layout.capture, e.x, e.y))
+            captureRequested = true;
+        else if (inside(layout.finish, e.x, e.y))
+            finishRequested = true;
+    });
+    display->onButton([&](const hal::ButtonEvent& e) {
+        if (!e.pressed) return;
+        if (screen != Screen::Preview)
+            dismissRequested = true;
+        else if (e.id == drm::kBoardButtonB)
+            finishRequested = true;
+        else
+            captureRequested = true;
+    });
+
+    std::printf("running: CAPTURE / FINISH on the panel or board buttons A / B; Ctrl-C to quit\n");
     std::fflush(stdout);
     int missedFrames = 0;
     while (g_running) {
         const auto frame = camera->capture(std::chrono::milliseconds(200));
-        // ~5 s without a frame means the webcam went away (unplugged, or the
-        // hub dropped). Go back to waiting rather than freezing the preview.
+        // ~5 s without a frame means the webcam went away: wait for it again.
         missedFrames = frame ? 0 : missedFrames + 1;
         if (missedFrames >= 25) {
             std::printf("camera:  lost - waiting for it to come back\n");
@@ -564,23 +372,24 @@ int main(int argc, char** argv) {
             continue;
         }
         if (screen == Screen::Card) {
-            if (dismissRequested.exchange(false)) {
-                screen = Screen::Preview;
-                captureRequested = false;
-            }
+            if (dismissRequested.exchange(false)) screen = Screen::Preview;
             continue;  // keep draining the camera so the preview is live on return
+        }
+        if (screen == Screen::Summary) {
+            if (dismissRequested.exchange(false)) {
+                current = newSession();
+                status = "New session " + current->id() + ".";
+                statusColour = kMuted;
+                std::printf("session: %s\n", current->id().c_str());
+                screen = Screen::Preview;
+            }
+            continue;
         }
         if (frame) lastRgb = yuyvToRgb(frame.value());
 
         if (captureRequested.exchange(false)) {
-            drawPreviewScreen(r, layout, lastRgb, camW, camH, "Measuring...", kAccent, true);
-            (void)r.present();
-            auto outcome = captureOnce(*camera, service, spec, cameraPath, identity);
-            std::printf("capture: %s\n", outcome.status.c_str());
-            std::fflush(stdout);
-            status = outcome.status;
-            statusColour = outcome.statusColour;
-            if (outcome.record) {
+            const auto outcome = doCapture();
+            if (outcome.measured) {
                 apps::drawObservationCard(r, *outcome.record, outcome.thumbnail);
                 (void)r.present();
                 dismissRequested = false;
@@ -588,7 +397,17 @@ int main(int argc, char** argv) {
                 continue;
             }
         }
-        drawPreviewScreen(r, layout, lastRgb, camW, camH, status, statusColour, false);
+        if (finishRequested.exchange(false)) {
+            session::FinishResult result;
+            if (const auto reason = doFinish(result)) {
+                drawSessionSummary(r, *current, result, *reason);
+                (void)r.present();
+                dismissRequested = false;
+                screen = Screen::Summary;
+                continue;
+            }
+        }
+        drawPreviewScreen(r, layout, lastRgb, camW, camH, panelState(false));
         (void)r.present();
     }
 
