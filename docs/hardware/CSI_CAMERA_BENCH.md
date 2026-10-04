@@ -128,6 +128,20 @@ camera on CAMERA0). Panel note: the ATTINY's first writes fail on several
 boots (also before cameras were enabled); `uno-q-dsi-panel-recover` brings
 the display up about 30 s after boot.
 
+**CAMERA0 is the wrong port for these modules on this board (2026-10-04
+23:01–23:03, camera1=none, blue stiffener up at the carrier):** run
+`B0393/20261004T230239Z-all` and the next boot show
+`imx219_power_on: failed to enable regulators` (-110), every ATTINY panel
+write timing out, and 156 CCI timeouts. CAMERA0's sensor shares CCI bus 0
+with the PCA9555 that switches camera power, the panel's ATTINY and touch.
+A connected but unpowered third-party module loads that bus, so the
+expander cannot switch the camera on and the panel cannot be initialised
+(the "display dark with blue side up" report). The 22:54 success was a
+timing win, not a stable state. CAMERA1's sensor is on CCI bus 1, away from
+the expander and the panel: use `camera0=none camera1=type1-2lanes` for a
+single third-party IMX219 on this board, contrary to the manual's
+"single camera on CAMERA0" (written for genuine modules).
+
 Reading before the fix: the camera bus and the carrier's camera power switching are
 configured (`cam-pwr-csi0`, `cam-pwr-csi1` on the TCA9555); the sensor never
 answers. Untested so far: CAMERA0 (Arduino's single-camera port), the
