@@ -15,6 +15,10 @@ Nothing here is a CSI result yet. Facts below are labelled by source.
 | With both ports `none`, a connected B0394 cannot enumerate: no sensor entity in `media-ctl`, libcamera "No sensor found for /dev/media0", nothing at the IMX219 address on either CCI bus | baseline probe `B0394/20261004T220941Z-all` |
 | The `5-dsi-touch-a` slot on the EFI partition holds the **patched** Waveshare 800×480 overlay (`waveshare,4-3-inch-dsi`, sha256 `b438db9b…`), with Arduino's original kept as `.arduino-orig` | `/boot/efi/dtb/qcom` |
 
+| Arduino's manual: "If you want to use just one camera, make sure to enable and connect it on CAMERA0 connector"; libcamera camera names `/base/soc@0/cci@5c1b000/i2c-bus@0/sensor@10` (camera0) and `…/i2c-bus@1/sensor@10` (camera1); snapshot via `gst-launch-1.0 libcamerasrc` (needs `gstreamer1.0-libcamera`) | [UNO Media Carrier user manual](https://docs.arduino.cc/tutorials/uno-media-carrier/user-manual/), rev. 09/22/2026 |
+| Arduino's reference photo shows an M12-lens IMX219 module on an **orange flex** cable; the manual's "MIPI cable contacts orientation" diagram is an image only | same manual |
+| B0394 package (retailer listing): a 15 cm **22-22-pin** cable and a 15 cm **yellow 15-22-pin** cable; Arducam's own page refused automated access | [welectron listing](https://www.welectron.com/Arducam-B0394-8MP-IMX219-Camera-Module-for-Raspberry-Pi_1) |
+
 Consequences:
 
 - Enabling a camera port must restate `display=5-dsi-touch-a`; the tool then
@@ -81,11 +85,28 @@ Rules:
   data, never as bench results.
 - No algorithm is tuned from these runs; they are fixtures.
 
+## Bench log
+
+### 2026-10-04 — B0394, T1 not yet passing
+
+| Run (evidence dir) | Setup | Result |
+|---|---|---|
+| `20261004T220941Z-all` | ports `none` (before enabling) | no sensor entity; expected |
+| `20261004T221912Z-all`, `20261004T222234Z-all` | both ports `type1-2lanes`; white AWM 20624 cable in **CAMERA1**, two carrier-end orientations (blue stiffener up / contacts up) | driver probes both ports: `imx219 N-0010: Error reading reg 0x0000: -6` / `failed to read chip id 219` (ENXIO: nothing acknowledges at 0x10); panel and touch unaffected on the shared CCI bus |
+| `20261004T222854Z-all` | same, after re-seat | same ENXIO on both buses (`2-0010`, `3-0010`) |
+
+Reading: the camera bus and the carrier's camera power switching are
+configured (`cam-pwr-csi0`, `cam-pwr-csi1` on the TCA9555); the sensor never
+answers. Untested so far: CAMERA0 (Arduino's single-camera port), the
+camera-end contact orientation, and the yellow cable (Arduino's reference
+photo uses an orange flex). Do not conclude the module is faulty until those
+are excluded.
+
 ## Comparison (fill from evidence only)
 
 | Criterion | B0394 low-distortion, manual focus | B0393 autofocus | B0390 compact, fixed focus |
 |---|---|---|---|
-| T1 enumerates on Media Carrier | UNRESOLVED | UNRESOLVED | UNRESOLVED |
+| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; see bench log) | UNRESOLVED | UNRESOLVED |
 | CSI port / lanes | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T2 working modes (format, size, fps) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T3 repeat capture after reboot / power cycle | UNRESOLVED | UNRESOLVED | UNRESOLVED |
