@@ -182,6 +182,15 @@ v4l2-ctl -d /dev/video0 --set-fmt-video=width=1640,height=1232,pixelformat=pRAA 
 pool at 1640×1232 and is the one for measurement: fixed exposure/gain, no
 uncalibrated processing. Archived: `B0393/20261004T232839Z-raw`.
 
+**First lit capture (2026-10-04 23:32, run `B0393/20261004T233254Z-all`):**
+calibration sheet at ~15 cm under room light, 1280×720 software-ISP preview:
+the 20 mm square is recognisable but **out of focus**, and the image is dim
+(auto-exposure at the 60 fps exposure limit, gain 192 of 232). No lens/VCM
+subdevice enumerated (`lens: none`): the B0393's autofocus cannot be driven on
+this board as configured, so its lens rests at a far focus. For quantitative
+use it is a fixed-focus camera focused beyond the bench working distance
+until a focus driver exists.
+
 Reading before the fix: the camera bus and the carrier's camera power switching are
 configured (`cam-pwr-csi0`, `cam-pwr-csi1` on the TCA9555); the sensor never
 answers. Untested so far: CAMERA0 (Arduino's single-camera port), the
@@ -199,7 +208,7 @@ are excluded.
 | T3 repeat capture after reboot / power cycle | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T4 DSI + touch coexistence | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T5 envelope (measured) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
-| T6 focus control / working distance | UNRESOLVED | UNRESOLVED | UNRESOLVED |
+| T6 focus control / working distance | UNRESOLVED | **no lens control enumerated**; rests at far focus, blurry at ~15 cm (2026-10-04) | UNRESOLVED |
 | T7 edge sharpness (centre / corner) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T8 distortion residual | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T9 exposure / low light | UNRESOLVED | UNRESOLVED | UNRESOLVED |
