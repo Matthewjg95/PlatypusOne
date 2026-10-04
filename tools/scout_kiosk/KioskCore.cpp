@@ -112,6 +112,19 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
     r.clear(kBackground);
     if (!rgb.empty()) r.drawImage(l.preview, rgb, camW, camH, 3);
     r.drawRect(l.preview, kMuted);
+    if (rgb.empty() && panel.noCamera) {
+        // Say it where the operator is looking: in the empty preview.
+        const std::int32_t big = l.textScale + 1;
+        const std::string line1 = "CAMERA NOT CONNECTED";
+        const std::string line2 = "Plug the USB webcam into the hub";
+        const std::int32_t h1 = renderer::Renderer::textHeight(big);
+        const std::int32_t cy = l.preview.y + l.preview.h / 2 - h1;
+        r.drawText(l.preview.x + (l.preview.w - renderer::Renderer::textWidth(line1, big)) / 2, cy,
+                   line1, kWarn, big);
+        r.drawText(
+            l.preview.x + (l.preview.w - renderer::Renderer::textWidth(line2, l.textScale)) / 2,
+            cy + h1 + 6 * l.textScale, line2, kText, l.textScale);
+    }
     r.fillRect(l.panel, kPanel);
 
     const std::int32_t s = l.textScale;
@@ -158,7 +171,8 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
         section(panel.status, panel.statusColour, s);
     }
 
-    drawButton(r, l.capture, panel.busy ? "WAIT" : "CAPTURE", panel.busy ? kMuted : kAccent,
+    const char* captureLabel = panel.noCamera ? "NO CAMERA" : panel.busy ? "WAIT" : "CAPTURE";
+    drawButton(r, l.capture, captureLabel, panel.noCamera || panel.busy ? kMuted : kAccent,
                kBackground, s + 1);
     const bool anyMeasured = panel.guidance && panel.guidance->measured > 0;
     const bool satisfied = panel.guidance && panel.guidance->modelSatisfied;

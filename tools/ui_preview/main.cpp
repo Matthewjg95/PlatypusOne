@@ -259,6 +259,15 @@ int renderKioskSessionDemo(const std::string& outDir) {
         return true;
     };
 
+    // Before any camera exists: what the kiosk shows while it waits for one.
+    {
+        kiosk::PanelState waiting;
+        waiting.status = "No camera found. Scout starts as soon as one is plugged in.";
+        waiting.statusColour = kiosk::kWarn;
+        waiting.noCamera = true;
+        kiosk::drawPreviewScreen(r, layout, {}, 640, 480, waiting);
+        if (!snap("no-camera")) return 1;
+    }
     bool ok = preview("new-session");
     ok = ok && capture(0, "card") && preview("after-1");
     ok = ok && capture(-1, "") && preview("refused-no-part");  // part removed

@@ -61,6 +61,9 @@ struct PanelState {
     std::string status;                         ///< last capture outcome, one line
     Color statusColour = kMuted;
     bool busy = false;
+    /// No camera: the button says so and the empty preview explains it,
+    /// instead of a bare busy state.
+    bool noCamera = false;
 };
 
 void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector<std::uint8_t>& rgb,

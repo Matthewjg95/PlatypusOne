@@ -95,6 +95,9 @@ class DrmDisplay final : public hal::IDisplay {
     hal::Status fail(hal::Error error, std::string why);
     hal::Status programDisplay();
     void startInput();
+    /// Opens the first touchscreen evdev node; returns its description, or
+    /// empty when none exists yet.
+    std::string openTouchscreen();
     void inputLoop();
     void releaseScanout();
 
