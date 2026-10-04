@@ -68,6 +68,17 @@ journalctl -k -b --no-pager 2>/dev/null |
     grep -i -E 'imx219|camss|csiphy|csid|vfe|cci|dw9714|dw9807|ak7375|vcm|lens' >kernel.log
 grep -c -i 'imx219' kernel.log >kernel_imx219_lines.txt
 
+# The chip-ID read is the real enumeration test: a sensor bound to the
+# imx219 driver answered on I2C, even if camss has not registered its media
+# graph yet (camss waits for every enabled port's sensor).
+BOUND=""
+for d in /sys/bus/i2c/devices/*-0010; do
+    [ -e "$d" ] || continue
+    drv=$(basename "$(readlink "$d/driver" 2>/dev/null)" 2>/dev/null)
+    say "$(basename "$d"): ${drv:-unbound}" >>i2c_sensors.txt
+    [ "$drv" = imx219 ] && BOUND="$BOUND $(basename "$d")"
+done
+
 run media.txt media-ctl -d /dev/media0 -p
 SENSOR=""
 LENS=""
@@ -79,6 +90,7 @@ for sd in /sys/class/video4linux/v4l-subdev*; do
     esac
 done
 say "sensor_subdev: ${SENSOR:-none}" >>system.txt
+say "imx219_bound_i2c:${BOUND:- none}" >>system.txt
 say "lens_subdev: ${LENS:-none}" >>system.txt
 if [ -n "$SENSOR" ]; then
     run sensor.txt v4l2-ctl -d "$SENSOR" --list-subdev-mbus-codes
@@ -159,5 +171,7 @@ with open(os.path.join(out, "manifest.json"), "w", newline="\n") as f:
 PY
 sync
 
+say "chip-id answered (imx219 bound):${BOUND:- none}"
+[ -n "$BOUND" ] && [ -z "$SENSOR" ] && say "note: sensor answered but no media graph - is another enabled CSI port empty?"
 say "sensor: ${SENSOR:-NOT FOUND}   lens: ${LENS:-none}   frames: $(ls frame-* raw-* 2>/dev/null | wc -l)"
 say "done: $OUT"

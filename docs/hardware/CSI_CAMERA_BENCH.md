@@ -118,6 +118,16 @@ carrier and current panel overlays) → `sudo … install` (keeps originals as
 `.arduino-orig`, re-applies the current camera/display options) → unplug
 ~10 s → `csi_bench.sh`. `sudo … rollback` restores Arduino's files.
 
+**After the fix (overlays installed, cold power cycle, 2026-10-04 22:54):**
+the B0393 on CAMERA0 **answered its chip ID** — `1-0010` bound to the imx219
+driver (run `B0393/20261004T230019Z-probe`, `i2c_sensors.txt`). CAMERA1,
+enabled but empty, still fails as expected. No media graph appears because
+camss waits for every enabled port's sensor: an empty enabled port blocks the
+other. With one camera, configure `camera1=none` (Arduino's manual: single
+camera on CAMERA0). Panel note: the ATTINY's first writes fail on several
+boots (also before cameras were enabled); `uno-q-dsi-panel-recover` brings
+the display up about 30 s after boot.
+
 Reading before the fix: the camera bus and the carrier's camera power switching are
 configured (`cam-pwr-csi0`, `cam-pwr-csi1` on the TCA9555); the sensor never
 answers. Untested so far: CAMERA0 (Arduino's single-camera port), the
@@ -129,7 +139,7 @@ are excluded.
 
 | Criterion | B0394 low-distortion, manual focus | B0393 autofocus | B0390 compact, fixed focus |
 |---|---|---|---|
-| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; overlay fix pending) | not yet (same, 2026-10-04) | UNRESOLVED |
+| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; overlay fix pending) | chip ID answers on CAMERA0 after the PR #5 overlay fix + cold boot (2026-10-04); media graph pending `camera1=none` | UNRESOLVED |
 | CSI port / lanes | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T2 working modes (format, size, fps) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T3 repeat capture after reboot / power cycle | UNRESOLVED | UNRESOLVED | UNRESOLVED |
