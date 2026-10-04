@@ -96,15 +96,15 @@ void test_bores_are_kept_and_glints_are_not() {
         assert((vision::signedArea(outline.outer) > 0) !=
                (vision::signedArea(outline.holes[0]) > 0));
     }
-    // A glint: a 1.5 px (~1.8 mm^2) hole in a shaft is counted by the blob
-    // statistics but never exported as a feature.
+    // A glint: a 1.5 px (~7 px) pocket in a shaft is neither counted as a
+    // hole nor exported as a feature; polished screws are full of them.
     {
         auto scene = withReference();
         scene.addRect(400.0, 280.0, 240.0, 36.0, 0.0);
         scene.addBore(400.0, 280.0, 1.5);
         const auto outcome = vision::analyzeFrame(scene.frame(), {20.0});
         assert(outcome.ok());
-        assert(outcome.analysis->subject.holeCount == 1);
+        assert(outcome.analysis->subject.holeCount == 0);
         assert(outcome.analysis->subjectOutlinePx.holes.empty());
     }
 }

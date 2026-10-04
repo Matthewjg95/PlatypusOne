@@ -17,19 +17,44 @@ std::string_view to_string(FastenerClass value) noexcept {
             return "bolt_or_screw";
         case FastenerClass::NutOrWasher:
             return "nut_or_washer";
+        case FastenerClass::Washer:
+            return "washer";
+        case FastenerClass::Nut:
+            return "nut";
     }
     return "unknown";
 }
 
 namespace {
 
-constexpr std::string_view kMethod = "ai.fastener_classifier.v2";
+constexpr std::string_view kMethod = "ai.fastener_classifier.v4";
 
 /// Rod-like at or above this length/width ratio.
 constexpr double kMinRodAspect = 2.5;
 /// Compact (nut/washer candidate) at or below this ratio; a regular hexagon's
 /// across-corners / across-flats is ~1.155, well inside.
 constexpr double kMaxCompactAspect = 1.4;
+/// A bolt or screw from above has a head: one end of the silhouette at least
+/// this much wider than the shank. A rod without one (pin, dowel, pen) is not
+/// claimed as a fastener.
+constexpr double kMinHeadToShank = 1.2;
+/// Holes in a rod-like part: a glare spot on a polished head can survive as a
+/// small one; holes covering this share of the outline mean a bar or bracket.
+constexpr double kMaxRodHoleShare = 0.03;
+/// Outer-outline area over the inscribed-ellipse area of its extents: 1.0 for
+/// a circle, ~0.96 for a hex nut, ~1.27 for a rectangle. Nuts and washers are
+/// round or hexagonal; a rectangular part with a hole is not one.
+constexpr double kMaxRoundFill = 1.12;
+/// A nut or washer bore sits at the centre: offset over width.
+constexpr double kMaxBoreOffset = 0.2;
+/// Round vs hex from above, by the outline's six-fold harmonic (a fraction of
+/// its mean radius): a regular hexagon is 0.060, a circle ~0. Chamfered nut
+/// corners and pixel noise sit between; between the gates nothing is claimed.
+constexpr double kMinHexSixFold = 0.03;
+constexpr double kMaxRoundSixFold = 0.015;
+/// A washer fits a bolt whose diameter is this much smaller than its bore.
+constexpr double kMinWasherClearanceMm = 0.1;
+constexpr double kMaxWasherClearanceMm = 1.2;
 /// Inference from a single silhouette is never certain.
 constexpr double kMaxConfidence = 0.9;
 /// Nominal matches worse than this relative error are not claimed at all.
@@ -48,6 +73,20 @@ constexpr std::array<TableEntry, 7> kShaftDiametersMm{{{"M3", 3.0},
                                                        {"M8", 8.0},
                                                        {"M10", 10.0},
                                                        {"M12", 12.0}}};
+/// ASME B1.1 UNC coarse major diameters. A silhouette resolves about
+/// +-0.5 mm, which cannot separate most of these from their metric
+/// neighbours (1/4-20 is 6.35 mm, M6 is 6.00): only the thread pitch can.
+constexpr std::array<TableEntry, 8> kUncDiametersMm{{{"#4-40 UNC", 2.845},
+                                                     {"#6-32 UNC", 3.505},
+                                                     {"#8-32 UNC", 4.166},
+                                                     {"#10-24 UNC", 4.826},
+                                                     {"1/4-20 UNC", 6.35},
+                                                     {"5/16-18 UNC", 7.938},
+                                                     {"3/8-16 UNC", 9.525},
+                                                     {"1/2-13 UNC", 12.7}}};
+/// Sizes this close to the best match are indistinguishable from it.
+constexpr double kShaftUncertaintyMm = 0.5;
+
 /// ISO 4032 hex across-flats widths.
 constexpr std::array<TableEntry, 7> kHexAcrossFlatsMm{{{"M3", 5.5},
                                                        {"M4", 7.0},
@@ -56,6 +95,15 @@ constexpr std::array<TableEntry, 7> kHexAcrossFlatsMm{{{"M3", 5.5},
                                                        {"M8", 13.0},
                                                        {"M10", 16.0},
                                                        {"M12", 18.0}}};
+
+/// Hex nut across-flats for UNC sizes (ASME B18.2.2, finished hex nuts).
+constexpr std::array<TableEntry, 7> kUncHexAcrossFlatsMm{{{"#6-32 UNC", 7.94},
+                                                          {"#8-32 UNC", 8.73},
+                                                          {"#10-24 UNC", 9.53},
+                                                          {"1/4-20 UNC", 11.11},
+                                                          {"5/16-18 UNC", 12.70},
+                                                          {"3/8-16 UNC", 14.29},
+                                                          {"1/2-13 UNC", 19.05}}};
 
 std::string formatMm(double value) {
     char buffer[32];
@@ -90,7 +138,157 @@ std::optional<NominalMatch> bestMatch(double measuredMm, std::span<const TableEn
     return match;
 }
 
+double polygonArea(const std::vector<geometry::Vec2>& pts) {
+    double a = 0.0;
+    for (std::size_t i = 0; i < pts.size(); ++i) {
+        const auto& p = pts[i];
+        const auto& q = pts[(i + 1) % pts.size()];
+        a += static_cast<double>(p.x) * q.y - static_cast<double>(q.x) * p.y;
+    }
+    return std::abs(a) / 2.0;
+}
+
+geometry::Vec2 centroid(const std::vector<geometry::Vec2>& pts) {
+    double x = 0.0, y = 0.0;
+    for (const auto& p : pts) {
+        x += p.x;
+        y += p.y;
+    }
+    const auto n = static_cast<double>(std::max<std::size_t>(1, pts.size()));
+    return {static_cast<float>(x / n), static_cast<float>(y / n)};
+}
+
+FastenerClassification unknown(std::string why) {
+    FastenerClassification r;
+    r.rationale = std::move(why);
+    return r;
+}
+
+/// Nearest size across metric and UNC tables. When the other standard has a
+/// size within the measurement uncertainty, both are named and confidence is
+/// halved: the silhouette cannot decide between them.
+std::optional<NominalMatch> crossMatch(double measuredMm, std::span<const TableEntry> metricTable,
+                                       std::span<const TableEntry> uncTable,
+                                       const std::string& basis) {
+    auto metric = bestMatch(measuredMm, metricTable, basis);
+    auto unc = bestMatch(measuredMm, uncTable, basis);
+    if (!metric && !unc) return std::nullopt;
+    if (!metric || !unc) return metric ? metric : unc;
+    const double dm = std::abs(measuredMm - metric->referenceMm);
+    const double du = std::abs(measuredMm - unc->referenceMm);
+    auto& best = dm <= du ? *metric : *unc;
+    const auto& other = dm <= du ? *unc : *metric;
+    if (std::max(dm, du) - std::min(dm, du) > kShaftUncertaintyMm) return best;
+    best.designation += " or " + other.designation;
+    best.alternative = other.designation;
+    best.confidence *= 0.5;
+    return best;
+}
+
+/// "5/16-18 UNC" -> "5/16 in", "#10-24 UNC" -> "#10": a washer fits a bolt
+/// size, not a thread.
+std::string boltSizeName(std::string_view uncDesignation) {
+    const auto dash = uncDesignation.find('-');
+    std::string size(uncDesignation.substr(0, dash));
+    return size.front() == '#' ? size : size + " in";
+}
+
+/// The bolt sizes a washer bore fits: the largest metric and the largest UNC
+/// diameter with a plausible clearance. Both are named when both fit.
+std::optional<NominalMatch> washerFit(double boreMm) {
+    const auto largestFit = [&](std::span<const TableEntry> table) -> const TableEntry* {
+        const TableEntry* fit = nullptr;
+        for (const auto& e : table) {
+            const double clearance = boreMm - e.mm;
+            if (clearance >= kMinWasherClearanceMm && clearance <= kMaxWasherClearanceMm &&
+                (!fit || e.mm > fit->mm))
+                fit = &e;
+        }
+        return fit;
+    };
+    const auto* metric = largestFit(kShaftDiametersMm);
+    const auto* unc = largestFit(kUncDiametersMm);
+    if (!metric && !unc) return std::nullopt;
+    NominalMatch match;
+    match.basis = "bore_clearance";
+    const auto* best = metric && unc ? (boreMm - metric->mm <= boreMm - unc->mm ? metric : unc)
+                                     : (metric ? metric : unc);
+    match.designation = best == unc ? boltSizeName(unc->designation) : best->designation;
+    match.referenceMm = best->mm;
+    match.fitError = (boreMm - best->mm) / best->mm;
+    match.confidence = 0.7;
+    if (metric && unc) {
+        const std::string other =
+            best == metric ? boltSizeName(unc->designation) : std::string(metric->designation);
+        match.designation += " or " + other;
+        match.alternative = other;
+        match.confidence = 0.45;
+    }
+    return match;
+}
+
 }  // namespace
+
+std::optional<WidthProfile> widthProfile(const geometry::Outline2& outline, double axisAngleRad) {
+    if (outline.empty()) return std::nullopt;
+    // Walk the outer outline densely (simplification leaves long straight
+    // edges with no vertices) in the part's own frame: t along the length
+    // axis, s across it. Width at t is the spread of s.
+    const double c = std::cos(axisAngleRad), sn = std::sin(axisAngleRad);
+    std::vector<std::pair<double, double>> ts;
+    const auto& o = outline.outer;
+    for (std::size_t i = 0; i < o.size(); ++i) {
+        const auto& p = o[i];
+        const auto& q = o[(i + 1) % o.size()];
+        const double len = std::hypot(q.x - p.x, q.y - p.y);
+        const int steps = std::max(1, static_cast<int>(std::ceil(len / 0.5)));
+        for (int k = 0; k < steps; ++k) {
+            const double f = static_cast<double>(k) / steps;
+            const double x = p.x + (q.x - p.x) * f, y = p.y + (q.y - p.y) * f;
+            ts.emplace_back(x * c + y * sn, -x * sn + y * c);
+        }
+    }
+    double tMin = ts.front().first, tMax = tMin;
+    for (const auto& pt : ts) {
+        tMin = std::min(tMin, pt.first);
+        tMax = std::max(tMax, pt.first);
+    }
+    constexpr int kBins = 24;
+    const double span = tMax - tMin;
+    if (span <= 0.0) return std::nullopt;
+    std::array<double, kBins> lo{}, hi{};
+    std::array<bool, kBins> seen{};
+    for (const auto& pt : ts) {
+        const int b = std::min(kBins - 1, static_cast<int>((pt.first - tMin) / span * kBins));
+        if (!seen[b]) {
+            lo[b] = hi[b] = pt.second;
+            seen[b] = true;
+        } else {
+            lo[b] = std::min(lo[b], pt.second);
+            hi[b] = std::max(hi[b], pt.second);
+        }
+    }
+    std::vector<double> middle;
+    double endA = 0.0, endB = 0.0;
+    for (int b = 0; b < kBins; ++b) {
+        if (!seen[b]) continue;
+        const double width = hi[b] - lo[b];
+        // The outer 3 bins (12.5%) are each end; a head is rarely shorter.
+        if (b < 3)
+            endA = std::max(endA, width);
+        else if (b >= kBins - 3)
+            endB = std::max(endB, width);
+        else if (b >= kBins / 5 && b < kBins - kBins / 5)
+            middle.push_back(width);
+    }
+    if (middle.empty()) return std::nullopt;
+    std::sort(middle.begin(), middle.end());
+    WidthProfile w;
+    w.shankPx = middle[middle.size() / 2];
+    if (w.shankPx <= 0.0) return std::nullopt;
+    w.endToShank = std::max(endA, endB) / w.shankPx;
+    return w;
+}
 
 FastenerClassification classify(const vision::ScoutAnalysis& analysis) {
     FastenerClassification result;
@@ -101,91 +299,193 @@ FastenerClassification classify(const vision::ScoutAnalysis& analysis) {
         return result;
     }
     const double aspect = lengthMm / widthMm;
+    const auto& outline = analysis.subjectOutlinePx;
+    // The outline keeps only bores of at least 4 mm²; prefer it to the raw
+    // count, which is in pixels and made before the scale was known.
+    const std::size_t holes = outline.empty() ? analysis.subject.holeCount : outline.holes.size();
 
+    // Every fastener claim needs positive evidence for that family, not just
+    // a proportion: anything else is outside this build's library and is said
+    // to be, rather than forced into the nearest class.
     if (aspect >= kMinRodAspect) {
-        result.fastenerClass = FastenerClass::BoltOrScrew;
-        result.confidence = std::min(kMaxConfidence, 0.55 + 0.08 * (aspect - kMinRodAspect));
-        // Shaft table only: the minor extent of a mostly-rod silhouette is the
-        // shank. The shaft and across-flats tables overlap (12 mm shank vs
-        // 13 mm M8 head), so mixing them makes the match ambiguous; a
-        // head-dominated outline is a documented limitation, not a guess.
-        result.nominal = bestMatch(widthMm, kShaftDiametersMm, "shaft_diameter");
-        result.rationale = "rod-like silhouette (aspect " + formatMm(aspect) +
-                           " >= " + formatMm(kMinRodAspect) + ")";
-        return result;
+        // A reflection on a polished head can survive as one small "hole";
+        // a bar or bracket has real holes covering a meaningful share of it.
+        double holeArea = 0.0;
+        for (const auto& h : outline.holes)
+            holeArea += polygonArea(h);
+        const double outerArea = outline.empty() ? 0.0 : polygonArea(outline.outer);
+        const double holeShare = outerArea > 0.0 ? holeArea / outerArea : (holes > 0 ? 1.0 : 0.0);
+        if (holes > 2 || holeShare >= kMaxRodHoleShare)
+            return unknown("rod-like (aspect " + formatMm(aspect) + ") but with " +
+                           std::to_string(holes) + " hole(s) covering " +
+                           formatMm(100.0 * holeShare) + "% of it; not a bolt or screw");
+        const auto profile = widthProfile(outline, analysis.subject.majorAxisAngleRad);
+        if (!profile) return unknown("rod-like but no outline to check for a head");
+        if (profile->endToShank < kMinHeadToShank)
+            return unknown("rod-like (aspect " + formatMm(aspect) + ") with no head (end/shank " +
+                           formatMm(profile->endToShank) +
+                           "); could be a pin, rod or pen - not claimed as a screw");
+        FastenerClassification bolt;
+        bolt.fastenerClass = FastenerClass::BoltOrScrew;
+        bolt.confidence = std::min(kMaxConfidence, 0.55 + 0.08 * (aspect - kMinRodAspect));
+        bolt.shankWidthMm = profile->shankPx * analysis.mmPerPixel;
+        bolt.endToShank = profile->endToShank;
+        // The shank, not the overall width: the overall width of a part with
+        // a head is the head, which would read one or two sizes too big.
+        bolt.nominal =
+            crossMatch(*bolt.shankWidthMm, kShaftDiametersMm, kUncDiametersMm, "shaft_diameter");
+        bolt.rationale = "rod-like silhouette (aspect " + formatMm(aspect) +
+                         ") with a head (end/shank " + formatMm(profile->endToShank) + ")";
+        return bolt;
     }
 
-    if (aspect <= kMaxCompactAspect && analysis.subject.holeCount >= 1) {
-        result.fastenerClass = FastenerClass::NutOrWasher;
-        result.confidence = aspect <= 1.2 ? 0.75 : 0.6;
-        result.nominal = bestMatch(widthMm, kHexAcrossFlatsMm, "hex_across_flats");
-        result.rationale = "compact silhouette (aspect " + formatMm(aspect) + ") with " +
-                           std::to_string(analysis.subject.holeCount) + " bore(s)";
-        return result;
+    if (aspect <= kMaxCompactAspect) {
+        if (holes != 1)
+            return unknown(holes == 0 ? "compact silhouette without a bore; not a nut or washer"
+                                      : "compact with " + std::to_string(holes) +
+                                            " holes; a nut or washer has exactly one");
+        if (outline.empty() || outline.holes.size() != 1)
+            return unknown("compact with a bore, but no outline to check its shape");
+        const double ellipse =
+            3.14159265358979 / 4.0 * analysis.subject.lengthPx * analysis.subject.widthPx;
+        const double fill = polygonArea(outline.outer) / ellipse;
+        if (fill > kMaxRoundFill)
+            return unknown("compact with a bore but a squared-off outline (fill " + formatMm(fill) +
+                           "); nuts and washers are round or hexagonal");
+        const auto co = centroid(outline.outer);
+        const auto ch = centroid(outline.holes.front());
+        const double offset = std::hypot(co.x - ch.x, co.y - ch.y) / analysis.subject.widthPx;
+        if (offset > kMaxBoreOffset)
+            return unknown("compact with an off-centre hole (offset " + formatMm(offset) +
+                           " of width); not a nut or washer");
+        // Round or hexagonal is visible from above; only thickness is not.
+        FastenerClassification part;
+        part.confidence = aspect <= 1.2 ? 0.75 : 0.6;
+        if (!analysis.holeDiametersMm.empty()) part.boreMm = analysis.holeDiametersMm.front();
+        const double six = analysis.outlineSixFold;
+        const std::string shape = " (six-fold " + formatMm(100.0 * six) + "%) with a centred bore";
+        if (six >= kMinHexSixFold) {
+            part.fastenerClass = FastenerClass::Nut;
+            part.nominal =
+                crossMatch(widthMm, kHexAcrossFlatsMm, kUncHexAcrossFlatsMm, "hex_across_flats");
+            part.rationale = "hexagonal outline" + shape;
+        } else if (six <= kMaxRoundSixFold) {
+            part.fastenerClass = FastenerClass::Washer;
+            // A washer's size is the bolt it fits: its bore, not its outside.
+            if (part.boreMm) part.nominal = washerFit(*part.boreMm);
+            part.rationale = "round outline" + shape;
+        } else {
+            part.fastenerClass = FastenerClass::NutOrWasher;
+            part.confidence = std::min(part.confidence, 0.5);
+            part.rationale = "outline between round and hexagonal" + shape;
+        }
+        return part;
     }
 
-    result.rationale = aspect <= kMaxCompactAspect
-                           ? "compact silhouette without a bore; not a recognizable fastener family"
-                           : "aspect " + formatMm(aspect) + " between compact and rod-like gates";
-    return result;
+    return unknown("aspect " + formatMm(aspect) +
+                   " is neither rod-like nor compact; outside the fastener library");
 }
 
 void appendClassification(observation::EngineeringObservation& record,
                           const FastenerClassification& classification) {
     const std::string method(kMethod);
+    const auto cls = classification.fastenerClass;
+    const auto unresolved = [&](std::string name, std::string reason) {
+        record.unresolved.push_back({std::move(name), std::move(reason)});
+    };
+    const auto recommend = [&](std::string action, std::vector<std::string> resolves) {
+        record.recommendedNextObservations.push_back({std::move(action), std::move(resolves)});
+    };
 
-    // The analyzer parked these as "not attempted"; classification has now
-    // been attempted, so they are restated below with what actually remains.
-    std::erase_if(record.unresolved, [](const observation::Unresolved& item) {
-        return item.name == "fastener_class" || item.name == "nominal_size";
-    });
-
-    if (classification.fastenerClass == FastenerClass::Unknown) {
-        record.unresolved.push_back({"fastener_class", classification.rationale});
-        record.unresolved.push_back(
-            {"nominal_size", "no fastener class; nominal matching not applicable"});
+    // Perception reports geometry only; every open question below belongs to
+    // the family hypothesis that raises it (docs/architecture/AI_PIPELINE.md).
+    if (cls == FastenerClass::Unknown) {
+        unresolved("object_class", "not a recognized fastener: " + classification.rationale);
+        unresolved("thickness", "out-of-plane size is not visible in a top-down view");
         return;
     }
 
-    record.inferred.push_back(
-        observation::Claim{"fc-class",
-                           "fastener_class",
-                           std::string(to_string(classification.fastenerClass)),
-                           std::nullopt,
-                           classification.confidence,
-                           {"sa-subj-length-mm", "sa-subj-width-mm", "sa-subj-holes"},
-                           method + "; " + classification.rationale});
+    record.inferred.push_back(observation::Claim{
+        "fc-class",
+        "fastener_class",
+        std::string(to_string(cls)),
+        std::nullopt,
+        classification.confidence,
+        {"sa-subj-length-mm", "sa-subj-width-mm", "sa-subj-holes", "sa-six-fold"},
+        method + "; " + classification.rationale});
+
+    if (classification.shankWidthMm) {
+        record.derived.push_back(observation::Claim{
+            "fc-shank-mm",
+            "shank_width",
+            *classification.shankWidthMm,
+            "mm",
+            std::nullopt,
+            {"sa-mm-per-px", "sa-subj-axis-rad"},
+            method + "; median outline width over the middle 60% of the length axis"});
+    }
 
     if (classification.nominal) {
         const auto& nominal = *classification.nominal;
-        char detail[128];
-        std::snprintf(detail, sizeof(detail),
-                      "; nearest %s table entry %.2f mm, relative error %.3f",
+        char detail[160];
+        std::snprintf(detail, sizeof(detail), "; %s, table entry %.2f mm, relative error %.3f",
                       nominal.basis.c_str(), nominal.referenceMm, nominal.fitError);
+        const std::string evidence = classification.shankWidthMm         ? "fc-shank-mm"
+                                     : nominal.basis == "bore_clearance" ? "sa-hole-1-dia-mm"
+                                                                         : "sa-subj-width-mm";
         record.inferred.push_back(observation::Claim{"fc-nominal",
                                                      "nominal_size",
                                                      nominal.designation,
                                                      std::nullopt,
                                                      nominal.confidence,
-                                                     {"fc-class", "sa-subj-width-mm"},
+                                                     {"fc-class", evidence},
                                                      method + detail});
+    } else if (cls == FastenerClass::NutOrWasher) {
+        unresolved("nominal_size", "depends on nut vs washer (across flats vs bore)");
     } else {
-        record.unresolved.push_back(
-            {"nominal_size", "no standard metric size within tolerance of the measured width"});
+        unresolved("nominal_size", cls == FastenerClass::Washer
+                                       ? "no bolt size fits the bore within washer clearance"
+                                       : "no standard size within tolerance of the measurement");
     }
 
-    if (classification.fastenerClass == FastenerClass::BoltOrScrew) {
-        record.unresolved.push_back(
-            {"bolt_vs_screw", "head style is not visible in a top-down silhouette"});
-        record.recommendedNextObservations.push_back(
-            {"capture the head from the side to distinguish bolt from screw and read the drive",
-             {"bolt_vs_screw"}});
-    } else {
-        record.unresolved.push_back(
-            {"nut_vs_washer", "thickness is not visible in a top-down silhouette"});
-        record.recommendedNextObservations.push_back(
-            {"capture a side profile to measure thickness and separate nut from washer",
-             {"nut_vs_washer"}});
+    const std::string ambiguity =
+        classification.nominal && !classification.nominal->alternative.empty()
+            ? "metric or UNC: " + classification.nominal->designation +
+                  " are within the silhouette's uncertainty; the thread pitch decides. "
+            : "";
+    switch (cls) {
+        case FastenerClass::BoltOrScrew:
+            unresolved("thread_pitch",
+                       ambiguity +
+                           "Not measured by this build (the thread edge is visible in "
+                           "sharp frames of a part lying flat)");
+            unresolved("bolt_vs_screw", "head style is not visible in a top-down silhouette");
+            recommend(
+                "capture the head from the side to distinguish bolt from screw and read the "
+                "drive",
+                {"bolt_vs_screw"});
+            break;
+        case FastenerClass::Nut:
+            unresolved("thickness", "nut height is not visible in a top-down view");
+            unresolved("thread_pitch",
+                       ambiguity + "the internal thread is not visible; check the mating bolt");
+            recommend("capture a side profile to measure the nut's height", {"thickness"});
+            break;
+        case FastenerClass::Washer:
+            unresolved("thickness", "washer thickness is not visible in a top-down view");
+            recommend("capture a side profile to measure the washer's thickness", {"thickness"});
+            break;
+        case FastenerClass::NutOrWasher:
+            unresolved("nut_vs_washer",
+                       "outline is between round and hexagonal: " + classification.rationale);
+            unresolved("thickness", "thickness is not visible in a top-down view");
+            recommend(
+                "recapture closer and in focus so the outline reads as round or hex; a side "
+                "profile also gives thickness",
+                {"nut_vs_washer", "thickness"});
+            break;
+        case FastenerClass::Unknown:
+            break;
     }
 }
 

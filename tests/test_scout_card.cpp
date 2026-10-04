@@ -47,7 +47,7 @@ std::size_t countColor(const std::vector<std::byte>& frame, renderer::Color colo
 observation::EngineeringObservation boltRecord() {
     hal::testing::SyntheticScene scene;
     scene.addSquare(50, 50, 40);
-    scene.addRect(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0);
+    scene.addBolt(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0, 36.0, 16.0);
 
     const vision::CalibrationSpec spec{20.0};
     const auto analyzed = vision::analyzeFrame(scene.frame(), spec);

@@ -4,6 +4,7 @@
 //   ui_preview --scout-card RECORD.json OUT.ppm
 //   ui_preview --scout-card-demo OUT.ppm
 //   ui_preview --kiosk-session-demo OUTDIR
+//   ui_preview --analyze-yuyv SOURCE.yuyv   (re-run a board capture on the host)
 //
 // Draws through the real Renderer into an in-memory display and writes the
 // frame as a P6 PPM. A bring-up tool (like engineering_scout_capture): UI
@@ -21,6 +22,7 @@
 #include <platypus/renderer/Renderer.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
 
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -170,7 +172,7 @@ int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
         scene.addHexagon(400.0, 280.0, 20.0, 15.0 * 3.14159265358979 / 180.0);
         scene.addBore(400.0, 280.0, 5.0);
     } else {
-        scene.addRect(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0);
+        scene.addBolt(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0, 36.0, 16.0);
     }
 
     const vision::CalibrationSpec spec{20.0};
@@ -257,6 +259,15 @@ int renderKioskSessionDemo(const std::string& outDir) {
         return true;
     };
 
+    // Before any camera exists: what the kiosk shows while it waits for one.
+    {
+        kiosk::PanelState waiting;
+        waiting.status = "No camera found. Scout starts as soon as one is plugged in.";
+        waiting.statusColour = kiosk::kWarn;
+        waiting.noCamera = true;
+        kiosk::drawPreviewScreen(r, layout, {}, 640, 480, waiting);
+        if (!snap("no-camera")) return 1;
+    }
     bool ok = preview("new-session");
     ok = ok && capture(0, "card") && preview("after-1");
     ok = ok && capture(-1, "") && preview("refused-no-part");  // part removed
@@ -275,6 +286,37 @@ int renderKioskSessionDemo(const std::string& outDir) {
     return 0;
 }
 
+/// Re-analyze a frame the board saved (640x480 YUYV source.yuyv) with this
+/// build's analyzer + classifier and print the record: lets a change be
+/// checked against real bench captures without the board.
+int analyzeYuyv(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    auto bytes = std::make_shared<std::vector<std::byte>>(640u * 480u * 2u);
+    if (!in.read(reinterpret_cast<char*>(bytes->data()),
+                 static_cast<std::streamsize>(bytes->size()))) {
+        std::fprintf(stderr, "error: %s is not a 640x480 YUYV frame\n", path.c_str());
+        return 1;
+    }
+    const hal::Frame frame({640, 480, hal::PixelFormat::YUYV, 30.0f}, bytes,
+                           std::chrono::steady_clock::time_point{});
+    const vision::CalibrationSpec spec{20.0};
+    const auto analyzed = vision::analyzeFrame(frame, spec);
+    if (!analyzed.ok()) {
+        const auto why = vision::to_string(analyzed.error);
+        std::printf("refused: %.*s\n", static_cast<int>(why.size()), why.data());
+        return 0;
+    }
+    observation::EngineeringObservation record;
+    record.observationId = "reanalysis";
+    record.timestampUtc = "1970-01-01T00:00:00Z";
+    record.source = {{"app", "ui_preview"}};
+    record.artifacts.push_back({"source-image", "image/x-yuyv", path});
+    vision::appendEvidence(record, *analyzed.analysis, spec, "source-image");
+    ai::appendClassification(record, ai::classify(*analyzed.analysis));
+    std::printf("%s\n", observation::toJson(record).c_str());
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -285,10 +327,12 @@ int main(int argc, char** argv) {
         return renderScoutCardDemo(args[1], args.size() == 3 ? args[2] : "bolt");
     if (args.size() == 2 && args[0] == "--kiosk-session-demo")
         return renderKioskSessionDemo(args[1]);
+    if (args.size() == 2 && args[0] == "--analyze-yuyv") return analyzeYuyv(args[1]);
     std::fprintf(stderr,
                  "usage: ui_preview --font-specimen OUT.ppm\n"
                  "       ui_preview --scout-card RECORD.json OUT.ppm\n"
                  "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n"
-                 "       ui_preview --kiosk-session-demo OUTDIR\n");
+                 "       ui_preview --kiosk-session-demo OUTDIR\n"
+                 "       ui_preview --analyze-yuyv SOURCE.yuyv\n");
     return 2;
 }

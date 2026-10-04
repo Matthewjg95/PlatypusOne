@@ -112,6 +112,19 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
     r.clear(kBackground);
     if (!rgb.empty()) r.drawImage(l.preview, rgb, camW, camH, 3);
     r.drawRect(l.preview, kMuted);
+    if (rgb.empty() && panel.noCamera) {
+        // Say it where the operator is looking: in the empty preview.
+        const std::int32_t big = l.textScale + 1;
+        const std::string line1 = "CAMERA NOT CONNECTED";
+        const std::string line2 = "Plug the USB webcam into the hub";
+        const std::int32_t h1 = renderer::Renderer::textHeight(big);
+        const std::int32_t cy = l.preview.y + l.preview.h / 2 - h1;
+        r.drawText(l.preview.x + (l.preview.w - renderer::Renderer::textWidth(line1, big)) / 2, cy,
+                   line1, kWarn, big);
+        r.drawText(
+            l.preview.x + (l.preview.w - renderer::Renderer::textWidth(line2, l.textScale)) / 2,
+            cy + h1 + 6 * l.textScale, line2, kText, l.textScale);
+    }
     r.fillRect(l.panel, kPanel);
 
     const std::int32_t s = l.textScale;
@@ -158,7 +171,8 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
         section(panel.status, panel.statusColour, s);
     }
 
-    drawButton(r, l.capture, panel.busy ? "WAIT" : "CAPTURE", panel.busy ? kMuted : kAccent,
+    const char* captureLabel = panel.noCamera ? "NO CAMERA" : panel.busy ? "WAIT" : "CAPTURE";
+    drawButton(r, l.capture, captureLabel, panel.noCamera || panel.busy ? kMuted : kAccent,
                kBackground, s + 1);
     const bool anyMeasured = panel.guidance && panel.guidance->measured > 0;
     const bool satisfied = panel.guidance && panel.guidance->modelSatisfied;
@@ -328,6 +342,14 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
     if (out.measured) {
         out.status = "saved " + out.record->observationId;
         out.statusColour = kGood;
+        if (out.analysis && out.analysis->cameraTiltDeg >= vision::kTiltWarningDeg) {
+            // Hand-held reality: say so before anyone trusts the number.
+            char tilt[64];
+            std::snprintf(tilt, sizeof(tilt), "; tilted ~%.0f deg: aim straight down",
+                          out.analysis->cameraTiltDeg);
+            out.status += tilt;
+            out.statusColour = kWarn;
+        }
     } else {
         // The capture-only record is still written — honest evidence that the
         // attempt happened. The operator is told what to change through the
@@ -371,7 +393,9 @@ void SceneCamera::setPose(int pose) {
     scene_.addSquare(80, 80, static_cast<std::int32_t>(20.0 * pxPerMm));
     if (pose < 0) return;  // part removed: exercises the refused-scene path
     const auto& p = poses[static_cast<std::size_t>(pose) % std::size(poses)];
-    scene_.addRect(p.cx, p.cy, 40.0 * pxPerMm, 8.0 * pxPerMm, p.degrees * kPi / 180.0);
+    // An M8 x 40 bolt: 8 mm shank, 13 mm across-flats head ~5 mm tall.
+    scene_.addBolt(p.cx, p.cy, 40.0 * pxPerMm, 8.0 * pxPerMm, p.degrees * kPi / 180.0,
+                   13.0 * pxPerMm, 5.2 * pxPerMm);
 }
 
 hal::Status SceneCamera::open(const hal::CameraMode&) {

@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
+#include <vector>
 
 namespace platypus::vision {
 
@@ -60,10 +61,24 @@ struct ScoutAnalysis {
     double mmPerPixel = 0.0;  ///< referenceSideMm / sqrt(reference.areaPx)
     double subjectLengthMm = 0.0;
     double subjectWidthMm = 0.0;
+    /// Camera tilt against the table, read from how the square is squashed:
+    /// the ratio of the singular values of its two edge vectors (independent
+    /// of how the card is rotated). A lower bound: tilts under ~10 deg are
+    /// within corner noise at bench scale.
+    double cameraTiltDeg = 0.0;
+    /// Largest opposite-side length ratio minus one: perspective keystone.
+    double referenceKeystone = 0.0;
     /// The subject's silhouette in pixel coordinates: outer boundary plus
     /// bores, glints filtered out. Scale by mmPerPixel for millimetres; this
     /// is what leaves PlatypusOne as a CAD sketch (services/export).
     geometry::Outline2 subjectOutlinePx;
+    /// Equal-area diameters of the outline's holes (those kept: >= 4 mm^2),
+    /// in outline order. Geometry only; whether a hole is a bore is inference.
+    std::vector<double> holeDiametersMm;
+    /// Six-fold harmonic of the outer outline's radius about its centroid,
+    /// sampled along the perimeter, as a fraction of the mean radius: ~0 for a
+    /// circle (or a square), 0.060 for a regular hexagon.
+    double outlineSixFold = 0.0;
 };
 
 enum class AnalyzeError : std::uint8_t {
@@ -76,6 +91,10 @@ enum class AnalyzeError : std::uint8_t {
 };
 
 [[nodiscard]] std::string_view to_string(AnalyzeError error) noexcept;
+
+/// Tilt at or above which the operator is warned: sizes read high because the
+/// square and the part are no longer at the same scale.
+inline constexpr double kTiltWarningDeg = 12.0;
 
 /// DecodeOutcome-style result: vision failures are scene conditions the UI
 /// must explain to the operator, not HAL faults, so they carry their own enum.
@@ -93,8 +112,10 @@ struct AnalyzeOutcome {
 ///   OBSERVED  — pixel-space facts (threshold, areas, extents, axis angle)
 ///   DERIVED   — mm/px scale and the subject's mm dimensions, with provenance
 ///               chains back to the observed claims and the source artifact
-///   UNRESOLVED — fastener_class / nominal_size / thread_pitch, with reasons
-/// plus one recommended next observation for the thread pitch.
+///   (no UNRESOLVED and no family-specific recommendation: perception
+///   states geometry; what remains open depends on what the part is, which
+///   is the reasoner's call — docs/architecture/AI_PIPELINE.md)
+/// plus a tilt recommendation when the camera is tilted.
 /// sourceArtifactId must be the id of the frame's artifact in the record.
 void appendEvidence(observation::EngineeringObservation& record, const ScoutAnalysis& analysis,
                     const CalibrationSpec& spec, std::string_view sourceArtifactId);

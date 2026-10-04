@@ -9,7 +9,12 @@
 [Unit]
 Description=PlatypusOne Engineering Scout kiosk (local display)
 Conflicts=display-manager.service
-After=display-manager.service uno-q-dsi-panel-recover.service
+# Not After=uno-q-dsi-panel-recover.service: that unit is ordered after
+# multi-user.target, which this unit is wanted by, so the pair forms an
+# ordering cycle and systemd silently drops the kiosk at boot. A panel that
+# is not up yet is covered by Restart= below: the kiosk exits when it cannot
+# open the display and is retried every 5 s until the recovery has run.
+After=display-manager.service
 
 [Service]
 User=@USER@

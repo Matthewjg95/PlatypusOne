@@ -49,6 +49,16 @@ class SyntheticScene {
             }
     }
 
+    /// A bolt lying flat, seen from above: a shank of `shankWidth` running the
+    /// full `length`, with a `headWidth` x `headLength` head at the -u end.
+    void addBolt(double cx, double cy, double length, double shankWidth, double angleRad,
+                 double headWidth, double headLength) {
+        addRect(cx, cy, length, shankWidth, angleRad);
+        const double offset = -length / 2.0 + headLength / 2.0;
+        addRect(cx + std::cos(angleRad) * offset, cy + std::sin(angleRad) * offset, headLength,
+                headWidth, angleRad);
+    }
+
     /// Filled regular hexagon by across-flats width, rotated angleRad
     /// (0 = flat-top).
     void addHexagon(double cx, double cy, double acrossFlats, double angleRad = 0.0) {

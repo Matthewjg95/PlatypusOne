@@ -229,9 +229,9 @@ int main(int argc, char** argv) {
                 announced = true;
             }
             PanelState waiting;
-            waiting.status = "Waiting for the webcam. Plug it into the USB-C hub.";
+            waiting.status = "No camera found. Scout starts as soon as one is plugged in.";
             waiting.statusColour = kWarn;
-            waiting.busy = true;
+            waiting.noCamera = true;
             drawPreviewScreen(r, layout, {}, camW, camH, waiting);
             (void)r.present();
             std::this_thread::sleep_for(std::chrono::seconds(1));
