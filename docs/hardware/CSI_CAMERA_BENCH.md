@@ -47,6 +47,16 @@ sudo arduino-linux-config carrier enable media-carrier camera0=none camera1=none
 If the panel does not come back, recovery is in [DSI_BRINGUP.md](DSI_BRINGUP.md)
 (the `.arduino-orig` restore and the stock-panel path).
 
+### Boot-time re-bind (installed once)
+
+The imx219 probe fails on most boots because it runs inside the panel's flaky
+CCI window (bench log below). `sudo tools/csi_bench/install_imx219_rebind.sh`
+installs `platypus-imx219-rebind.service`, which runs after
+`uno-q-dsi-panel-recover.service` (pulled in by it, not by
+`multi-user.target`, to avoid an ordering cycle) and binds any unbound IMX219,
+retrying for ~30 s. `--remove` uninstalls. Manual equivalent:
+`sudo sh -c 'for d in /sys/bus/i2c/devices/*-0010; do [ -e $d/driver ] || basename $d > /sys/bus/i2c/drivers/imx219/bind; done'`.
+
 ## Per-camera procedure
 
 `tools/csi_bench/csi_bench.sh <SKU> <probe|capture|all> "notes"` writes
