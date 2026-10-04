@@ -136,12 +136,33 @@ if [ "$TEST" != probe ]; then
     if [ -z "$SENSOR" ]; then
         say "no imx219 sensor subdev: capture skipped" >capture.txt
     else
-        # Prefer a processed stream libcamera can write directly; keep the
-        # raw Bayer stream too when available, since it is the evidence.
-        run capture.txt timeout 30 cam -c 1 --capture=5 \
-            --stream role=viewfinder,width=1640,height=1232 --file=frame-#.bin
-        run capture.txt timeout 30 cam -c 1 --capture=3 \
-            --stream role=raw --file=raw-#.bin
+        # libcamera's simple pipeline delivers ABGR8888 through its software
+        # ISP. 1280x720 fits the board's 32 MB CMA pool (1640x1232 and up fail
+        # with "dma-heap allocation failure", 2026-10-04). Let auto-exposure
+        # settle over 30 frames, keep the last three plus a viewable PPM.
+        mkdir -p settle
+        run capture.txt timeout 40 cam -c 1 --capture=30             --stream role=viewfinder,width=1280,height=720 --file=settle/frame-#.bin
+        for f in $(ls settle/frame-* 2>/dev/null | tail -3); do mv "$f" .; done
+        rm -rf settle
+        run sensor_after.txt v4l2-ctl -d "$SENSOR" -C exposure -C analogue_gain
+        last=$(ls frame-* 2>/dev/null | tail -1)
+        if [ -n "$last" ]; then
+            python3 - "$last" 1280 720 <<'PY'
+import sys
+path, w, h = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+data = open(path, "rb").read()
+stride = len(data) // h
+rgb = bytearray(w * h * 3)
+for y in range(h):
+    row = data[y * stride : y * stride + w * 4]
+    out = rgb[y * w * 3 : (y + 1) * w * 3]
+    out[0::3], out[1::3], out[2::3] = row[0::4], row[1::4], row[2::4]
+    rgb[y * w * 3 : (y + 1) * w * 3] = out
+with open("preview.ppm", "wb") as f:
+    f.write(b"P6 %d %d 255" % (w, h) + bytes([10]))
+    f.write(rgb)
+PY
+        fi
     fi
 fi
 

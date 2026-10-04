@@ -142,6 +142,26 @@ the expander and the panel: use `camera0=none camera1=type1-2lanes` for a
 single third-party IMX219 on this board, contrary to the manual's
 "single camera on CAMERA0" (written for genuine modules).
 
+**Boot-time probe race, and first frames (2026-10-04 23:12–23:18).** With
+`camera0=none camera1=type1-2lanes` the B0393 on CAMERA1 still failed at boot
+with `imx219_power_on: failed to enable regulators` (-110): the probe runs at
+~7 s, while CCI bus 0 (PCA9555 + panel ATTINY + touch) is in its flaky
+start-up window that `uno-q-dsi-panel-recover` exists for (every ATTINY write
+timing out until ~24 s), so the expander write that switches camera power
+times out and the probe is not retried. A manual re-bind after the panel
+recovered (`echo 3-0010 > /sys/bus/i2c/drivers/imx219/bind`) succeeded:
+run `B0393/20261004T231534Z-all`, sensor `/dev/v4l-subdev12`, libcamera camera
+`/base/soc@0/cci@5c1b000/i2c-bus@1/sensor@10`, pixel array 3280×2464,
+SRGGB10/SRGGB8.
+
+First frames: the simple pipeline's software ISP delivers ABGR8888 at
+**640×480 and 1280×720, ~60 fps**; 1640×1232 and larger fail with
+`dma-heap allocation failure` (CMA total 32 MB). The first-light run
+`B0393/20261004T231740Z-all` kept three 1280×720 frames: auto-exposure ran
+the analogue gain to its maximum (232) and the image is green-tinted noise —
+almost no light (lens cap or covered view, to confirm) and no colour tuning
+(`imx219.yaml` absent, libcamera falls back to `uncalibrated.yaml`).
+
 Reading before the fix: the camera bus and the carrier's camera power switching are
 configured (`cam-pwr-csi0`, `cam-pwr-csi1` on the TCA9555); the sensor never
 answers. Untested so far: CAMERA0 (Arduino's single-camera port), the
@@ -153,9 +173,9 @@ are excluded.
 
 | Criterion | B0394 low-distortion, manual focus | B0393 autofocus | B0390 compact, fixed focus |
 |---|---|---|---|
-| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; overlay fix pending) | chip ID answers on CAMERA0 after the PR #5 overlay fix + cold boot (2026-10-04); media graph pending `camera1=none` | UNRESOLVED |
+| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; overlay fix pending) | **yes on CAMERA1** after the PR #5 overlay fix + a manual re-bind past the boot-time bus window (2026-10-04) | UNRESOLVED |
 | CSI port / lanes | UNRESOLVED | UNRESOLVED | UNRESOLVED |
-| T2 working modes (format, size, fps) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
+| T2 working modes (format, size, fps) | UNRESOLVED | ABGR8888 640×480 and 1280×720 at ~60 fps; ≥1640×1232 blocked by 32 MB CMA (2026-10-04) | UNRESOLVED |
 | T3 repeat capture after reboot / power cycle | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T4 DSI + touch coexistence | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T5 envelope (measured) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
