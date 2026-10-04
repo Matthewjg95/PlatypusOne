@@ -136,7 +136,9 @@ at the top/side edge (left-hand implications in
 Matthew shared a rendered concept board (front/side/back/top/bottom views,
 exploded view, flat pattern, display options, manufacturing notes). It is
 inspiration only; it contradicts itself in places and nothing in it is
-measured or vendor-checked. The image is not archived in the repo yet.
+measured or vendor-checked.
+
+![Rev A-SM1 concept board, 2026-10-04 (inspiration, not requirements)](../media/concepts/rev-a-sm1-concept-board-2026-10-04.jpg)
 
 | Idea from the concept | Status here |
 |---|---|
