@@ -162,6 +162,26 @@ the analogue gain to its maximum (232) and the image is green-tinted noise —
 almost no light (lens cap or covered view, to confirm) and no colour tuning
 (`imx219.yaml` absent, libcamera falls back to `uncalibrated.yaml`).
 
+**Real scene and the raw path (2026-10-04 23:24–23:30).** Run
+`B0393/20261004T232424Z-all` shows recognisable structure (a ceiling, room
+lights off — `CORRECTION.txt`). libcamera's simple pipeline does not offer a
+raw stream here (a `role=raw` request returns ABGR8888), so raw Bayer was
+read directly, as Arduino's manual recommends for quality images:
+
+```sh
+media-ctl -d /dev/media0 -V '"imx219 3-0010":0[fmt:SRGGB10_1X10/1640x1232]'   # bus number varies per boot
+media-ctl -d /dev/media0 -V '"msm_csiphy1":0[fmt:SRGGB10_1X10/1640x1232]'
+media-ctl -d /dev/media0 -V '"msm_csid0":0[fmt:SRGGB10_1X10/1640x1232]'
+media-ctl -d /dev/media0 -V '"msm_vfe0_rdi0":0[fmt:SRGGB10_1X10/1640x1232]'
+v4l2-ctl -d /dev/v4l-subdev12 -c exposure=1700 -c analogue_gain=100
+v4l2-ctl -d /dev/video0 --set-fmt-video=width=1640,height=1232,pixelformat=pRAA     --stream-mmap=4 --stream-count=8 --stream-skip=4 --stream-to=raw.bin
+```
+
+`pRAA` = SRGGB10 MIPI-packed (5 bytes per 4 pixels), 2056 bytes per line,
+2 532 992 bytes per frame, black level ~64 of 1023. This path fits the CMA
+pool at 1640×1232 and is the one for measurement: fixed exposure/gain, no
+uncalibrated processing. Archived: `B0393/20261004T232839Z-raw`.
+
 Reading before the fix: the camera bus and the carrier's camera power switching are
 configured (`cam-pwr-csi0`, `cam-pwr-csi1` on the TCA9555); the sensor never
 answers. Untested so far: CAMERA0 (Arduino's single-camera port), the
