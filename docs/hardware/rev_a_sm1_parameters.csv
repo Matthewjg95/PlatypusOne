@@ -1,0 +1,43 @@
+Name,Unit,Expression,Comment
+sm_thickness,mm,1.2 mm,PROVISIONAL 5052-H32 (study 1.2 and 1.6); replace with the selected vendor's stocked gauge
+sm_bend_radius,mm,sm_thickness,PLACEHOLDER only (R = t); replace from the vendor's bend table
+sm_k_factor,,0.44,PLACEHOLDER; replace from the vendor's table for material/thickness/tooling
+sm_relief_width,mm,sm_thickness + 0.5 mm,PLACEHOLDER bend relief; vendor rule governs
+sm_min_flange,mm,4 * sm_thickness,PLACEHOLDER minimum flange length; vendor rule governs
+sm_hole_edge_min,mm,2 * sm_thickness,PLACEHOLDER hole-to-edge; vendor rule governs
+head_width,mm,80 mm,PROVISIONAL target band 75-85
+head_height,mm,135 mm,PROVISIONAL target band 125-145
+head_depth,mm,28 mm,PROVISIONAL target band 24-32 before grip
+grip_thickness,mm,40 mm,PROVISIONAL band 35-45
+grip_angle,deg,12 deg,PROVISIONAL rearward rake band 10-15
+display_choice,,2,"1 = 3.5in, 2 = 4.0in, 3 = 4.3in; drives the active envelope set below"
+disp35_outline_w,mm,0 mm,UNRESOLVED Waveshare 3.5inch DSI LCD (E) drawing not yet recorded
+disp35_outline_h,mm,0 mm,UNRESOLVED
+disp40_outline_w,mm,65.1 mm,VENDOR 4-DSI-TOUCH-A 108.30 x 65.10 (portrait: w = 65.10)
+disp40_outline_h,mm,108.3 mm,VENDOR 4-DSI-TOUCH-A
+disp40_active_w,mm,51.84 mm,VENDOR 4-DSI-TOUCH-A active area
+disp40_active_h,mm,86.4 mm,VENDOR 4-DSI-TOUCH-A active area
+disp43_outline_w,mm,68.9 mm,VENDOR 4.3-DSI-TOUCH-A 116.50 x 68.90; 4.3inch DSI LCD outline still UNRESOLVED
+disp43_outline_h,mm,116.5 mm,VENDOR 4.3-DSI-TOUCH-A
+disp43_active_w,mm,56.16 mm,VENDOR 4.3-DSI-TOUCH-A active area
+disp43_active_h,mm,93.6 mm,VENDOR 4.3-DSI-TOUCH-A active area
+disp43_module_depth,mm,14.05 mm,VENDOR 4.3inch DSI LCD overall thickness incl. driver board
+disp_edge_min,mm,8 mm,PROVISIONAL minimum sheet-metal edge around the aperture (band 8-12)
+disp_aperture_clear,mm,0.5 mm,PROVISIONAL per-side clearance active area to aperture edge
+cam_board_w,mm,25 mm,VENDOR B0394 24 x 25 mm board; MEASURE on the bench (T5)
+cam_board_h,mm,24 mm,VENDOR B0394
+cam_lens_stack,mm,0 mm,UNRESOLVED measure B0394 lens height above PCB (T5)
+cam_hfov,deg,75 deg,VENDOR B0394 horizontal FOV; keep-out cone uses this plus margin
+cam_vfov,deg,60 deg,VENDOR B0394 vertical FOV
+cam_fov_margin,deg,5 deg,PROVISIONAL extra keep-out beyond the FOV cone
+tof_pod_w,mm,0 mm,UNRESOLVED VL53L8CX pod: dimensions owned by platypus-lab evidence
+tof_pod_h,mm,0 mm,UNRESOLVED
+tof_cam_baseline,mm,0 mm,UNRESOLVED camera-to-ToF optical-centre offset; set by the datum bracket design
+unoq_w,mm,68.58 mm,VENDOR UNO form factor 68.58 x 53.34 board outline
+unoq_h,mm,53.34 mm,VENDOR
+unoq_stack_depth,mm,0 mm,UNRESOLVED measure UNO Q + Media Carrier stack height incl. connectors and FFC bends
+rf_window_margin,mm,0 mm,UNRESOLVED non-metal clearance around the UNO Q antenna; locate antenna first
+battery_w,mm,0 mm,UNRESOLVED battery not selected
+battery_h,mm,0 mm,UNRESOLVED
+battery_t,mm,0 mm,UNRESOLVED
+ffc_min_bend,mm,0 mm,UNRESOLVED minimum FFC bend radius for CSI and DSI cables (cable datasheet)
