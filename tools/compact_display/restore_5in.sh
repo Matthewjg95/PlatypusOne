@@ -55,7 +55,9 @@ if [ "$OFFLINE" = 1 ]; then
     warn "DKMS still holds the compact panel sources - rerun without --offline when online"
 else
     UP=${1:-${UPSTREAM:-}}
-    [ -n "$UP" ] && [ -f "$UP/install.sh" ] || die "usage: sudo $0 <uno_q_dsi_displays checkout>"
+    if [ -z "$UP" ] || [ ! -f "$UP/install.sh" ]; then
+        die "usage: sudo $0 <uno_q_dsi_displays checkout>"
+    fi
     step "Re-running the proven 5\" install"
     (cd "$UP" && sh ./install.sh "$PROVEN_5IN_PANEL")
 fi

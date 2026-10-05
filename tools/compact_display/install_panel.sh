@@ -67,13 +67,16 @@ need_root
 # ------------------------------------------------------------- 1 preflight --
 step "Pre-flight"
 is_uno_q || die "this does not look like an UNO Q: $(tr -d '\0' < /proc/device-tree/model 2>/dev/null)"
-[ -f "$BASE_DTB" ] && [ -f "$CARRIER_DTBO" ] || die "Media Carrier overlays missing - this image predates the carrier (DSI_BRINGUP.md blocker 2)"
+if [ ! -f "$BASE_DTB" ] || [ ! -f "$CARRIER_DTBO" ]; then
+    die "Media Carrier overlays missing - this image predates the carrier (DSI_BRINGUP.md blocker 2)"
+fi
 [ -f "$SLOT_DTBO" ] || die "5-inch slot overlay missing: $SLOT_DTBO"
 for c in python3 dtc fdtoverlay i2ctransfer arduino-linux-config git; do
     have_cmd "$c" || die "$c not found"
 done
-[ -f "$UPSTREAM/lib/common.sh" ] && [ -f "$UPSTREAM/$PROVEN_5IN_PANEL" ] \
-    || die "$UPSTREAM is not a uno_q_dsi_displays checkout (git clone $UPSTREAM_URL)"
+if [ ! -f "$UPSTREAM/lib/common.sh" ] || [ ! -f "$UPSTREAM/$PROVEN_5IN_PANEL" ]; then
+    die "$UPSTREAM is not a uno_q_dsi_displays checkout (git clone $UPSTREAM_URL)"
+fi
 GOT=$(upstream_commit "$UPSTREAM")
 if [ "$GOT" != "$UPSTREAM_COMMIT" ]; then
     [ "${ALLOW_UPSTREAM_DRIFT:-0}" = 1 ] \

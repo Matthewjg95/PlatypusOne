@@ -81,7 +81,7 @@ take_drm_master() {
         fi
     done
 }
-# shellcheck disable=SC2329  # invoked by the EXIT trap
+# shellcheck disable=SC2317,SC2329  # invoked by the EXIT trap (code differs by shellcheck version)
 restore_dm() { for dm in $DM_STOPPED; do systemctl start "$dm"; done; }
 trap restore_dm EXIT
 
