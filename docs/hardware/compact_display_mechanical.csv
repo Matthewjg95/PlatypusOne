@@ -1,0 +1,52 @@
+Name,Unit,Expression,Comment
+disp_edge_min,mm,8 mm,PROVISIONAL same name and value as PR #43 rev_a_sm1_parameters.csv (band 8-12) so this file imports on its own
+disp35h_outline_w,mm,56 mm,VENDOR 3.5inch DSI LCD (H) SKU 33087 2D drawing: PCB 56 wide (portrait); cover lens 52.56 so the PCB sets the width
+disp35h_outline_h,mm,88.87 mm,VENDOR (H) cover lens OD 88.87 tall; PCB 86.5 so the lens sets the height
+disp35h_lens_w,mm,52.56 mm,VENDOR (H) lens OD
+disp35h_active_w,mm,45.36 mm,VENDOR (H) lens VA (480 px; 0.0945 mm pitch)
+disp35h_active_h,mm,75.8 mm,VENDOR (H) lens VA (800 px)
+disp35h_active_top,mm,3.63 mm,VENDOR (H) lens top edge to VA; VA is off-centre (bottom border 9.44)
+disp35h_active_bottom,mm,9.44 mm,VENDOR (H) VA to lens bottom edge (LCD FPC side)
+disp35h_front_to_pcb,mm,6.7 mm,VENDOR (H) drawing + STEP (PCB_ASM placed at z = -6.7 from the lens front)
+disp35h_rear_standoff,mm,4 mm,VENDOR (H) 4x SMT M2.5 standoffs (SMTSO-M2_5-4ET) on the PCB rear; MEASURE total depth incl. connector
+disp35h_depth_total,mm,disp35h_front_to_pcb + disp35h_rear_standoff,INFERRED ~10.7 mm envelope; MEASURE with calipers on arrival
+disp35h_hole_dia,mm,2.5 mm,VENDOR 4-M2.5 threaded standoffs
+disp35h_hole_dx,mm,49 mm,VENDOR hole spacing across the width (Raspberry Pi pattern)
+disp35h_hole_dy,mm,58 mm,VENDOR hole spacing along the height
+disp35h_hole_side,mm,3.5 mm,DERIVED (56 - 49) / 2
+disp35h_hole_top,mm,3.5 mm,DERIVED 86.5 - 25 - 58 from the PCB top (connector end)
+disp35h_hole_bottom,mm,25 mm,VENDOR PCB bottom edge to the lower holes
+disp35h_ffc_edge,,1,"VENDOR STEP: 1MM-15PIN-FPC-CONNECTOR at PCB top end, centred across the width; 1 = top short edge. FFC leaves toward the head's sensor flange"
+disp35h_ffc_from_top,mm,5.6 mm,DERIVED from STEP: connector origin 37.65 mm from the PCB centre on a 86.5 mm board
+disp35h_ffc_width,mm,16 mm,"VENDOR-class 15-pin 1.0 mm FFC (15 mm pitch span + margins); proven 15->22 MIPI-DSI-Cable, length TBD by Fusion route"
+disp35e_outline_w,mm,77.27 mm,VENDOR 3.5inch DSI LCD (E) SKU 33086: lens OD 77.27 (landscape); PCB 77
+disp35e_outline_h,mm,65 mm,VENDOR (E) PCB 65; lens OD 63.51
+disp35e_active_w,mm,70.67 mm,VENDOR (E) VA (640 px; 0.110 mm pitch)
+disp35e_active_h,mm,53.27 mm,VENDOR (E) VA (480 px)
+disp35e_depth_total,mm,8.9 mm + 4 mm,VENDOR (E) drawing callouts 8.9 lens-to-PCB + 4 rear; MEASURE
+disp35e_hole_dx,mm,58 mm,VENDOR 4-M2.5; holes 15.6 from the left edge and 3.4 from the right
+disp35e_hole_dy,mm,49 mm,VENDOR; 12.3 from the top and 3.7 from the bottom
+disp35e_ffc_edge,,2,"INFERRED from drawing: vertical 15-pin connector on the right long edge; 2 = right edge"
+disp40_outline_w,mm,65.1 mm,VENDOR 4-DSI-TOUCH-A SKU 34354 108.30 x 65.10 (portrait w = 65.10); same values as PR #43
+disp40_outline_h,mm,108.3 mm,VENDOR
+disp40_active_w,mm,51.84 mm,VENDOR (480 px; 0.108 mm pitch)
+disp40_active_h,mm,86.4 mm,VENDOR (800 px)
+disp40_depth_total,mm,7.9 mm + 5 mm,VENDOR 7.90 body + bosses/standoffs to 5.00 behind the back cover; MEASURE
+disp40_hole_pattern,,8,"VENDOR 8x M2.5 thread: 100 x 56 outer, 58 x 49 inner"
+disp40_ffc_edge,,3,"INFERRED from drawing: connectors under a rear cut-out near one short end; 3 = rear face"
+disp43_outline_w,mm,68 mm,VENDOR 4.3inch DSI LCD (the panel on the proven 5in definition) PCB 106 x 68; portrait w = 68
+disp43_outline_h,mm,106 mm,VENDOR PCB; cover glass outline UNRESOLVED
+disp43_active_w,mm,0 mm,UNRESOLVED 4.3inch DSI LCD active area not in the vendor drawing we hold
+disp43_active_h,mm,0 mm,UNRESOLVED
+disp43_module_depth,mm,14.05 mm,VENDOR overall thickness incl. driver board (PR #43 value)
+disp43_hole_pattern,,8,"VENDOR 4 outer holes 99.3 x 61.8 + 4 inner 58 x 49"
+disp43_ffc_edge,,2,"INFERRED from photo: vertical 15-pin connector on the right edge (landscape)"
+disp28_outline_w,mm,52.9 mm,VENDOR 2.8inch DSI LCD SKU 22028 lens 71.30 x 52.90 mounted portrait; PCB 66.47 x 47.9
+disp28_outline_h,mm,71.3 mm,VENDOR
+disp28_active_w,mm,43.6 mm,VENDOR VA 58.00 x 43.60 (480 x 640 px)
+disp28_active_h,mm,58 mm,VENDOR
+disp28_hole_pattern,,4,"VENDOR 4 holes 59.47 x 40.90, 3.5 from edges"
+head_width_needed_35h,mm,disp35h_outline_w + 2 * disp_edge_min,DERIVED 72 mm with the PR #43 8 mm edge: inside the 75-85 band with 3-13 mm spare
+head_width_needed_35e,mm,disp35e_outline_w + 2 * disp_edge_min,DERIVED 93.3 mm landscape: OVER the 75-85 band (portrait mounting = 81 mm but needs software rotation)
+head_width_needed_40,mm,disp40_outline_w + 2 * disp_edge_min,DERIVED 81.1 mm portrait: inside the band
+head_width_needed_43,mm,disp43_outline_w + 2 * disp_edge_min,DERIVED 84 mm portrait (needs rotation: 800x480 is landscape-native); 122 mm landscape

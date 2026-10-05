@@ -69,7 +69,7 @@ set-point until H2 shows UNO Q + display + camera leave that headroom.
 |---|---|---|---|
 | UNO Q (Linux idle / camera pipeline / Wi-Fi burst) | 5 V USB-C | UNKNOWN | inline USB-C meter, states below |
 | UNO Media Carrier (incl. on-board level shifting) | via UNO Q | UNKNOWN | difference with/without carrier |
-| Compact display (3.5–4.3 in, not chosen) + backlight | via carrier / its own 5 V | UNKNOWN | 5 in dev panel as proxy now, re-measure on chosen panel |
+| Compact display + backlight — leading 3.5in (H): **180 mA at 3.3 V on UNO Q `PWR_3P3V` via the DSI FFC** (vendor; backlight fixed, always on) | UNO Q PWR_3P3V (no 5 V) | DOCUMENTED (vendor), UNMEASURED | 5 in dev panel as proxy now; re-measure on the (H) with kiosk + camera ([selection](../../docs/hardware/COMPACT_DISPLAY_SELECTION.md) §3) |
 | IMX219 camera module (each of B0394/B0393/B0390; B0393 VCM) | Media Carrier camera rail | UNKNOWN | difference preview vs no camera; record per SKU |
 | Perception head | 5 V + 3V3 | §2 (datasheet-based) | head shunts SH1/SH3 |
 | Battery → 5 V conversion loss | — | UNKNOWN (topology not chosen); ESTIMATED 85–93 % efficiency for a buck from 2S/3S | measure once host carrier power stage exists |

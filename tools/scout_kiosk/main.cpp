@@ -4,7 +4,7 @@
 //   classified evidence record saved -> Scout result card -> tap to go back.
 //
 //   scout_kiosk [--device /dev/videoN] [--out DIR] [--reference-mm MM]
-//               [--prefer dp|dsi] [--offscreen DIR] [--fake]
+//               [--prefer dp|dsi] [--offscreen DIR] [--offscreen-size WxH] [--fake]
 //
 // A composition root, like apps/launcher/src/main.cpp: the only file here that
 // knows concrete types. Everything it shows comes from pieces that are already
@@ -18,7 +18,8 @@
 // loop, verifiable with no panel attached. --fake swaps the webcam for the
 // validation battery's M8 bolt scene, served as YUYV exactly like the real
 // camera; its records name the camera "synthetic" so they can never pass
-// for bench evidence.
+// for bench evidence. --offscreen-size (default 800x480) renders the same loop
+// at another panel geometry, e.g. 480x800 for a portrait compact display.
 //
 // The display needs DRM master: stop the desktop first (sudo systemctl stop
 // lightdm). The camera is found by capability, never by a remembered node
@@ -129,7 +130,9 @@ std::vector<std::uint8_t> yuyvToRgb(const hal::Frame& frame) {
 // --- layout -----------------------------------------------------------------
 
 /// Laid out against the display's real geometry (ADR-0001): the 800x480 panel
-/// and a 1080p bench monitor both come out right.
+/// and a 1080p bench monitor both come out right. A portrait panel (taller than
+/// wide, e.g. a 480x800 compact display) stacks the preview above the panel;
+/// landscape geometry takes the original side-by-side path unchanged.
 struct Layout {
     Rect preview;
     Rect panel;
@@ -137,8 +140,29 @@ struct Layout {
     std::int32_t textScale = 2;
 };
 
+Layout computePortraitLayout(std::int32_t w, std::int32_t h, std::int32_t camW, std::int32_t camH) {
+    const std::int32_t margin = std::max(8, w / 18);
+    Layout l;
+    l.textScale = std::max(1, w / 240);
+    std::int32_t pw = w - 2 * margin;
+    std::int32_t ph = pw * camH / std::max(1, camW);
+    const std::int32_t maxPh = h / 2;
+    if (ph > maxPh) {
+        ph = maxPh;
+        pw = ph * camW / std::max(1, camH);
+    }
+    l.preview = {(w - pw) / 2, margin, pw, ph};
+    const std::int32_t py = margin + ph + margin;
+    l.panel = {margin, py, w - 2 * margin, h - py - margin};
+    const std::int32_t bh = std::min(h / 6, l.panel.h / 3);
+    l.button = {l.panel.x + margin / 2, l.panel.y + l.panel.h - bh - margin / 2, l.panel.w - margin,
+                bh};
+    return l;
+}
+
 Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32_t camH) {
     const std::int32_t w = info.width, h = info.height;
+    if (h > w) return computePortraitLayout(w, h, camW, camH);
     const std::int32_t margin = std::max(8, h / 30);
     Layout l;
     l.textScale = std::max(1, h / 240);
@@ -372,7 +396,8 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
 int usage() {
     std::fprintf(stderr,
                  "usage: scout_kiosk [--device /dev/videoN] [--out DIR] [--reference-mm MM]\n"
-                 "                   [--prefer dp|dsi] [--offscreen DIR] [--fake]\n");
+                 "                   [--prefer dp|dsi] [--offscreen DIR] [--offscreen-size WxH]\n"
+                 "                   [--fake]\n");
     return 2;
 }
 
@@ -382,6 +407,7 @@ int main(int argc, char** argv) {
     std::string device;
     std::string outDir = "observations";
     std::string offscreen;
+    std::uint16_t offscreenW = 800, offscreenH = 480;
     bool fake = false;
     double referenceMm = vision::CalibrationSpec{}.referenceSideMm;
     drm::DrmDisplayConfig displayConfig;
@@ -395,7 +421,14 @@ int main(int argc, char** argv) {
             outDir = next();
         else if (arg == "--offscreen")
             offscreen = next();
-        else if (arg == "--fake")
+        else if (arg == "--offscreen-size") {
+            unsigned w = 0, h = 0;
+            if (std::sscanf(next().c_str(), "%ux%u", &w, &h) != 2 || w < 64 || h < 64 || w > 4096 ||
+                h > 4096)
+                return usage();
+            offscreenW = static_cast<std::uint16_t>(w);
+            offscreenH = static_cast<std::uint16_t>(h);
+        } else if (arg == "--fake")
             fake = true;
         else if (arg == "--reference-mm")
             referenceMm = std::atof(next().c_str());
@@ -421,9 +454,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<SnapshotDisplay> snapshot;
     std::shared_ptr<drm::DrmDisplay> drmDisplay;
     if (!offscreen.empty()) {
-        snapshot = std::make_shared<SnapshotDisplay>(hal::DisplayInfo{800, 480, 16});
+        snapshot = std::make_shared<SnapshotDisplay>(hal::DisplayInfo{offscreenW, offscreenH, 16});
         display = snapshot;
-        std::printf("display: offscreen 800x480 -> %s\n", offscreen.c_str());
+        std::printf("display: offscreen %ux%u -> %s\n", offscreenW, offscreenH, offscreen.c_str());
     } else {
         drmDisplay = std::make_shared<drm::DrmDisplay>(displayConfig);
         if (const auto s = drmDisplay->open(); !s) {
