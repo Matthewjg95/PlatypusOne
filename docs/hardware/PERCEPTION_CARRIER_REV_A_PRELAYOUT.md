@@ -2,6 +2,10 @@
 
 **Status:** pre-layout work may proceed; fabrication/layout remains gated by physical evidence.
 
+**Progress (2026-10-05):** Perception Head Rev A pre-layout schematic (KiCad 9, ERC clean)
+and its ICD/power/bring-up documents: [`hardware/pcb/`](../../hardware/pcb/README.md).
+Host carrier (B) architecture: [`hardware/pcb/HOST_CARRIER_ARCHITECTURE.md`](../../hardware/pcb/HOST_CARRIER_ARCHITECTURE.md).
+
 ## Decision
 
 Do **not** turn every Platypus One interface into one large PCB yet.

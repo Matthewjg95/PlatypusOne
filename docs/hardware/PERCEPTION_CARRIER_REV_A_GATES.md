@@ -1,5 +1,10 @@
 # Rev A perception carrier — entry gates
 
+> **Electrical design work (2026-10-05):** the Perception Head Rev A schematic,
+> research ledger, decision register, ICD, power tree and bring-up plan live in
+> [`hardware/pcb/`](../../hardware/pcb/README.md). This file remains the gate
+> definition; `hardware/pcb/README.md` tracks which gates are released.
+
 Status: planning gate, 2026-09-30. This document prevents schematic/layout work from outrunning verified interfaces.
 
 The custom carrier is the primary Platypus One path. Integrated commercial RGB-D modules are reference/fallback architectures, not the default.
@@ -128,7 +133,7 @@ Sources for this section are manufacturer documentation; bench proof is still re
 |---|---|---|---|---|
 | RGB camera | Media Carrier MIPI-CSI preferred; USB UVC remains known-good fallback | UNO Media Carrier provides two 22-pin, 4-lane MIPI-CSI connectors and explicitly lists IMX219 compatibility. UNO Q native camera path is four-lane MIPI-CSI-2 at 1.8 V I/O. | Prototype the supported IMX219-class CSI path before selecting a custom camera sensor. Keep UVC available until CSI capture is physically proven. | INTERFACE VERIFIED; SENSOR TBD |
 | Display | Existing Media Carrier DSI path | Media Carrier provides 22-pin 4-lane MIPI-DSI. Physical 800×480 Waveshare panel path is documented separately in DSI_BRINGUP.md. | Carrier Rev A must coexist with Media Carrier rather than consume its display path. | PROVEN/STAGED |
-| MCU sensor bus | MCU I2C4 / Qwiic candidate | UNO Q Qwiic is I2C4 / Wire1 and 3.3 V only. Media Carrier preserves host signals and exposes MCU I2C4. | Use this bus for 3.3-V-compatible sensor interfaces; do not connect low-voltage bare-die I/O without translation. | VERIFIED |
+| MCU sensor bus | MCU I2C4 / Qwiic candidate | UNO Q Qwiic is I2C4 (PD12/PD13) and 3.3 V only. Media Carrier preserves host signals and exposes MCU I2C4 on JMISC — but on a **different pin pair (PF14/PF15)** of the same peripheral, so it is not a second bus (2026-10-05 correction, see `hardware/pcb/RESEARCH_LEDGER.md`). | Use this bus for 3.3-V-compatible sensor interfaces; do not connect low-voltage bare-die I/O without translation. | VERIFIED |
 | MCU control | MCU GPIO/PWM | Media Carrier exposes MCU GPIO at 3.3 V; UNO Q has additional STM32-controlled digital pins. | Prefer MCU control for illumination enable/PWM and deterministic sensor reset/interrupt handling. | VERIFIED; PIN ASSIGNMENT TBD |
 | SoC GPIO | Linux-side control where required | Media Carrier exposes SoC GPIO at 1.8 V. | Never assume 3.3-V tolerance; use only where Linux ownership is necessary and level-match explicitly. | VERIFIED |
 | ToF | VL53L8CX primary | 8×8 / 64-zone, up to 4 m, I2C up to 1 MHz or SPI up to 3 MHz, 3.3 V AVDD + 1.8 V core, IOVDD 1.2/1.8 V; GPIO1 interrupt and LPn control; ST publishes C API and Linux driver. | Bare IC requires low-voltage rail(s) and level compatibility. Rev A must either include regulation/translation or deliberately use a module that already solves them. Reserve INT + LPn. | PART DIRECTION STRONG; ELECTRICAL IMPLEMENTATION OPEN |

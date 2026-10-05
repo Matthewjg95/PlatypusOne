@@ -38,6 +38,9 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 
 ## Sensing (alternates kept — analysis pending)
 
+> Perception Head Rev A part selections with rationale (ToF carrier, IMU, illumination driver, ID EEPROM):
+> [`hardware/pcb/BOM_PERCEPTION_HEAD_REV_A.md`](../../hardware/pcb/BOM_PERCEPTION_HEAD_REV_A.md).
+
 | # | Item | Qty | Est. | Envelope (mm) | Source | Notes | ACQ |
 |---|---|---|---|---|---|---|---|
 | 7a | Camera: USB UVC OV5640-class autofocus ✦ | 1 | $25 | 25×25×10 | Amazon | Simplest Linux path (V4L2) | PLANNED |

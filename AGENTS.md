@@ -11,7 +11,7 @@ Before changing PlatypusOne:
    to bench evidence, or tune a measurement algorithm without preserved evidence.
 7. Current post-Dream-Lab work:
    - issue #32 — stabilization/evidence baseline;
-   - issue #33 — Rev A perception carrier gate;
+   - issue #33 — Rev A perception carrier gate (PCB status: `hardware/pcb/README.md`);
    - issue #37 — Sketch Intent Resolver.
 8. The canonical Tab5/M024/Pololu VL53L8CX experiment now lives in
    `Matthewjg95/platypus-lab`, issue #3. Platypus Lab owns its raw evidence;

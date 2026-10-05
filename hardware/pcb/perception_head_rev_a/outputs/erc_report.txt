@@ -1,0 +1,20 @@
+ERC report (2026-10-05, KiCad 9.0.9, --severity-all)
+Report includes: Errors, Warnings, Exclusions
+
+***** Sheet /
+
+***** Sheet /HOST_INTERFACE/
+
+***** Sheet /POWER/
+
+***** Sheet /TOF/
+
+***** Sheet /IMU/
+
+***** Sheet /ILLUMINATION/
+
+***** Sheet /ID_CALIBRATION/
+
+***** Sheet /DEBUG_TEST/
+
+ ** ERC messages: 0  Errors 0  Warnings 0
