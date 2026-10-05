@@ -50,10 +50,10 @@ thermocouple or IR thermometer.
 | B4 | EEPROM: read serial, attempt write with WP high (must fail), WP low (P4) write/readback record | serial non-zero/stable; write blocked/allowed as expected | — |
 | B5 | IMU: chip ID, 8 kB config upload, data-ready on IMU_INT1 (TP21) | INT pulses at set ODR; gravity ≈1 g | — |
 | B6 | Add **+5V** via J1, 200 mA limit, ToF still off | TP2 ≈5 V; +5V_HEAD current <1 mA; TP3 ≈0 | — |
-| B7 | Enable ToF rail (P0) **without** carrier | TP6 = 3.43 V ±2 %; rise monotonic | out of range → check R5/R6 |
+| B7 | Enable ToF rail (P0) **without** carrier | TP6 = 3.29 V ±2 % (3.23–3.36 V); rise monotonic | out of range → check R5/R6 |
 | B8 | Fit Pololu carrier (unpowered), enable rail | TP8 AVDD ≥3.13 V, TP9 1.8 V; ACK 0x29 on bus B | AVDD low → T2 |
 | B9 | ULD init + ranging 4×4 @10 Hz then 8×8 @15 Hz, 30 min | SH2 voltage → ToF current (record); AVDD under load; INT on TP17; frames valid | resets, AVDD <3.13 V |
-| B10 | Scope I2C_B at the real harness length, 400 kHz and 1 MHz; repeat with C18/C19 fitted | clean edges, no ringing/oscillation | oscillation → T4 mitigation |
+| B10 | Scope I2C_B, TOF_INT_N and TOF_SYNC (open-drain) at the real harness length, 400 kHz and 1 MHz, with host 3V3 at its actual value; repeat with C18/C19 fitted | clean edges; I2C_B low ≤0.15 V at the carrier; high ≥ VCC(B) − 0.4 V; levels match ICD §5a | oscillation → T4 mitigation |
 | B11 | ToF reset: P0 low 10 ms → TP6 <0.3 V → re-enable → re-init | recovers every time (20 cycles); bus A unaffected | back-feed holds rail up → T5 |
 | B12 | Illumination with dummy LED on J3, JP1 open: ILLUM_EN high, ILLUM_SET 0 → 3.3 V in steps | TP27 (mV) = mA, linear to ~254 mA; no ringing on TP27 (else fit C15) | runaway / oscillation |
 | B13 | Thermal at full scale, 5 min continuous | Q1/Q2 rise recorded; LED temp recorded | >80 °C case → duty limit |

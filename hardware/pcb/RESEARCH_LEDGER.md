@@ -29,6 +29,8 @@ Nothing here is a bench measurement.
 | S17 | ST AN5939 "Guidelines for the cover glass of the VL53L8 ToF multizone sensor family" | Rev 1, May 2023 | Wayback Machine capture 2023-10-16 of st.com |
 | S18 | ST VL53L8CX ULD API header (`vl53l8cx_api.h`, API 1.3.0) | stm32duino/VL53L8CX on GitHub | raw.githubusercontent.com |
 | S19 | JLCPCB parts-library stock snapshot | 2026-10-05 | jlcpcb.com parts API (one distributor; see BOM) |
+| S20 | ST STM32U585xx datasheet DS13086 | Rev 2, Sep 2021 | Wayback capture 2021-11-08 of st.com |
+| S21 | Nexperia NXS0108 datasheet | Rev 1.1, 31 Jul 2024 | assets.nexperia.com |
 
 Status probes on TI product pages (2026-10-05): TPS2553, TLV755P/TLV758P,
 TCA9534, TLV9062 all **ACTIVE**. BMI270 is Bosch's current IMU; BNO055 is
@@ -119,7 +121,7 @@ plane per AN5897; cover window per S4 §2.2 exclusion zone; all three rails
 switched together for reset. Gate: Rev A shows ToF earns its place and the
 carrier's size/pose is the limiting factor.
 
-### Why the ToF gets a dedicated bus and a switchable 3.43 V rail (DERIVED)
+### Why the ToF gets a dedicated bus and a switchable 3.3 V rail (DERIVED)
 
 - Reset requires a supply cycle (S5 §4.2) → the head must be able to remove
   ToF power without touching IMU/EEPROM.
@@ -129,11 +131,27 @@ carrier's size/pose is the limiting factor.
 - TLV758P (S9): 0.55 V reference ±1 %, 500 mA, ISC 350 mA, **active output
   discharge** (clean 0 V during the 10 ms reset), EN active-high, SOT-23-5
   (IN 1, GND 2, EN 3, FB 4, OUT 5), RθJA 176.9 °C/W (DBV).
-- 3.43 V (R5 52.3 k / R6 10 k) keeps carrier AVDD headroom while I/O stays
-  below STM32 VDD + 0.3 V. Host bus-B pull-ups (3.3 V) and the shifter's
-  pull-ups (3.43 V) differ by ~0.13 V → µA-level cross-current, acceptable.
-  **BENCH_VERIFY** AVDD ≥3.13 V during 8×8 ranging and rail "off" voltage
-  with bus B idling high (back-feed).
+- **3.29 V nominal (R5 49.9 k / R6 10 k)** keeps the carrier's host-side I/O
+  (which follows VIN) inside the host 3.3 V logic domain. An earlier draft used
+  3.43 V for AVDD headroom. Review on #44 correctly flagged the mixed domain;
+  the NXS0108 B-port VIH = VCC(B) − 0.4 V makes a 3.3 V push-pull drive
+  marginal-to-failing at 3.43 V. The full worst-case crossing table and the
+  conditional 3.43 V fallback are in ICD §5a.
+- Cost of 3.29 V: less AVDD headroom (Pololu: AVDD sags when VIN < ~3.4 V;
+  VL53L8CX min 3.13 V). **BENCH_VERIFY T2**, measured first on the Lab rig at
+  its existing safe VIN = 3.3 V.
+- Back-feed into an unpowered ToF rail is bounded by NXS0108 IOFF ≤ ±1 µA per
+  B pin (DS Table 8). T5 still measures it.
+
+### STM32U585 I/O and NXS0108 levels (for ICD §5a)
+
+| Fact | Source |
+|---|---|
+| PB10 FT_fhv, PB11 FT_fh, PB3 FT_fa (JTDO/TRACESWO by default), PB8 FT_f, PB2 FT_ha, PB4 FT_fa, PD12/PD13 FT_fha; PA4/PB0 TT_ha | STM32U585 DS13086 Rev 2 pin table (S20) |
+| FT input operating max = min(VDD, VDDA, VDDUSB, VDDIO2) + 3.6 V (≤5.5 V); TT max = VDDIOx + 0.3 V; >4 V needs internal pull-ups/downs disabled | DS13086 Tables 30/33 |
+| VIL ≤ 0.3·VDDIO; VIH ≥ 0.7·VDDIO (and 0.5·VDDIO + 0.2 V for all I/Os except FT_c, design-guaranteed); hysteresis 250 mV | DS13086 Table 92 |
+| VOL ≤ 0.4 V at 8 mA, VOH ≥ VDDIO − 0.4 V at 8 mA (2.7–3.6 V) → output resistance ≤ ~50 Ω | DS13086 Table 93 / DERIVED |
+| NXS0108: VCC(A) 1.2–3.6 V ≤ VCC(B) 1.65–5.5 V; switch-type with one-shot edge accelerators; **B-port VIH ≥ VCC(B) − 0.4 V, VIL ≤ 0.15 V**; VOH(B) ≥ 0.67·VCC(B) at 20 µA; RPU = 4 kΩ when high / 40 kΩ when low; IOFF ≤ ±1 µA when VCC(B) = 0; outputs disabled when either supply is off; intended for open-drain drivers (Nexperia suggests NXB0108 for push-pull) | NXS0108 DS Rev 1.1 (S21) |
 
 ## BMI270
 

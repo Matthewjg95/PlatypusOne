@@ -13,7 +13,7 @@ Status and gates: [../README.md](../README.md). **Pre-layout — no PCB file yet
 |---|---|---|
 | root | `perception_head_rev_a.kicad_sch` | design intent, label conventions, sheet index |
 | HOST_INTERFACE | `host_interface.kicad_sch` | J1 host cable, J2 Qwiic, TVS, bus pull-up options, TCA9534 |
-| POWER | `power.kicad_sch` | shunts SH1–SH3, switchable 3.43 V ToF LDO, PWR_FLAGs |
+| POWER | `power.kicad_sch` | shunts SH1–SH3, switchable 3.29 V ToF LDO, PWR_FLAGs |
 | TOF | `tof.kicad_sch` | Pololu #3419 carrier, I2C strap, bus-B damping options |
 | IMU | `imu.kicad_sch` | BMI270 + address option |
 | ILLUMINATION | `illumination.kicad_sch` | TPS2553 switch, 2-ch linear CC sinks, light-board connectors, kill jumper |

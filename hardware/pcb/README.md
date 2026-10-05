@@ -15,7 +15,7 @@ handheld that carries the sensing stack as one calibrated unit:
 
 | Function | Rev A implementation | Source sheet |
 |---|---|---|
-| ToF depth | Pololu #3419 VL53L8CX carrier, hosted on headers + 2× M2, own I2C bus, power-cyclable 3.43 V rail | `tof.kicad_sch`, `power.kicad_sch` |
+| ToF depth | Pololu #3419 VL53L8CX carrier, hosted on headers + 2× M2, own I2C bus, power-cyclable 3.29 V rail in the host 3.3 V logic domain | `tof.kicad_sch`, `power.kicad_sch` |
 | IMU | Bosch BMI270, I2C bus A, INT1 direct to host | `imu.kicad_sch` |
 | Controlled white illumination | 2-channel linear constant-current sink, analog set-point (DAC/filtered PWM), current-limited switched 5 V, off-board light boards | `illumination.kicad_sch` |
 | Identity / calibration | AT24CS32 EEPROM with factory 128-bit serial, write-protected by default | `id_calibration.kicad_sch` |
@@ -71,7 +71,7 @@ RF experiments, robotics; cosmetics; production certification; algorithm tuning.
 | EEPROM identity scheme | **PROVISIONAL – strong** | record schema to define in software |
 | Host connector family/pinout | **PROVISIONAL** | JST GH 14 for bench; final after Fusion routing |
 | Host-side pin assignment | **PROVISIONAL (TBD_*)** | candidates in [ICD](ICD_PERCEPTION_HEAD.md) |
-| ToF rail voltage 3.43 V | **PROVISIONAL – BENCH_VERIFY** | AVDD headroom vs I/O level |
+| ToF rail 3.29 V + voltage-domain crossings | **DECIDED by worst-case analysis (ICD §5a) – BENCH_VERIFY (T2, T13)** | 3.43 V is a conditional fallback only |
 | Board outline, hole positions, connector placement | **BLOCKED (MECHANICAL)** | [Fusion inputs](MECHANICAL_FUSION_INPUTS.md) |
 | Camera choice (B0394/B0393/B0390) | **BLOCKED (BENCH)** | [intake table](CAMERA_EVIDENCE_INTAKE.md) |
 | ToF usefulness / operating modes | **BLOCKED (BENCH, Platypus Lab #3)** | no physical ToF data yet |
@@ -98,6 +98,7 @@ RF experiments, robotics; cosmetics; production certification; algorithm tuning.
 5. Illumination current + LED part chosen from optical/thermal tests.
 6. Platypus Lab ToF evidence shows ToF earns its place (or ToF is dropped/deferred, which simplifies the board).
 7. Every DECISION REQUIRED row in the [register](DECISION_REGISTER.md) closed or explicitly deferred.
+8. Measured, not inferred: register items **H1, H2, H4, H6, T2, T3, T4, T5, T13** stay provisional until bench evidence exists. ERC and the netlist check are hygiene, not circuit validation.
 
 **Layout start** additionally requires:
 1. Fusion delivers head outline envelope, camera/ToF optical centres, datum-hole

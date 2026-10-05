@@ -12,7 +12,7 @@ PROVISIONAL (placeholder until a gate closes).
 | Ref | Part (MPN) | Package | Status | Why this part | Verified against | Alternate |
 |---|---|---|---|---|---|---|
 | M1 | Pololu **#3419** VL53L8CX carrier | 12.7 × 22.9 mm, 0.1" headers | SELECTED (Rev A) | Same hardware as Platypus Lab evidence; solves 3-rail supply + 1.8 V I/O; swappable | Pololu drawing + schematic; custom footprint from drawing | Pololu VL53L7CX carrier (pin-compatible, 90° FoV); bare VL53L8CX = Rev B |
-| U1 | TI **TLV75801PDBVR** | SOT-23-5 | SELECTED | Adjustable (sets 3.43 V), 1 % ref, active discharge for clean ToF reset, EN, 500 mA / 350 mA ISC, ACTIVE | DS pinout = KiCad `TLV75801PDBV` symbol | TLV75533P (fixed 3.3 V, less AVDD headroom) |
+| U1 | TI **TLV75801PDBVR** | SOT-23-5 | SELECTED | Adjustable (sets 3.29 V; 3.43 V fallback), 1 % ref, active discharge for clean ToF reset, EN, 500 mA / 350 mA ISC, ACTIVE | DS pinout = KiCad `TLV75801PDBV` symbol | TLV75533P (fixed 3.3 V, less AVDD headroom) |
 | U2 | Bosch **BMI270** | LGA-14 2.5 × 3.0 | SELECTED | Current Bosch IMU, 3.3 V-compatible VDD/VDDIO, I2C, 2 INTs, low current; BNO055 is NRND | Pinout Table 22 (= BMI160 symbol); Bosch land pattern → custom footprint | BMI323 (newer, different pinout/package — would need new footprint) |
 | U3 | TI **TPS2553DBVR** | SOT-23-6 | SELECTED | Current-limited, soft-start, reverse-blocking 5 V switch with FAULT: protects host 5 V from LED faults; EN default off | SLVS841F pin table → custom symbol | TPS22918 (no current limit) + polyfuse |
 | U4 | TI **TLV9062IDR** | SOIC-8 | SELECTED | RRIO dual, 3.3 V supply, 10 MHz, low offset → accurate low-voltage current sense loop; hand-reworkable package | DS; stock `TLV9062xD` symbol | TLV9002 (lower GBW), MCP6002 |
@@ -55,7 +55,7 @@ PROVISIONAL (placeholder until a gate closes).
 
 | Ref | Value | Function | Basis |
 |---|---|---|---|
-| R5 / R6 | 52.3 k / 10 k (1 %) | ToF rail 3.43 V | 0.55 × (1 + R5/R6) |
+| R5 / R6 | 49.9 k / 10 k (**0.5 %**) | ToF rail 3.29 V (52.3 k → 3.43 V conditional fallback, ICD §5a) | 0.55 × (1 + R5/R6) |
 | R7 / R13 | 100 k | ToF rail and LED switch OFF at power-up | EN pull-downs |
 | R15 | 40.2 k (1 %) | U3 limit ≈0.65 A nom | TPS2553 eq. 1 |
 | R16 / R17 / C13 | 120 k / 10 k / 220 n | ILLUM_SET → 0–0.254 V, PWM filter, OFF when floating | divider ratio 1/13 |
