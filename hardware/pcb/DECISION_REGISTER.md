@@ -33,9 +33,10 @@ Classes: **RESEARCH** = researchable now · **BENCH** = bench required ·
 | T6 | BENCH | Useful ToF mode(s): 4×4@? Hz vs 8×8@15 Hz, continuous vs autonomous, at Platypus working distances | Power, bus load, MCU time | M (Lab) | Lab evidence | Power tree, firmware | 8×8 @ 15 Hz continuous worst case | Lower power/bus load — only helps |
 | T7 | SW | ST ULD (~84 KB upload) on UNO Q STM32U585 Zephyr core: memory, I2C 1 MHz support, boot time | Feasibility of MCU-owned ToF | A | Build + run on UNO Q (Pololu on Qwiic bench) | Firmware arch | Fits (2 MB flash) | Run ToF from Linux side (needs 1.8 V-domain bus or different path) |
 | T8 | SW | MCU→Linux Bridge throughput/latency for 8×8 frames + IMU stream | Timestamp/sync quality | A | Bridge benchmark on hardware | Sync design | Adequate for 15 Hz frames | Decimate on MCU or send summaries |
-| T9 | MECH | ToF window: material, thickness, distance; aperture ≥ exclusion cone 57.9° | Crosstalk <60 cm is the Platypus range | M+A | ST cover-window app note (RESEARCH) + Lab crosstalk cal | Enclosure window | No window for Rev A bench | Crosstalk cal per unit; store in EEPROM record |
+| T9 | MECH | ToF window geometry in the real enclosure (design rules now known: AN5939 — gap <0.5 mm or gasket, gap+glass <1.5 mm, >87 % at 940 nm, IR haze <1 %, tilt ±5°, two apertures) | Crosstalk <60 cm is the Platypus range | M | Fusion window design to AN5939 + Lab crosstalk measurement with the real window | Enclosure window | No window for first Rev A bench | Per-unit crosstalk cal (776 B) stored in the head EEPROM, tied to the window ID |
 | T10 | DECIDE | VL53L8CX (45°) vs VL53L7CX (90°) carrier vs camera FOV 62–75° | Depth coverage of the image | M+A | Lab evidence + camera choice | Footprint (same) | L8CX | Swap carrier, same footprint |
-| T11 | RESEARCH | ST AN5897 thermal/PCB guidance and cover-glass guidance documents | Rev B bare IC + window | A | Fetch ST docs (st.com blocked here) | Rev B only | n/a for Rev A | — |
+| T11 | ~~RESEARCH~~ **CLOSED 2026-10-05** | ST AN5897 thermal and AN5939 cover-glass guidance | Rev B bare IC + window | A | Retrieved from Wayback captures; facts in ledger §VL53L8 thermal / cover window | — | — | — |
+| T12 | BENCH | Pololu carrier temperature during 8×8 continuous ranging when mounted on headers (AN5897 target ≤35 °C/W, ≤11 °C rise at 320 mW) | Tj limit and ~0.1 mm/°C range drift | M | Thermocouple on the carrier after 30 min continuous, in free air and inside the enclosure mock-up | Mounting / thermal pad decision | Acceptable in free air | Add a thermal pad to head copper, or prefer autonomous mode |
 
 ## IMU
 
@@ -69,10 +70,11 @@ Classes: **RESEARCH** = researchable now · **BENCH** = bench required ·
 
 | ID | Class | Question | Why it matters | Owner | Evidence required | Blocks | Provisional assumption | If wrong |
 |---|---|---|---|---|---|---|---|---|
-| C1 | SW | EEPROM record schema + host calibration file format | Identity/provenance | A | Schema doc + reader/writer with tests | Firmware | Versioned binary + CRC, ≤512 B | — |
+| C1 | SW | EEPROM record schema + host calibration file format | Identity/provenance | A | Schema doc + reader/writer with tests | Firmware | Versioned binary + CRC: identity/pose ≤512 B + ToF crosstalk buffer 776 B (+ optional offset buffer 488 B) | — |
+| C5 | BENCH/DECIDE | AT24CS32 supply: JLCPCB stock is thin (52 SOT-23, 28 SOIC, 261 UDFN on 2026-10-05) | Assembly availability | M+A | Order-day check at 2–3 distributors | Order | Buy a few for Rev A by hand | Swap to 24AA025E48T-I/OT (EUI-48, 256 B only — crosstalk buffer would move to host files) or a larger EEPROM plus a separate ID chip |
 | C2 | DECIDE | Acceptable RGB↔ToF timestamp error for Rev A (handheld still capture vs motion) | Whether TOF_SYNC needed | M+A | Use-case definition; IMU motion stats | Keep/drop TOF_SYNC | Still capture; ≤50 ms OK; SYNC kept as cheap option | Drop the pin |
 | C3 | BENCH | Extrinsic repeatability after head remove/refit (datum holes) | Proves Rev A goal #3 | M | 5× remove/refit, re-capture fixed target | Datum design | <0.2 mm / <0.2° class | Add dowels / change locating scheme |
-| C4 | RESEARCH | AT24CS32 serial-number read sequence & page size | Firmware | A | DS20006087 | Firmware | Security address 0x58 | Trivial firmware change |
+| C4 | ~~RESEARCH~~ **CLOSED 2026-10-05** | AT24CS32 serial-number read sequence & page size | Firmware | A | Atmel-8869C DS: 0x58 + dummy write 0x0800 + read 16 B; 32-byte pages; 5 ms write | — | — | — |
 
 ## Camera / mechanics
 

@@ -30,12 +30,12 @@ contract (5 V/3 A) is the documented limit.
 
 | Load | Rail | Typical | Max / peak | Class | Basis |
 |---|---|---|---|---|---|
-| VL53L8CX active ranging (via Pololu VIN) | +3V3_TOF ← +5V_HEAD | 100 mA | 150 mA peak | KNOWN | Pololu #3419; consistent with ST DS Table 12 (AVDD 43/50 + CORE 50/80 mA, +10 mA peaks) |
+| VL53L8CX active ranging (via Pololu VIN) | +3V3_TOF ← +5V_HEAD | 100 mA | 150 mA peak | KNOWN | Pololu #3419; consistent with ST DS Table 12 (AVDD 43/50 + CORE 50/80 mA, +10 mA peaks) and AN5897 (215 mW typ / 320 mW max in the sensor) |
 | VL53L8CX HP idle | +3V3_TOF | ~4 mA | ~19 mA | KNOWN | DS Table 12 (AVDD 1/1.6, CORE 3/17 mA) + shifter |
 | ToF rail off | — | 0 | back-feed only | ESTIMATED | active discharge LDO; T5 to measure |
 | U1 LDO dissipation | — | 0.16 W | 0.24 W (ΔTj ≈ 42 °C @ RθJA 176.9 °C/W) | KNOWN/DERIVED | (5 − 3.43 V) × I |
 | BMI270 | +3V3_LOGIC | 0.69 mA | 0.97 mA (performance mode) | KNOWN @1.8 V; ESTIMATED same @3.3 V | Bosch DS Table 1 |
-| AT24CS32 | +3V3_LOGIC | µA standby | ≤3 mA during write | ESTIMATED | typical I2C EEPROM; confirm DS20006087 (C4) |
+| AT24CS32 | +3V3_LOGIC | ≤6 µA standby; 0.4 mA read | 3.0 mA max during write | KNOWN | Atmel-8869C DC table (specified at 5 V; lower at 3.3 V) |
 | TCA9534 | +3V3_LOGIC | µA | ≤0.25 mA | ESTIMATED | confirm DS ICC table |
 | TLV9062 | +3V3_LOGIC | 1.08 mA | ~1.2 mA | KNOWN | 538 µA/ch |
 | Q1/Q2 base drive | +3V3_LOGIC (via op-amp) | 0 | 5 mA at full scale | DERIVED | 2 × 254 mA / hFE(min 100) |

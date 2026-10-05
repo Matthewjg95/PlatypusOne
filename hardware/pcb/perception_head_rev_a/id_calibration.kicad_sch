@@ -589,7 +589,7 @@
 		)
 		(uuid "eedd10ab-85f2-5049-afc9-e8be992ad050")
 	)
-	(text "  (exact read sequence: verify against Microchip AT24CS32 datasheet during firmware bring-up)."
+	(text "  (read: dummy write word address 0x0800 to 0x58, then read 16 bytes - Atmel-8869C sec 10)."
 		(exclude_from_sim no)
 		(at 10 20.4 0)
 		(effects
@@ -622,7 +622,7 @@
 		)
 		(uuid "84dbb89e-1c8b-5898-9f2a-ec11f177183a")
 	)
-	(text "  extrinsic camera<->ToF, intrinsics reference/hash, calibration rev/date, test state) + CRC."
+	(text "  extrinsic camera<->ToF, intrinsics reference/hash, calibration rev/date, test state) + CRC,"
 		(exclude_from_sim no)
 		(at 10 30 0)
 		(effects
@@ -633,7 +633,7 @@
 		)
 		(uuid "9a924e93-d1ac-52b5-9214-de23327e8377")
 	)
-	(text "Full calibration files stay on the host, keyed by the serial number; EEPROM holds identity + compact pose."
+	(text "  plus the 776-byte VL53L8CX crosstalk buffer (ST AN5939: host stores it, loads it at every start-up)."
 		(exclude_from_sim no)
 		(at 10 33.2 0)
 		(effects
@@ -644,9 +644,20 @@
 		)
 		(uuid "08de06bf-f7aa-55d9-a05e-a6b62cc43b23")
 	)
+	(text "Full calibration files stay on the host, keyed by the serial number; EEPROM holds identity + compact pose."
+		(exclude_from_sim no)
+		(at 10 36.4 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "e5c571a1-83c2-5d75-971d-0add9bde26ef")
+	)
 	(symbol
 		(lib_id "Memory_EEPROM:AT24CS32-STUM")
-		(at 160.02 104.14 0)
+		(at 160.02 107.95 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -655,7 +666,7 @@
 		(fields_autoplaced yes)
 		(uuid "fe28e3e0-a81a-58f4-bd2a-0389a86db962")
 		(property "Reference" "U5"
-			(at 152.4 97.79 0)
+			(at 152.4 101.6 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -663,7 +674,7 @@
 			)
 		)
 		(property "Value" "AT24CS32-STUM-T"
-			(at 162.56 110.49 0)
+			(at 162.56 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -672,7 +683,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-5"
-			(at 160.02 104.14 0)
+			(at 160.02 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -681,7 +692,7 @@
 			)
 		)
 		(property "Datasheet" "http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-8869-SEEPROM-AT24CS32-Datasheet.pdf"
-			(at 160.02 104.14 0)
+			(at 160.02 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -690,7 +701,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 160.02 104.14 0)
+			(at 160.02 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -699,7 +710,7 @@
 			)
 		)
 		(property "Manufacturer" "Microchip"
-			(at 160.02 104.14 0)
+			(at 160.02 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -708,7 +719,7 @@
 			)
 		)
 		(property "MPN" "AT24CS32-STUM-T"
-			(at 160.02 104.14 0)
+			(at 160.02 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -717,7 +728,7 @@
 			)
 		)
 		(property "Status" "SELECTED"
-			(at 160.02 104.14 0)
+			(at 160.02 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -725,8 +736,8 @@
 				(hide yes)
 			)
 		)
-		(property "Note" "32 Kbit + 128-bit unique serial; SOT-23-5 has no address pins (fixed 0x50)"
-			(at 160.02 104.14 0)
+		(property "Note" "32 Kbit + 128-bit serial (0x58, dummy write 0x0800, read 16 B); fixed 0x50; JLC stock thin 2026-10-05, alt 24AA025E48T"
+			(at 160.02 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -760,18 +771,18 @@
 	)
 	(wire
 		(pts
-			(xy 160.02 96.52)
-			(xy 160.02 93.98)
+			(xy 160.02 100.33)
+			(xy 160.02 97.79)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "a93e9f4d-9dd5-5ec8-a7a2-06022c105f9a")
+		(uuid "adf114d3-6a07-5b28-be24-297949bbdc84")
 	)
 	(global_label "+3V3_LOGIC"
 		(shape bidirectional)
-		(at 160.02 93.98 90)
+		(at 160.02 97.79 90)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -779,9 +790,9 @@
 			)
 			(justify left)
 		)
-		(uuid "05f9e0a2-bf64-5019-a47a-761b0a664738")
+		(uuid "43c3eac5-bb56-58d4-acfa-51a0c02d3ce5")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 160.02 93.98 0)
+			(at 160.02 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -793,18 +804,18 @@
 	)
 	(wire
 		(pts
-			(xy 160.02 111.76)
-			(xy 160.02 114.3)
+			(xy 160.02 115.57)
+			(xy 160.02 118.11)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "dd02ebed-369d-56d3-ba56-345d3724bf85")
+		(uuid "3bc6beed-2eef-5ff6-a961-2ead7d02fc67")
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 160.02 114.3 0)
+		(at 160.02 118.11 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -813,7 +824,7 @@
 		(fields_autoplaced yes)
 		(uuid "b43aadcb-58c3-55d8-935a-7c39944be313")
 		(property "Reference" "#PWR_ID_CALIBRATION_U5_1_2"
-			(at 160.02 120.65 0)
+			(at 160.02 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -822,7 +833,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 160.02 118.11 0)
+			(at 160.02 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -830,7 +841,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 160.02 114.3 0)
+			(at 160.02 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -839,7 +850,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 160.02 114.3 0)
+			(at 160.02 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -848,7 +859,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 160.02 114.3 0)
+			(at 160.02 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -870,18 +881,18 @@
 	)
 	(wire
 		(pts
-			(xy 170.18 101.6)
-			(xy 172.72 101.6)
+			(xy 170.18 105.41)
+			(xy 172.72 105.41)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "3bc6beed-2eef-5ff6-a961-2ead7d02fc67")
+		(uuid "cb24a1b2-daea-5f90-88b1-1cbfb548a18f")
 	)
 	(global_label "I2C_A_SDA"
 		(shape bidirectional)
-		(at 172.72 101.6 0)
+		(at 172.72 105.41 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -889,9 +900,9 @@
 			)
 			(justify left)
 		)
-		(uuid "bdf0d336-7af0-55ae-a5bf-aab42e678c13")
+		(uuid "283e4d50-5379-5a85-a231-f7ba4e42d327")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 172.72 101.6 0)
+			(at 172.72 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -903,18 +914,18 @@
 	)
 	(wire
 		(pts
-			(xy 170.18 104.14)
-			(xy 172.72 104.14)
+			(xy 170.18 107.95)
+			(xy 172.72 107.95)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "ed5d882c-e60b-59e5-bbfc-fa920d411a50")
+		(uuid "4c0aaaa1-801c-555e-924c-0ee4ce0da803")
 	)
 	(global_label "I2C_A_SCL"
 		(shape bidirectional)
-		(at 172.72 104.14 0)
+		(at 172.72 107.95 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -922,9 +933,9 @@
 			)
 			(justify left)
 		)
-		(uuid "e567b61c-5f5f-5a2f-85a0-5343c4e6a6e9")
+		(uuid "f3460175-faaa-5a97-914d-f2976e6fb408")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 172.72 104.14 0)
+			(at 172.72 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -936,18 +947,18 @@
 	)
 	(wire
 		(pts
-			(xy 170.18 106.68)
-			(xy 172.72 106.68)
+			(xy 170.18 110.49)
+			(xy 172.72 110.49)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "b9e1c397-4941-58b7-b15b-8d89da260b48")
+		(uuid "890550c5-99fb-532a-b6df-c1abdb538fcf")
 	)
 	(global_label "EEPROM_WP"
 		(shape bidirectional)
-		(at 172.72 106.68 0)
+		(at 172.72 110.49 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -955,9 +966,9 @@
 			)
 			(justify left)
 		)
-		(uuid "cb02f976-d35f-571f-934f-e9ccdbdf0123")
+		(uuid "7075b704-c68a-5c7a-9e17-93194e74dbf6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 172.72 106.68 0)
+			(at 172.72 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -969,7 +980,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 119.38 104.14 0)
+		(at 119.38 107.95 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -978,7 +989,7 @@
 		(fields_autoplaced yes)
 		(uuid "727aa3c2-68f3-5e00-a5f6-9cf1b72044ad")
 		(property "Reference" "C17"
-			(at 120.015 101.6 0)
+			(at 120.015 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -987,7 +998,7 @@
 			)
 		)
 		(property "Value" "100n"
-			(at 120.015 106.68 0)
+			(at 120.015 110.49 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -996,7 +1007,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 119.38 104.14 0)
+			(at 119.38 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1005,7 +1016,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 119.38 104.14 0)
+			(at 119.38 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1014,7 +1025,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 119.38 104.14 0)
+			(at 119.38 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1023,7 +1034,7 @@
 			)
 		)
 		(property "Spec" "X7R/X5R, >=10 V"
-			(at 119.38 104.14 0)
+			(at 119.38 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1048,18 +1059,18 @@
 	)
 	(wire
 		(pts
-			(xy 119.38 100.33)
-			(xy 119.38 97.79)
+			(xy 119.38 104.14)
+			(xy 119.38 101.6)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "9d5118f1-502a-5fb3-af12-f123556f607c")
+		(uuid "68ffdfb2-227e-589a-985b-a7cdf49356bc")
 	)
 	(global_label "+3V3_LOGIC"
 		(shape bidirectional)
-		(at 119.38 97.79 90)
+		(at 119.38 101.6 90)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -1067,9 +1078,9 @@
 			)
 			(justify left)
 		)
-		(uuid "d9039e11-eaa3-5095-87a0-4a4edbb62db9")
+		(uuid "61e5ac56-92db-59fa-beaf-06eecffacada")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 119.38 97.79 0)
+			(at 119.38 101.6 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1081,18 +1092,18 @@
 	)
 	(wire
 		(pts
-			(xy 119.38 107.95)
-			(xy 119.38 110.49)
+			(xy 119.38 111.76)
+			(xy 119.38 114.3)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "af1e886e-5664-5607-8ea4-fe9c648abd6f")
+		(uuid "5f274e5e-15e1-5593-aab3-fb32f72ad8f6")
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 119.38 110.49 0)
+		(at 119.38 114.3 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -1101,7 +1112,7 @@
 		(fields_autoplaced yes)
 		(uuid "3d75c91a-8a3c-5bef-ba6b-a2abc184423a")
 		(property "Reference" "#PWR_ID_CALIBRATION_C17_1_2"
-			(at 119.38 116.84 0)
+			(at 119.38 120.65 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1110,7 +1121,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 119.38 114.3 0)
+			(at 119.38 118.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1118,7 +1129,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 119.38 110.49 0)
+			(at 119.38 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1127,7 +1138,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 119.38 110.49 0)
+			(at 119.38 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1136,7 +1147,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 119.38 110.49 0)
+			(at 119.38 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1158,7 +1169,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 209.55 144.78 0)
+		(at 209.55 147.32 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -1167,7 +1178,7 @@
 		(fields_autoplaced yes)
 		(uuid "3b832e72-d738-5de5-84b6-0b6ff3470fe5")
 		(property "Reference" "R24"
-			(at 211.582 144.78 90)
+			(at 211.582 147.32 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1175,7 +1186,7 @@
 			)
 		)
 		(property "Value" "10k"
-			(at 209.55 144.78 90)
+			(at 209.55 147.32 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1183,7 +1194,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 209.55 144.78 0)
+			(at 209.55 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1192,7 +1203,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 144.78 0)
+			(at 209.55 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1201,7 +1212,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 209.55 144.78 0)
+			(at 209.55 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1210,7 +1221,7 @@
 			)
 		)
 		(property "Spec" "1% 0.1W"
-			(at 209.55 144.78 0)
+			(at 209.55 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1219,7 +1230,7 @@
 			)
 		)
 		(property "Note" "Write-protect by default"
-			(at 209.55 144.78 0)
+			(at 209.55 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1244,18 +1255,18 @@
 	)
 	(wire
 		(pts
+			(xy 209.55 143.51)
 			(xy 209.55 140.97)
-			(xy 209.55 138.43)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "5f274e5e-15e1-5593-aab3-fb32f72ad8f6")
+		(uuid "86756a0b-9150-584a-9e86-6a4c5777dd1a")
 	)
 	(global_label "EEPROM_WP"
 		(shape bidirectional)
-		(at 209.55 138.43 90)
+		(at 209.55 140.97 90)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -1263,9 +1274,9 @@
 			)
 			(justify left)
 		)
-		(uuid "52ddd974-439d-5770-a215-4fe2a6bfb050")
+		(uuid "63fc2f20-83f7-5ed8-94d4-e99600ffb2d6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 209.55 138.43 0)
+			(at 209.55 140.97 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1277,18 +1288,18 @@
 	)
 	(wire
 		(pts
-			(xy 209.55 148.59)
 			(xy 209.55 151.13)
+			(xy 209.55 153.67)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "f734acb8-effe-50e7-b378-244bca3bf7f3")
+		(uuid "6dbbf18d-e901-5865-8d2c-99cbb4f68069")
 	)
 	(global_label "+3V3_LOGIC"
 		(shape bidirectional)
-		(at 209.55 151.13 270)
+		(at 209.55 153.67 270)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -1296,9 +1307,9 @@
 			)
 			(justify right)
 		)
-		(uuid "db854b06-0069-5787-ac5a-ad6f2ee31aa4")
+		(uuid "84ef9a7e-e10e-5d16-898c-ad710878fae8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 209.55 151.13 0)
+			(at 209.55 153.67 0)
 			(effects
 				(font
 					(size 1.27 1.27)

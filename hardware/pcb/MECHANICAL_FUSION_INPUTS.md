@@ -38,6 +38,10 @@ Tags: **VENDOR** (manufacturer drawing), **PROVISIONAL** (study value),
 | BMI270 | 2.5 × 3.0 × 0.8 mm | VENDOR |
 | J1 JST GH 14 horizontal | ≈21 mm wide incl. mounting pads; cable exits board edge; latch access | VENDOR (KiCad footprint) |
 | Head PCB thickness | 1.6 mm FR-4 | PROVISIONAL (M5) |
+| ToF window air gap | **<0.5 mm** without a gasket; >0.7 mm needs a gasket; gap + glass <1.5 mm | VENDOR (ST AN5939) |
+| ToF window optics | >87 % transmittance at 940 nm, IR haze <1 %, tilt ±5°, single material (glass/sapphire/PMMA/PC), no coatings inside the exclusion areas | VENDOR (ST AN5939) |
+| ToF window apertures | two circular holes preferred; Tx–Rx optical centres 4 mm apart; single slot 6.44 × 2.46 mm at 0 gap … 7.25 × 3.27 mm at 0.5 mm gap (0.5 mm glass, ±2°) | VENDOR (ST AN5939 Table 4) |
+| ToF thermal | 215 mW typ / 320 mW max; ≤35 °C/W board path recommended; heat-sink to chassis if possible | VENDOR (ST AN5897) |
 
 ## 3. Placement requirements
 
@@ -60,7 +64,7 @@ Tags: **VENDOR** (manufacturer drawing), **PROVISIONAL** (study value),
 2. **Datum-hole positions** H1/H2/H3 relative to the camera optical centre, and the bracket's locating features.
 3. **Camera optical centre position** and module orientation (FFC exit direction) for the selected module (after #40).
 4. **ToF optical centre position** (sets the baseline, P2) and carrier stand-off height.
-5. **Keep-out solids**: camera FOV cone, ToF exclusion cone, window/bezel, light-board volumes, screw heads, FFC bend volume.
+5. **Keep-out solids**: camera FOV cone, ToF exclusion cone, window/bezel, light-board volumes, screw heads, FFC bend volume. The ToF window must follow the AN5939 rows in §2. The sensor top is 1.8 mm above the carrier board, so the carrier height sets the window gap directly.
 6. **Connector exit directions** and cable route lengths to the host (H7) incl. minimum bend radii.
 7. **Max component height** on front and rear faces (window clearance in front, cover clearance behind).
 8. **Board thickness/stiffness decision** (M5) and any chassis thermal contact pad location.

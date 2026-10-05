@@ -24,11 +24,16 @@ Nothing here is a bench measurement.
 | S12 | Microchip AT24CS04/08 datasheet (same CS family as AT24CS32) | — | AT24CS32 DS20006087 download refused (403); family doc used, see open item |
 | S13 | Platypus Lab issue #3 + `docs/TOF_TEST_PLAN.md` | 2026-10-05 | Matthewjg95/platypus-lab |
 | S14 | PlatypusOne issues #33/#40/#41, PRs #21/#42/#43 | 2026-10-04/05 | this repo |
+| S15 | Microchip/Atmel AT24CS32 datasheet | Atmel-8869C (01/2015) | ww1.microchip.com/downloads/en/DeviceDoc/Atmel-8869-SEEPROM-AT24CS32-Datasheet.pdf (the DS20006087 URL returned 403) |
+| S16 | ST AN5897 "PCB thermal guidelines for the VL53L8 ToF multizone sensor family" | Rev 2, Aug 2023 | Wayback Machine capture 2023-10-16 of st.com |
+| S17 | ST AN5939 "Guidelines for the cover glass of the VL53L8 ToF multizone sensor family" | Rev 1, May 2023 | Wayback Machine capture 2023-10-16 of st.com |
+| S18 | ST VL53L8CX ULD API header (`vl53l8cx_api.h`, API 1.3.0) | stm32duino/VL53L8CX on GitHub | raw.githubusercontent.com |
+| S19 | JLCPCB parts-library stock snapshot | 2026-10-05 | jlcpcb.com parts API (one distributor; see BOM) |
 
 Status probes on TI product pages (2026-10-05): TPS2553, TLV755P/TLV758P,
 TCA9534, TLV9062 all **ACTIVE**. BMI270 is Bosch's current IMU; BNO055 is
 marked not recommended for new designs (already recorded in the gates doc).
-Distributor stock was **not** checked from this environment — re-check on order day.
+Distributor stock: one snapshot from the JLCPCB parts library (S19), recorded in the BOM. DigiKey refused this environment (403), and TI's logged-out store pages show every part as "out of stock", so they were not used. Re-check on order day.
 
 ## UNO Q / Media Carrier
 
@@ -169,8 +174,12 @@ optics require it.
 | Fact | Tag |
 |---|---|
 | AT24CS-family: 128-bit factory-programmed, permanently locked unique serial in a separate address space; WP high inhibits all writes, reads allowed; SOT23-5 has no address pins (A bits must be 0); pinout SCL 1, GND 2, SDA 3, VCC 4, WP 5; 1.7–5.5 V | DS (S12 family document) |
-| AT24CS32 specifics (32 Kbit = 4 KB, serial-number read address/sequence) | **RESEARCHABLE NOW — open**: confirm from DS20006087 before firmware (download refused here) |
+| AT24CS32: 4096 × 8 in 128 pages of 32 B; partial page writes; self-timed write ≤5 ms; 1 M cycles; 400 kHz at 1.7 V, 1 MHz at 2.5/5 V | DS (S15) |
+| AT24CS32 currents: read 0.4 typ / 1.0 max mA, write 2.0 typ / 3.0 max mA (5 V, 400 kHz); standby ≤6 µA | DS (S15) |
+| **Serial-number read:** device address `1011 A2A1A0` (7-bit **0x58** on SOT23) + dummy write of word address **0x0800** (A11:A10 = `10`) → repeated start → read **16 bytes**. Read all 16 from the block start, or the number is not guaranteed unique. Bytes 16–31 read 0x00, then wrap. The serial cannot be written. | DS (S15) §8, §10 — closes register item C4 |
 | TCA9534 (S10): no internal I/O pull-ups (that is TCA9554); POR = all inputs, output register defaults 0xFF; INT open-drain; 400 kHz; 5 V-tolerant I/O | DS |
+
+ST requires the ToF crosstalk calibration to be **stored by the host and loaded at every start-up** (S17 §3). The ULD buffer is `VL53L8CX_XTALK_BUFFER_SIZE` = **776 B** (S18; offset buffer 488 B), so it fits in the 4 KB EEPROM with room to spare. Crosstalk depends on the cover window, so the stored record must name the window or enclosure it was calibrated with.
 
 Recommendation (smallest robust): one 4 KB EEPROM per head holding identity +
 a compact versioned record (schema id, board rev/variant, serial, camera id,
@@ -178,6 +187,32 @@ ToF carrier id, camera↔ToF extrinsic, intrinsics reference hash/version,
 calibration revision/date, manufacturing/test state, CRC). Full calibration
 data stays on the host keyed by the serial. Write-protected unless firmware
 explicitly lowers WP.
+
+## VL53L8 thermal (S16, AN5897)
+
+| Fact | Tag |
+|---|---|
+| Continuous mode: 215 mW typ, **320 mW max**; Tj max **110 °C** (thermal shutdown above); θdie 43 °C/W | DS |
+| Target PCB/flex thermal resistance **≤35 °C/W** (worst case 85 °C ambient, 320 mW) → <11 °C rise | DS |
+| Guidance: maximise copper; stitch the thermal pad (B4) with 8 vias to the bottom side; wide power/ground tracks into planes; heat-sink to the chassis; keep away from other hot parts; use low-power states when idle | DS |
+| ⇒ Rev A hosts the Pololu carrier on headers, so its thermal path is the carrier's own small PCB plus 13 pins. Whether it holds ≤35 °C/W is **BENCH_VERIFY** (T12). Range offset drifts ~0.1 mm/°C (DS §7.4), so carrier temperature also affects accuracy. Option: a thermal pad between the carrier and a head copper pour (mechanical). | DERIVED |
+
+## VL53L8 cover window (S17, AN5939)
+
+| Parameter | Recommendation |
+|---|---|
+| Max crosstalk | 300 kcps |
+| Transmittance at 940 nm | >87 % (90 % → ~3.8 m, 70 % → ~3.4 m max range in 8×8 dark) |
+| Haze | <2 % visible, <1 % IR |
+| Air gap without gasket | **<0.5 mm** (<0.4 mm keeps crosstalk inside limits; >0.7 mm **requires** a gasket) |
+| Air gap + glass thickness | **<1.5 mm** |
+| Tilt | ±5° (±2° assembly tolerance) |
+| Material | single material: glass, sapphire, PMMA or polycarbonate; avoid coatings inside exclusion areas |
+| Apertures | two circular holes preferred (better without a gasket); Tx–Rx optical centres **4 mm apart**; align to optical centres, not mechanical ones |
+| Aperture size (0.5 mm glass, incl. 2° tolerance) | single opening W × L = 6.44 × 2.46 mm at 0 gap, 7.25 × 3.27 mm at 0.5 mm gap |
+| Crosstalk calibration | once per unit in production, target at 600 mm (S5); data loaded by host at every start-up |
+
+Consequence: the window is part of the ToF optical system. Rev A bench work should run **without** a window first, then with candidate windows, using AN5939 numbers as the design rule.
 
 ## Platypus Lab ToF evidence status (S13)
 

@@ -216,7 +216,7 @@ sheet(
             conns={"1": "+5V_HOST", "2": "GND"},
             fields={
                 "Manufacturer": "Vishay/Littelfuse",
-                "MPN": "SMF5V0A",
+                "MPN": "SMF5V0A-E3-08",
                 "Status": "CANDIDATE",
                 "Note": "Unidirectional 5 V TVS on host 5 V input (Zener symbol used for K/A polarity)",
             },
@@ -768,10 +768,11 @@ sheet(
     [
         "ID / CALIBRATION — smallest robust option: one 32-Kbit EEPROM with a factory 128-bit unique serial number.",
         "AT24CS32 on bus A: array at 0x50, read-only serial number in the separate 0x58 'security' address space",
-        "  (exact read sequence: verify against Microchip AT24CS32 datasheet during firmware bring-up).",
+        "  (read: dummy write word address 0x0800 to 0x58, then read 16 bytes - Atmel-8869C sec 10).",
         "WP pulled HIGH by R24 = write-protected by default. Host enables writes via expander P4 (EEPROM_WP low).",
         "Contents: compact versioned record (schema id, board rev, assembly variant, camera id, ToF carrier id,",
-        "  extrinsic camera<->ToF, intrinsics reference/hash, calibration rev/date, test state) + CRC.",
+        "  extrinsic camera<->ToF, intrinsics reference/hash, calibration rev/date, test state) + CRC,",
+        "  plus the 776-byte VL53L8CX crosstalk buffer (ST AN5939: host stores it, loads it at every start-up).",
         "Full calibration files stay on the host, keyed by the serial number; EEPROM holds identity + compact pose.",
     ],
     [
@@ -792,7 +793,7 @@ sheet(
                 "Manufacturer": "Microchip",
                 "MPN": "AT24CS32-STUM-T",
                 "Status": "SELECTED",
-                "Note": "32 Kbit + 128-bit unique serial; SOT-23-5 has no address pins (fixed 0x50)",
+                "Note": "32 Kbit + 128-bit serial (0x58, dummy write 0x0800, read 16 B); fixed 0x50; JLC stock thin 2026-10-05, alt 24AA025E48T",
             },
         ),
         C("C17", "100n", "+3V3_LOGIC", "GND", (110, 100)),

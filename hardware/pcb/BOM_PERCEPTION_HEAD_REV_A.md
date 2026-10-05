@@ -3,8 +3,7 @@
 Machine-readable BOM (exported from the schematic, grouped, with DNP flags):
 [`perception_head_rev_a/outputs/perception_head_rev_a_bom.csv`](perception_head_rev_a/outputs/perception_head_rev_a_bom.csv).
 This page explains **why** each active/selected part is there and what the
-fallback is. Lifecycle checked on manufacturer pages 2026-10-05; **distributor
-stock/price not checked** — redo on order day. Status: SELECTED (use unless
+fallback is. Lifecycle checked on manufacturer pages 2026-10-05. Stock: one JLCPCB parts-library snapshot (2026-10-05, table below). Redo at 2–3 distributors on order day. Status: SELECTED (use unless
 evidence says otherwise) · CANDIDATE (reasonable, still comparing) ·
 PROVISIONAL (placeholder until a gate closes).
 
@@ -20,8 +19,25 @@ PROVISIONAL (placeholder until a gate closes).
 | U5 | Microchip **AT24CS32-STUM-T** | SOT-23-5 | SELECTED | 4 KB + factory 128-bit unique serial + WP pin: identity and compact calibration in one part | Family DS (AT24CS04/08) pinout = stock symbol; AT24CS32 DS to confirm serial read (C4) | 24AA025E48 (EUI-48, 256 B) |
 | U6 | TI **TCA9534PWR** | TSSOP-16 | SELECTED | 8 I/O over bus A, no internal pull-ups (defaults defined by our resistors), INT, 5 V-tolerant | DS pin table = stock symbol | PCA9534 (NXP), PCAL6408A |
 | Q1, Q2 | Nexperia **BCP56-16** | SOT-223 | CANDIDATE | 80 V/1 A NPN pass element; BJT linear-mode SOA; cheap, common | Stock symbol (B1 C2 E3 C-tab) | BCX56 (SOT-89, less dissipation); logic MOSFET in DPAK if dissipation grows |
-| D1 | **SMF5V0A** (Vishay/Littelfuse) | SMF (SOD-123F) | CANDIDATE | 5 V unidirectional TVS on cable 5 V input | Footprint stock `D_SMF` | SMBJ5.0A (bigger) |
+| D1 | **SMF5V0A-E3-08** (Vishay) | SMF (SOD-123F) | CANDIDATE | 5 V unidirectional TVS on cable 5 V input | Footprint stock `D_SMF` | SMBJ5.0A (bigger) |
 | D2 | Green LED 0603 | 0603 | GENERIC | Firmware heartbeat/status | — | any |
+
+## Stock snapshot (JLCPCB parts library, 2026-10-05)
+
+| MPN | Stock | LCSC code | Note |
+|---|---|---|---|
+| TLV75801PDBVR | 164,219 | C2877852 | — |
+| TPS2553DBVR | 57,938 | C55266 | — |
+| TCA9534PWR | 15,089 | C783615 | — |
+| TLV9062IDR | 170,048 | C398355 | — |
+| BMI270 | 8,032 | C2836813 | — |
+| BCP56-16,115 | 32,184 | C92221 | — |
+| SMF5V0A-E3-08 | 12,353 | C1972946 | (SMF6V0A-E3-08: 34,287, if 5.5 V VBUS leakage matters) |
+| **AT24CS32-STUM-T** | **52** | C147891 | **thin**: SOIC 28, UDFN 261; alternate 24AA025E48T-I/OT 6,428 (C129895). See register C5 |
+| SM14B-GHS-TB(LF)(SN) | 3,288 | C265343 | genuine JST |
+| SM04B-SRSS-TB(LF)(SN) | thin (genuine) | — | compatible clones plentiful, e.g. HC-1.0-4PWT 108,747 |
+| SM02B-GHS-TB(LF)(SN) | 2 (genuine) | C189893 | compatible clones plentiful, e.g. A1257WR-S-2P 63,705 |
+| Pololu #3419 | not checked | — | buy from Pololu directly |
 
 ## Connectors / mechanical
 
