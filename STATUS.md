@@ -3,7 +3,7 @@
 Rolling snapshot of where Platypus One actually is. Updated as work lands —
 if this file disagrees with the code, the code wins and this file is stale.
 
-**Last updated: 2026-10-01**
+**Last updated: 2026-10-05**
 
 ## Right now
 
@@ -60,6 +60,8 @@ Rev A core only:
 - power/battery
 - simple carrier/interconnect
 - controlled illumination if it earns its place through testing
+
+Rev A PCB workstream (#33): Perception Head Rev A pre-layout schematic in KiCad 9 (ERC 0/0) with ICD, power tree, decision register and bring-up plan in [`hardware/pcb/`](hardware/pcb/README.md). **No layout or fabrication** until the camera (#40), ToF (Platypus Lab #3), power and Fusion-datum gates release.
 
 Deferred from critical path:
 - radar
