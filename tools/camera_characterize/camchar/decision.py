@@ -43,7 +43,7 @@ def _measured(phys: dict[str, Any], key: str) -> float | None:
     entry = phys.get(key)
     if isinstance(entry, dict) and entry.get("status") == "measured":
         v = entry.get("value")
-        return float(v) if isinstance(v, (int, float)) else None
+        return float(v) if isinstance(v, int | float) else None
     return None
 
 

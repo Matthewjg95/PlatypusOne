@@ -51,9 +51,9 @@ def _focus_state(fr: Frame) -> tuple[str, str]:
 
 
 def _json_default(o: Any) -> Any:
-    if isinstance(o, (np.floating,)):
+    if isinstance(o, np.floating):
         return float(o)
-    if isinstance(o, (np.integer,)):
+    if isinstance(o, np.integer):
         return int(o)
     if isinstance(o, np.ndarray):
         return o.tolist()
