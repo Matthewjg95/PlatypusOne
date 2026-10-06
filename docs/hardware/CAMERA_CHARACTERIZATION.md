@@ -44,9 +44,13 @@ the capture plan is in [CAMERA_CAPTURE_MATRIX.md](CAMERA_CAPTURE_MATRIX.md).
 
 **Do not install Raspberry Pi autofocus software on the UNO Q.** `imx219_af.json`
 belongs to the RPi vc4 IPA, and the UNO Q runs libcamera's simple pipeline
-with no AF algorithm. Until a lens subdevice exists on the UNO Q, the B0393 is
-a fixed-focus camera resting at an unknown far position (`focus_mode: not_exposed`).
-Recording that is a result in itself.
+with no AF algorithm. Until a lens subdevice exists on the UNO Q, the B0393's
+lens rests at an unknown position that no software can read or set
+(`focus_mode: not_exposed`). That is a platform-compatibility result
+(`focus_control_exposed: false`). It is **not** a reproducible focus state:
+the gate's `focus_state_recorded` criterion stays INSUFFICIENT for it. Only
+separate evidence, plus a recorded criteria change, could establish that the
+rest position repeats.
 
 ## 2. Evidence contract
 
@@ -70,7 +74,8 @@ code is [`camchar/contract.py`](../../tools/camera_characterize/camchar/contract
 | `targets` | `charuco` (squares, square_mm, marker_to_square, dictionary), `scout_reference` (reference_mm), `planar_part` (truth length/width). Every dimension carries a status: `verified` / `nominal_unverified` / UNKNOWN |
 | per frame (or `defaults`) | capture_command, pixel_format, frame_rate, exposure_us, analogue_gain, white_balance, focus_mode, focus_position, working_distance_mm, scene, placement, lighting, targets, timestamp_utc |
 | per ok frame | frame_id, path, sha256, format (`raw10p` / `raw16` / `abgr8888` / `yuyv` / `png` / `pgm` / `ppm`), width, height; raw Bayer also stride, bayer_pattern, black_level, white_level |
-| optional | plan_cell, plan_index, repeat_series, repeat_index, calibration_set, notes |
+| optional | plan_cell, plan_index, repeat_series, repeat_index, calibration_set, mount_id, notes |
+| `mount_id` (calibration frames) | the physical mounting the set was taken on. `init` writes `<dataset_id>/mount-1` for set A and `.../mount-2` for set B (after remount). Constant within a set, or the set is invalid |
 | failures | `outcome: capture_failed / discarded` + `failure_reason`. Kept in the record, never analysed, listed in the report |
 
 **Rules:**
@@ -101,7 +106,7 @@ The per-frame hashes in `dataset.json` keep the evidence verifiable either way.
 | Region sharpness | normalised Tenengrad and Laplacian variance on a 3×3 grid; corner/centre ratio | scene-dependent: compare the same scene and placement only |
 | Edge rise (focus) | median 10–90 % width (px) of the 20 mm reference square's edges, 9 profiles per edge | blur of the whole chain at that pixel grid. Comparable across distances, at the same resolution only. Not MTF and not a resolution claim |
 | Calibration | OpenCV pinhole k1 k2 p1 p2 k3 from ChArUco: K, distortion, std devs, per-view RMS, accepted/rejected views with reasons, coverage, model displacement at image corners, undistortion preview | no post-hoc view rejection. A set is invalid if the focus state changes inside it. Minimum 10 views |
-| Calibration stability | max relative fx/fy difference between sets A and B (B after remount) | needs both sets at the same size |
+| Calibration stability | `calibration_independent_sets` = distinct `mount_id`s among ok sets at one size; max relative fx/fy difference across those mountings | a set without a mount_id, or repeating one already counted (A + A, or the same mount in two datasets), does not count as independent. Fewer than two independent mountings → INSUFFICIENT (never FAIL); only the measured delta can fail |
 | Centre / edge geometry | per ChArUco frame: reprojection RMS by zone; line-straightness RMS as captured and after undistortion; planar residual (mm) | the planar residual uses the board's own scale: shape, not absolute accuracy |
 | Repeatability | Scout length/width through `scout_measure` (the product analyzer, unchanged): n accepted/refused, mean, std, range, relative spread; as captured and undistorted | unmoved series only |
 | Accuracy | mean (bias), mean \|error\| and max \|error\| against the part's **verified** truth | never computed from nominal dimensions. **No correction factor is ever applied** |
@@ -135,7 +140,20 @@ carries its sha256.
 - **INSUFFICIENT EVIDENCE:** a needed metric or threshold is missing.
 - **NO ELIGIBLE CAMERA:** every camera failed at least one criterion.
 
+Focus rules:
+
+- `fixed`, `manual_locked`, or `motorized_position` with a recorded position
+  on every quantitative frame → PASS.
+- `auto`, or a motor position missing → FAIL.
+- UNKNOWN, `not_exposed`, or a motorized module claiming fixed/manual →
+  INSUFFICIENT.
+- `focus_control_exposed` reports platform compatibility separately and is not
+  a criterion.
+
 There is no weighted score. Synthetic datasets can never produce a role.
+Criteria changes are listed in `decision_criteria.json → changes`. Revision r2
+was made after independent review, before any data, and changed no threshold
+value.
 
 ## 5. Reuse — what already existed
 

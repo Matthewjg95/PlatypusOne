@@ -26,7 +26,9 @@ repeatability, lighting and clutter cells.
    walks the cells below. Failed or bad frames are discarded *with a reason*,
    never deleted.
 7. Calibration set B comes after removing and re-installing the camera in its
-   fixture with focus untouched: that is the stability test.
+   fixture with focus untouched: that is the stability test. The plan tags the
+   two sets with distinct `mount_id`s. Never reuse a mount_id for a set taken
+   without a real remount, because the gate counts only distinct mountings.
 8. Measure and verify the printed targets (ChArUco square pitch over 6 squares,
    20 mm reference square, part with calipers) and set `status: verified` +
    `source`. Until then the analysis reports shape, never absolute accuracy.

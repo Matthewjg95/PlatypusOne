@@ -16,7 +16,7 @@
      "instruction": "ChArUco board flat, facing the camera, pushed into a frame corner."}
   ],
   "at_representative": [
-    {"cell": "calib-A", "scene": "calibration", "placement": "varied", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 15, "calibration_set": "A",
+    {"cell": "calib-A", "scene": "calibration", "placement": "varied", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 15, "calibration_set": "A", "mount_id": "mount-1",
      "instruction": "Calibration set A: board tilted up to ~35 deg in varied directions; over the 15 shots put board corners into every image corner and edge. Board must be flat and still."},
     {"cell": "repeat", "scene": "repeatability", "placement": "center", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 10, "repeat_series": "rep-250",
      "instruction": "Fixture and scene untouched: 10 captures in a row. Do not move anything, do not touch the camera."},
@@ -30,7 +30,7 @@
      "instruction": "Bright overhead light, specular glare allowed if it happens."},
     {"cell": "clutter", "scene": "clutter", "placement": "center", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 2,
      "instruction": "Moderate clutter: 2-3 unrelated small objects near (not touching) the sheet."},
-    {"cell": "calib-B", "scene": "calibration", "placement": "varied", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 15, "calibration_set": "B",
+    {"cell": "calib-B", "scene": "calibration", "placement": "varied", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 15, "calibration_set": "B", "mount_id": "mount-2",
      "instruction": "Calibration set B AFTER removing and re-installing the camera in its fixture (focus untouched). Same pose rules as set A."}
   ],
   "camera_specific": {

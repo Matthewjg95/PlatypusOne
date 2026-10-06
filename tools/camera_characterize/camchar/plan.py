@@ -66,7 +66,7 @@ def expand(spec: dict[str, Any], camera: str) -> list[dict[str, Any]]:
                 "targets": list(cell["targets"]),
                 "instruction": cell["instruction"],
             }
-            for k in ("calibration_set", "repeat_series"):
+            for k in ("calibration_set", "mount_id", "repeat_series"):
                 if k in cell:
                     s[k] = cell[k]
             if "repeat_series" in cell:
@@ -154,11 +154,13 @@ def init_dataset(spec: dict[str, Any], camera: str, out: Path, dataset_id: str) 
         "notes": "",
     }
     (out / "dataset.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    plan = {
-        "matrix_version": spec["matrix_version"],
-        "camera": camera,
-        "shots": expand(spec, camera),
-    }
+    shots = expand(spec, camera)
+    for s in shots:
+        # A mounting is a physical event of THIS dataset: namespace it so two
+        # sessions' "mount-1" can never be mistaken for the same mounting.
+        if "mount_id" in s:
+            s["mount_id"] = f"{dataset_id}/{s['mount_id']}"
+    plan = {"matrix_version": spec["matrix_version"], "camera": camera, "shots": shots}
     (out / "capture_plan.json").write_text(json.dumps(plan, indent=2) + "\n")
     (out / "frames").mkdir(exist_ok=True)
 

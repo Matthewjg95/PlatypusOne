@@ -121,8 +121,11 @@ def analyze_dataset(
     for key, fids in sorted(groups.items()):
         cset, w, h, fmt = key
         states = {_focus_state(by_id[f]) for f in fids}
+        mounts = {str(by_id[f].get("mount_id", UNKNOWN)) for f in fids}
         entry: dict[str, Any] = {
+            "dataset_id": ds.dataset_id,
             "calibration_set": cset,
+            "mount_id": next(iter(mounts)) if len(mounts) == 1 else sorted(mounts),
             "size": [w, h],
             "format": fmt,
             "frames_offered": [by_id[f].ref for f in fids],
@@ -132,6 +135,11 @@ def analyze_dataset(
         if len(states) != 1:
             entry["status"] = "invalid"
             entry["reason"] = "focus state changes within one calibration set"
+            calibrations.append(entry)
+            continue
+        if len(mounts) != 1:
+            entry["status"] = "invalid"
+            entry["reason"] = "mount_id changes within one calibration set"
             calibrations.append(entry)
             continue
         accepted = [(by_id[f].ref, detections[f][1]) for f in fids if f in detections]

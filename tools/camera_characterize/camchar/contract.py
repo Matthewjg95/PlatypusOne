@@ -163,6 +163,11 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def is_number(value: Any) -> bool:
+    """A real engineering number. bool is an int subclass in Python and is rejected."""
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
 def is_unknown(value: Any) -> bool:
     return value == UNKNOWN or value is None
 
@@ -221,12 +226,16 @@ def _validate_targets(targets: Any, issues: list[Issue]) -> None:
             continue
         if kind == "charuco":
             sq = t.get("squares")
-            if not (isinstance(sq, list) and len(sq) == 2 and all(int(v) >= 3 for v in sq)):
+            if not (
+                isinstance(sq, list)
+                and len(sq) == 2
+                and all(isinstance(v, int) and not isinstance(v, bool) and v >= 3 for v in sq)
+            ):
                 issues.append(Issue("ERROR", where, "squares must be [cols, rows], each >= 3"))
             if t.get("dictionary") not in ARUCO_DICTIONARIES:
                 issues.append(Issue("ERROR", where, f"dictionary must be in {ARUCO_DICTIONARIES}"))
             ratio = t.get("marker_to_square")
-            if not isinstance(ratio, int | float) or not 0.3 <= ratio <= 0.9:
+            if not is_number(ratio) or not 0.3 <= ratio <= 0.9:
                 issues.append(Issue("ERROR", where, "marker_to_square must be in [0.3, 0.9]"))
             _dimension(t, "square_mm", where, issues)
         elif kind == "scout_reference":
@@ -246,7 +255,7 @@ def _dimension(obj: dict[str, Any], key: str, where: str, issues: list[Issue]) -
     if is_unknown(value):
         issues.append(Issue("WARN", where, f"{key} is UNKNOWN"))
         return
-    if not isinstance(value, int | float) or value <= 0:
+    if not is_number(value) or value <= 0:
         issues.append(Issue("ERROR", where, f"{key} must be a positive number"))
     status = obj.get(f"{key}_status", obj.get("status", UNKNOWN))
     if status not in DIMENSION_STATUS:
@@ -366,10 +375,9 @@ def _verify_file(fr: Frame, fmt: str, verify_hashes: bool) -> None:
     where = f"frames.{fr.frame_id}"
     assert fr.abs_path is not None
     data = fr.data
-    try:
-        w, h = int(data["width"]), int(data["height"])
-    except (KeyError, TypeError, ValueError):
-        fr.issues.append(Issue("ERROR", where, "width/height must be integers"))
+    w, h = data.get("width"), data.get("height")
+    if not all(isinstance(v, int) and not isinstance(v, bool) and v > 0 for v in (w, h)):
+        fr.issues.append(Issue("ERROR", where, "width/height must be positive integers"))
         return
     if fmt in RAW_FORMATS:
         stride = data.get("stride")
@@ -383,7 +391,7 @@ def _verify_file(fr: Frame, fmt: str, verify_hashes: bool) -> None:
                     Issue("ERROR", where, f"bayer_pattern must be in {BAYER_PATTERNS}")
                 )
             for k in ("black_level", "white_level"):
-                if not isinstance(data.get(k), int | float):
+                if not is_number(data.get(k)):
                     fr.issues.append(Issue("ERROR", where, f"{k} required for raw Bayer"))
     else:
         dims = _image_header_dims(fr.abs_path, fmt)

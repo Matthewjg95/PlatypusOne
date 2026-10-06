@@ -43,7 +43,7 @@ def _measured(phys: dict[str, Any], key: str) -> float | None:
     entry = phys.get(key)
     if isinstance(entry, dict) and entry.get("status") == "measured":
         v = entry.get("value")
-        return float(v) if isinstance(v, int | float) else None
+        return float(v) if isinstance(v, int | float) and not isinstance(v, bool) else None
     return None
 
 
@@ -86,19 +86,42 @@ def camera_metrics(
                 [],
                 "; ".join(str(x) for x in reasons if x) or "no calibration set captured",
             )
-    put("calibration_sets_ok", len(cals), [f"calibration:{c['calibration_set']}" for c in cals])
-    same = [c for c in cals if c["size"] == cals[0]["size"]] if cals else []
-    if len(same) >= 2:
-        f = [c["camera_matrix"][0][0] for c in same]
-        g = [c["camera_matrix"][1][1] for c in same]
+    # Stability needs INDEPENDENT calibrations: distinct physical mountings
+    # (mount_id), same image size. A set without a mount_id, or repeating
+    # one already counted, adds nothing - so A + A can never pass as A/B.
+    # cals is sorted best-first, so each mount keeps its strongest set.
+    same_size = [c for c in cals if c["size"] == cals[0]["size"]] if cals else []
+    by_mount: dict[str, dict[str, Any]] = {}
+    for c in same_size:
+        mid = c.get("mount_id", UNKNOWN)
+        if not isinstance(mid, str) or mid in (UNKNOWN, ""):
+            continue
+        by_mount.setdefault(mid, c)
+    indep = list(by_mount.values())
+    indep_ev = [
+        f"calibration:{c['dataset_id']}/{c['calibration_set']}@{c['mount_id']}" for c in indep
+    ]
+    # Fewer than two independent mountings is missing evidence, never a FAIL:
+    # only the measured focal delta between real mountings can fail.
+    put(
+        "calibration_independent_sets",
+        len(indep) if len(indep) >= 2 else None,
+        indep_ev,
+        f"{len(indep)} distinct physical mounting(s) (mount_id) at one image size; "
+        f"{len(same_size) - len(indep)} other ok set(s) not counted as independent",
+    )
+    if len(indep) >= 2:
+        f = [c["camera_matrix"][0][0] for c in indep]
+        g = [c["camera_matrix"][1][1] for c in indep]
         delta = max((max(f) - min(f)) / np.mean(f), (max(g) - min(g)) / np.mean(g))
+        put("calibration_focal_rel_delta", float(delta), indep_ev, "across independent mountings")
+    else:
         put(
             "calibration_focal_rel_delta",
-            float(delta),
-            [f"calibration:{c['calibration_set']}" for c in same],
+            None,
+            indep_ev,
+            "needs two calibrations from distinct mountings (mount_id) at the same size",
         )
-    else:
-        put("calibration_focal_rel_delta", None, [], "needs two calibration sets at the same size")
 
     geo = [
         (fr["frame"], fr["geometry"])
@@ -169,22 +192,49 @@ def camera_metrics(
         put("repeatability_accepted_frames", None, [])
 
     quant = [fr for r in results for fr in r["frames"].values() if fr.get("scene") in QUANT_SCENES]
-    if quant:
-        # UNKNOWN focus = missing evidence (INSUFFICIENT), not a failure.
-        # auto, or a motor position not recorded, is a FAIL: the state moved
-        # or cannot be reproduced.
-        modes = [fr["focus_mode"] for fr in quant]
-        if any(mm in (UNKNOWN, None) for mm in modes):
-            ok = None
-        else:
-            ok = all(
-                mm in ("manual_locked", "fixed", "not_exposed")
-                or (mm == "motorized_position" and fr["focus_position"] not in (UNKNOWN, None))
-                for mm, fr in zip(modes, quant, strict=True)
-            )
-        put("focus_state_recorded", ok, [fr["frame"] for fr in quant])
+    focus_type = next((r["camera"].get("focus_type") for r in results), UNKNOWN)
+    modes = [fr["focus_mode"] for fr in quant]
+    # Platform compatibility, reported on its own: does the UNO Q expose any
+    # focus control for this module? This is NOT a focus-state record.
+    ctl = [str((r.get("bringup") or {}).get("focus_control", UNKNOWN)) for r in results]
+    if "exposed" in ctl or "motorized_position" in modes:
+        exposed: bool | None = True
+    elif "not_exposed" in ctl or "not_exposed" in modes:
+        exposed = False
     else:
-        put("focus_state_recorded", None, [])
+        exposed = None
+    put(
+        "focus_control_exposed",
+        exposed,
+        [fr["frame"] for fr in quant] + [f"bringup:{c}" for c in ctl],
+        "platform compatibility only; does not establish a reproducible focus state",
+    )
+    # Reproducibly known focus state on every quantitative frame:
+    #   fixed / manual_locked            -> known (lens cannot move / is locked)
+    #   motorized_position + position    -> known (recorded per frame)
+    #   auto, or a motor position absent -> FAIL (state moved / unrecoverable)
+    #   UNKNOWN or not_exposed           -> INSUFFICIENT: no control is not a
+    #                                       record of where the lens rests
+    #   a motorized module claiming fixed/manual_locked -> INSUFFICIENT
+    if not quant:
+        state, note = None, "no quantitative frames"
+    elif any(m == "auto" for m in modes) or any(
+        m == "motorized_position" and fr["focus_position"] in (UNKNOWN, None)
+        for m, fr in zip(modes, quant, strict=True)
+    ):
+        state, note = False, "auto focus or unrecorded motor position on a quantitative frame"
+    elif any(m in (UNKNOWN, None) for m in modes):
+        state, note = None, "focus_mode UNKNOWN on a quantitative frame"
+    elif any(m == "not_exposed" for m in modes):
+        state, note = (
+            None,
+            "focus control not exposed: a compatibility result, not a reproducible focus state",
+        )
+    elif focus_type == "motorized" and any(m in ("fixed", "manual_locked") for m in modes):
+        state, note = None, "motorized module recorded as fixed/manual without evidence"
+    else:
+        state, note = True, ""
+    put("focus_state_recorded", state, [fr["frame"] for fr in quant], note)
 
     focus_series = [
         (n, s)

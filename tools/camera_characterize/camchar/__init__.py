@@ -6,6 +6,6 @@ Synthetic fixtures exercise the software; they are never camera evidence.
 
 # Bump on any change that can alter a computed number. Every derived file and
 # report carries it, so a metric always traces to the code that produced it.
-ANALYSIS_VERSION = "camchar-0.1.0"
+ANALYSIS_VERSION = "camchar-0.2.0"
 
 UNKNOWN = "UNKNOWN"

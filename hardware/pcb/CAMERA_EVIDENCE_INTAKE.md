@@ -24,7 +24,7 @@ Additional head-relevant fields the report provides:
 | Focus access (ring reachable / sealed / none / software-recorded) | handoff block, `focus_type` + `bringup.focus_control` | window/bezel, service cover |
 | Calibration survives remove/reinstall (focal Δ between sets A/B) | `calibration_focal_rel_delta` | datum-hole scheme (Rev A goal 3) |
 | Working-distance envelope (distances passing the edge-rise rule) | `working_envelope_distances` | baseline P2, illumination L2 |
-| B0393 focus control on UNO Q | `bringup.focus_control` (PR #42: no lens subdev) | whether AF is a product option at all |
+| B0393 focus control on UNO Q | `focus_control_exposed` / `bringup.focus_control` (PR #42: no lens subdev) | whether AF is a product option at all |
 
 ## A. Decisions the head needs
 

@@ -244,6 +244,7 @@ def make_dataset(
                 targets=["charuco"],
                 working_distance_mm=350,
                 calibration_set=cset,
+                mount_id=f"mount-{cset}",
             )
     for dist in distances:
         for placement, off in (("center", (0, 0)), ("edge", (-250, -170))):

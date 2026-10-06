@@ -163,6 +163,22 @@ class ContractTests(Tmp):
         fr = next(f for f in ds.frames if f.frame_id == "raw")
         self.assertTrue(any("expected 80" in i.message for i in fr.issues))
 
+    def test_bool_is_not_a_number(self):
+        d = self._dataset()
+        self._edit(d, lambda m: m["targets"]["ref20"].update(reference_mm=True))
+        ds = contract.load_dataset(d)
+        self.assertTrue(any("positive number" in i.message for i in ds.issues))
+        self.assertFalse(contract.is_number(True))
+        self.assertTrue(contract.is_number(20.0))
+        phys = {"board_w_mm": {"value": True, "status": "measured"}}
+        self.assertIsNone(decision._measured(phys, "board_w_mm"))
+
+    def test_bool_dimensions_rejected_for_frames(self):
+        d = self._dataset()
+        self._edit(d, lambda m: m["frames"][0].update(width=True))
+        ds = contract.load_dataset(d)
+        self.assertTrue(any("positive integers" in i.message for i in ds.frames[0].issues))
+
     def test_unverified_dimension_flagged(self):
         d = self._dataset()
         self._edit(
@@ -433,6 +449,71 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(rows["repeatability_rel_spread"]["status"], "INSUFFICIENT")
         self.assertNotEqual(d["decision"]["fallback"]["outcome"], "PROPOSED")
 
+    def test_duplicate_calibration_set_cannot_pass_stability(self):
+        a = copy.deepcopy(self.analysis)
+        sku_a = next(r for r in a["datasets"] if r["sku"] == "SYN-A")
+        for c in sku_a["calibrations"]:  # A + A, same mounting
+            c["calibration_set"] = "A"
+            c["mount_id"] = "mount-A"
+        d = decision.decide(a, self.crit, self.sha, _allow_synthetic_roles=True)
+        m = d["cameras"]["SYN-A"]["metrics"]
+        self.assertIsNone(m["calibration_independent_sets"]["value"])
+        self.assertIn("1 distinct physical mounting", m["calibration_independent_sets"]["note"])
+        self.assertIsNone(m["calibration_focal_rel_delta"]["value"])
+        rows = {c["metric"]: c for c in d["cameras"]["SYN-A"]["roles"]["reference"]["criteria"]}
+        self.assertEqual(rows["calibration_independent_sets"]["status"], "INSUFFICIENT")
+        self.assertEqual(d["cameras"]["SYN-A"]["roles"]["reference"]["verdict"], "INSUFFICIENT")
+        for c in sku_a["calibrations"]:  # no mounting identity at all
+            c["mount_id"] = UNKNOWN
+        d = decision.decide(a, self.crit, self.sha, _allow_synthetic_roles=True)
+        m = d["cameras"]["SYN-A"]["metrics"]["calibration_independent_sets"]
+        self.assertIsNone(m["value"])
+        self.assertIn("0 distinct physical mounting", m["note"])
+
+    def test_duplicate_set_across_datasets_counts_once(self):
+        a = copy.deepcopy(self.analysis)
+        sku_a = next(r for r in a["datasets"] if r["sku"] == "SYN-A")
+        twin = copy.deepcopy(sku_a)
+        twin["dataset_id"] = "syn-syn-a-copy"
+        for r in (sku_a, twin):
+            r["calibrations"] = [c for c in r["calibrations"] if c["calibration_set"] == "A"]
+        a["datasets"].append(twin)
+        d = decision.decide(a, self.crit, self.sha, _allow_synthetic_roles=True)
+        m = d["cameras"]["SYN-A"]["metrics"]["calibration_independent_sets"]
+        self.assertIsNone(m["value"])
+        self.assertIn("1 distinct physical mounting", m["note"])
+
+    def test_independent_mountings_pass(self):
+        m = self.decision["cameras"]["SYN-A"]["metrics"]
+        self.assertEqual(m["calibration_independent_sets"]["value"], 2)
+        self.assertIsNotNone(m["calibration_focal_rel_delta"]["value"])
+
+    def test_not_exposed_is_not_a_focus_state(self):
+        a = copy.deepcopy(self.analysis)
+        sku_a = next(r for r in a["datasets"] if r["sku"] == "SYN-A")
+        for fr in sku_a["frames"].values():
+            fr["focus_mode"] = "not_exposed"
+        d = decision.decide(a, self.crit, self.sha, _allow_synthetic_roles=True)
+        m = d["cameras"]["SYN-A"]["metrics"]
+        self.assertIsNone(m["focus_state_recorded"]["value"])
+        self.assertIs(m["focus_control_exposed"]["value"], False)
+        rows = {c["metric"]: c for c in d["cameras"]["SYN-A"]["roles"]["reference"]["criteria"]}
+        self.assertEqual(rows["focus_state_recorded"]["status"], "INSUFFICIENT")
+
+    def test_fixed_passes_but_motorized_claiming_fixed_does_not(self):
+        m = self.decision["cameras"]["SYN-A"]["metrics"]
+        self.assertIs(m["focus_state_recorded"]["value"], True)  # synthetic SYN-A is fixed
+        a = copy.deepcopy(self.analysis)
+        sku_a = next(r for r in a["datasets"] if r["sku"] == "SYN-A")
+        sku_a["camera"]["focus_type"] = "motorized"
+        d = decision.decide(a, self.crit, self.sha, _allow_synthetic_roles=True)
+        self.assertIsNone(d["cameras"]["SYN-A"]["metrics"]["focus_state_recorded"]["value"])
+        for fr in sku_a["frames"].values():
+            fr["focus_mode"], fr["focus_position"] = "motorized_position", 512
+        d = decision.decide(a, self.crit, self.sha, _allow_synthetic_roles=True)
+        self.assertIs(d["cameras"]["SYN-A"]["metrics"]["focus_state_recorded"]["value"], True)
+        self.assertIs(d["cameras"]["SYN-A"]["metrics"]["focus_control_exposed"]["value"], True)
+
     def test_unknown_focus_is_insufficient_auto_is_fail(self):
         a = copy.deepcopy(self.analysis)
         sku_a = next(r for r in a["datasets"] if r["sku"] == "SYN-A")
@@ -476,6 +557,9 @@ class PlanCaptureTests(Tmp):
         self.assertEqual(m["camera"]["silkscreen"], UNKNOWN)
         self.assertEqual(m["bringup"]["focus_control"], UNKNOWN)
         self.assertEqual(m["targets"]["charuco-7x10-20"]["square_mm_status"], "nominal_unverified")
+        shots = json.loads((d / "capture_plan.json").read_text())["shots"]
+        mounts = {s["mount_id"] for s in shots if "mount_id" in s}
+        self.assertEqual(mounts, {"b0393-test/mount-1", "b0393-test/mount-2"})
         with self.assertRaises(FileExistsError):
             plan.init_dataset(self.spec, "B0393", d, "b0393-test")
 
