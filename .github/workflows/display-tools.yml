@@ -1,0 +1,50 @@
+name: Display tools
+
+on:
+  pull_request:
+    paths:
+      - "tools/compact_display/**"
+      - ".github/workflows/display-tools.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/compact_display/**"
+      - ".github/workflows/display-tools.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: display-tools-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compact-display:
+    # Host-side consistency only: panel definitions vs the vendor overlay,
+    # generated overlays compile, scripts pass shellcheck. Not bench evidence.
+    name: Compact display - panels, overlays, scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install device-tree compiler and shellcheck
+        run: sudo apt-get update -q && sudo apt-get install -y -q device-tree-compiler shellcheck
+
+      - name: Unit tests
+        run: python3 -m unittest -v tools/compact_display/test_compact_display.py
+
+      - name: Dry-run installer (generate + compile both panels)
+        run: |
+          tools/compact_display/install_panel.sh --dry-run \
+            tools/compact_display/panels/waveshare-3in5-dsi-h.panel /tmp/h
+          tools/compact_display/install_panel.sh --dry-run \
+            tools/compact_display/panels/waveshare-3in5-dsi-e.panel /tmp/e
+          fdtdump /tmp/h/overlay.dtbo | grep -q 'platypus,waveshare-3in5-dsi-h'
+
+      - name: Shellcheck
+        working-directory: tools/compact_display
+        run: shellcheck -x -s sh install_panel.sh restore_5in.sh bench_accept.sh lib/common.sh

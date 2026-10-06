@@ -1,5 +1,11 @@
 # UNO Q DSI panel candidates
 
+> **Compact display (3.5–4.0"), 2026-10-05:** superseded for panel choice by
+> [COMPACT_DISPLAY_SELECTION.md](COMPACT_DISPLAY_SELECTION.md) — leading
+> candidate Waveshare 3.5inch DSI LCD (H), bench procedure
+> [COMPACT_DISPLAY_BENCH_ACCEPTANCE.md](COMPACT_DISPLAY_BENCH_ACCEPTANCE.md).
+> The 5" stays the development fixture and software fallback.
+
 > **Bench reality, 2026-09-28:** the panel actually in hand is the Waveshare
 > *5inch DSI LCD* (800×480, ICN6211, 15-pin FPC), not Candidate A below, and the
 > board image predates the carrier overlays. The executable plan for the

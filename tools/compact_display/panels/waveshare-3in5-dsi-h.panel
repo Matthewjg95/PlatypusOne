@@ -1,0 +1,85 @@
+# Waveshare 3.5inch DSI LCD (H)  -  SKU 33087  -  480x800 portrait, IPS, GT911
+#
+# Platypus One compact-display LEADING CANDIDATE (docs/hardware/COMPACT_DISPLAY_SELECTION.md).
+# NOT YET RUN ON AN UNO Q. Nothing in this file is bench evidence.
+#
+# Format: the shell-syntax .panel format of dcuartielles/uno_q_dsi_displays
+# (pinned at d633636), so its panel-simple descriptor build can consume it
+# unchanged. Touch is described by the GOODIX_* keys below, which that
+# repository's generator does not read; tools/compact_display/gen_overlay.py does.
+#
+# Where every number comes from (DOCUMENTED, Waveshare):
+#   Waveshare_35DSI.dtbo (files.waveshare.com/wiki/common/), decompiled with
+#   dtc; its "35H" override sets:
+#     clock-frequency 33600000, hactive 480, hfront-porch 48, hsync-len 32,
+#     hback-porch 80, vactive 800, vfront-porch 3, vsync-len 10,
+#     vback-porch 62, dsi-color-format RGB888, mode MODE_VIDEO, data-lanes <1>
+#   and the same values appear in the wiki's Bullseye instructions
+#   (vc4-kms-dsi-generic,hactive=480,hfp=48,hsync=32,hbp=80,vactive=800,
+#    vfp=3,vsync=10,vbp=62). reference/waveshare_35dsi_overrides.json holds
+#   the decoded overlay; tests check this file against it.
+#
+# What the overlay does NOT contain is the point: no power regulator, no reset
+# GPIO, no backlight device, no DSI init sequence. The panel takes 3V3 and I2C
+# from the FFC and drives itself; the host only streams video. That is the same
+# shape as the proven Waveshare 800x480 path (no host-programmed bridge), minus
+# the ATTINY controller.
+#
+# Power (DOCUMENTED, Waveshare FAQ): 3.3 V, 180 mA. Backlight: not adjustable.
+# Brightness: 270 cd/m2. Connector: 15-pin 1.0 mm (pins 2/3 lane 1, 5/6 clock,
+# 8/9 lane 0, 11/12 SCL0/SDA0, 14/15 3V3) -> the proven 15->22 MIPI-DSI-Cable.
+# Lanes: the FFC wires two, Waveshare's overlay drives ONE. One lane here too.
+# Single-lane bit rate: 33.6 MHz x 24 bpp = 806 Mbit/s (proven 5": 667 Mbit/s).
+
+PANEL_ID="waveshare-3in5-dsi-h"
+PANEL_DESC="Waveshare 3.5inch DSI LCD (H), 480x800"
+
+# Private compatible: matched only by the descriptor we add to panel-simple, so
+# nothing built into the Arduino kernel can win the bind race.
+PANEL_COMPATIBLE="platypus,waveshare-3in5-dsi-h"
+PANEL_C_NAME="waveshare_3in5_dsi_h"
+
+CLOCK_KHZ=33600
+HACTIVE=480
+HFRONT=48
+HSYNC=32
+HBACK=80
+VACTIVE=800
+VFRONT=3
+VSYNC=10
+VBACK=62
+
+# Active area from Waveshare 2D drawing "3.5_inch_DSI_LCD_H-2D-PDF": 45.36 x 75.80 mm.
+WIDTH_MM=45
+HEIGHT_MM=76
+
+DSI_LANES=1
+DSI_FORMAT="MIPI_DSI_FMT_RGB888"
+DSI_MODE_FLAGS="MIPI_DSI_MODE_VIDEO"
+BPC=8
+
+# No ATTINY-style panel controller on this board.
+PANEL_CTRL_COMPATIBLE=""
+PANEL_CTRL_ADDR=""
+
+# Empty on purpose: the upstream build scripts would otherwise fetch and patch
+# edt-ft5x06, which this panel does not use.
+TOUCH_ADDR=""
+
+# --- touch: Goodix GT911, polled (no INT/RST pins on the 15-pin FFC) -------
+# Waveshare's overlay declares gt911 at 0x14 AND 0x5d; the wiki shows the
+# (H) enumerating as "10-0014 Goodix". Mainline goodix polls every 17 ms when
+# no IRQ is given (input_setup_polling). Reads must be split for the carrier's
+# 12-byte CCI limit: upstream scripts/17-install-goodix-fix.sh.
+GOODIX_COMPATIBLE="goodix,gt911"
+GOODIX_ADDR="0x14"
+GOODIX_ALT_ADDR="0x5d"
+GOODIX_SIZE_X=480
+GOODIX_SIZE_Y=800
+
+# --- recognition (BENCH_VERIFY: product ID read from the panel itself) -----
+DETECT_ADDR="0x14"
+DETECT_WRITE="0x81 0x40"
+DETECT_READ="4"
+DETECT_EXPECT="0x39 0x31 0x31"              # ASCII "911"
+DETECT_NOTE="Goodix GT911 at 0x14 and nothing at 0x45 - Waveshare 3.5in DSI (H) or (E)"

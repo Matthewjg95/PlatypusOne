@@ -27,6 +27,7 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 | 4a | **Waveshare 5-DSI-TOUCH-A + UNO Media Carrier** ◐ CONDITIONAL | Panel $34.95–36.99 + carrier €19.89 | Panel CAD TBD; carrier 68.58×53.34 | Only 4.3–5″ panel with a shipped UNO Q profile; 720×1280 native portrait. Carrier was Coming Soon / sold out on 2026-08-25. Proof plan: [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md) | PLANNED |
 | 4b | 4.3" parallel-RGB 800×480 cap. (SUB3-class, ST7262E43 + GT1151) + ESP32-S3 bridge | ~$35+bridge | ~121×76×7 | FALLBACK ONLY (activated if 4a sourcing fails by Sep 30) | HOLD |
 | 4c | 3.2" ILI9341 320×240 SPI, resistive (XPT2046) | $16 | ~90×55×10 | DESCOPE NET only; matches current renderer/sim as built | HOLD |
+| 4e | **Waveshare 3.5inch DSI LCD (H), SKU 33087** + Media Carrier + existing 15→22 cable | (check on order day) | 56×88.9×~10.7 (vendor drawing/STEP) | Compact-display LEADING candidate (#41). 480×800 portrait, GT911, 3V3 180 mA. Software prepared, **not yet bench-tested**: [COMPACT_DISPLAY_SELECTION.md](COMPACT_DISPLAY_SELECTION.md) | RECOMMENDED (1 bench unit) |
 | 4d | USB-C/HDMI portable monitor or Waveshare 5" HDMI (H) | $40 | dev only | Prototyping fixture, never the product (consumes USB-C) | PLANNED |
 
 ## Input

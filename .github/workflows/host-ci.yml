@@ -137,3 +137,14 @@ jobs:
               assert len(data) == len(header) + 800 * 480 * 3
           print("synthetic kiosk: source + JSON + preview + card preserved")
           PY
+
+      - name: Smoke-test Scout kiosk portrait layout (480x800, compact display)
+        run: |
+          mkdir -p build/kiosk-portrait/screens
+          ./build/tools/scout_kiosk/scout_kiosk --fake --offscreen-size 480x800 \
+            --offscreen build/kiosk-portrait/screens \
+            --out build/kiosk-portrait/observations
+          for name in preview.ppm card.ppm; do
+            head -c 15 "build/kiosk-portrait/screens/$name" | grep -q '480 800' \
+              || { echo "$name is not 480x800"; exit 1; }
+          done

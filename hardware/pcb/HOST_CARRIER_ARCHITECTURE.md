@@ -16,7 +16,7 @@ The UNO Media Carrier remains the multimedia reference platform.
 | Rotary encoder + push | required | Needs a timer CH1/CH2 pair in encoder mode (e.g. TIM3: D8/PB4 + A2/PA6 candidate); keep out of the head's candidate pins. |
 | Buttons (2–3) | required | MCU GPIO or I2C expander on bus A. |
 | Service/debug | required | USB-C pass-through, UART console (JCTL SE4 is **1.8 V** — level-shift), test points on rails, SWD only if exposed by UNO Q. |
-| Compact display adaptation | only if needed | Native 22-pin DSI via Media Carrier preferred; adapter only if the chosen panel needs a different FPC/power (e.g. 4-DSI-TOUCH-A 5 V input). |
+| Compact display adaptation | only if needed | Native 22-pin DSI via Media Carrier preferred. Leading 3.5in (H) needs **none** (3V3 + I2C + 1 lane over the passive 15→22 cable); a 5 V lead only if the 4-DSI-TOUCH-A fallback is chosen ([selection](../../docs/hardware/COMPACT_DISPLAY_SELECTION.md)). |
 | Media Carrier replacement/consolidation | deferred | Only if packaging forces it; would bring CSI/DSI routing onto our board — explicitly not Rev A. |
 
 ## Interfaces

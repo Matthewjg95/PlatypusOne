@@ -1,0 +1,39 @@
+{
+  "source": "https://files.waveshare.com/wiki/common/Waveshare_35DSI.dtbo (decompiled with dtc, 2026-10-05)",
+  "default_data_lanes": 1,
+  "mode": "MODE_VIDEO",
+  "power_supply": null,
+  "backlight": null,
+  "touch": {
+    "compatible": "goodix,gt911",
+    "addresses": [
+      "0x14",
+      "0x5d"
+    ],
+    "interrupt": null
+  },
+  "35H": {
+    "clock_hz": 33600000,
+    "hactive": 480,
+    "hfp": 48,
+    "hsync": 32,
+    "hbp": 80,
+    "vactive": 800,
+    "vfp": 3,
+    "vsync": 10,
+    "vbp": 62,
+    "format": "RGB888"
+  },
+  "35E": {
+    "clock_hz": 24000000,
+    "hactive": 640,
+    "hfp": 48,
+    "hsync": 32,
+    "hbp": 80,
+    "vactive": 480,
+    "vfp": 3,
+    "vsync": 4,
+    "vbp": 13,
+    "format": "RGB888"
+  }
+}

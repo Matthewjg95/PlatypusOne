@@ -73,6 +73,10 @@ Deferred from critical path:
 - energy harvesting
 - production-polish features
 
+## Compact display (#41)
+
+Leading candidate **Waveshare 3.5inch DSI LCD (H)** (480×800 portrait, 3V3-only, GT911): reversible install, overlay, and D0–D7 bench procedure prepared in `tools/compact_display/`; **no compact panel has been run on the UNO Q yet**. See [selection](docs/hardware/COMPACT_DISPLAY_SELECTION.md) and [bench acceptance](docs/hardware/COMPACT_DISPLAY_BENCH_ACCEPTANCE.md). The 5" stays the dev fixture/fallback.
+
 ## Immediate next action
 
 **Preserve the submission-night captures, JSON, conditions, caliper truth, media, and actual tested SHA, then replay the pinned baseline on the UNO Q.**
