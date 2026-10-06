@@ -73,6 +73,10 @@ Deferred from critical path:
 - energy harvesting
 - production-polish features
 
+## Camera characterization (#40)
+
+Evidence pipeline built: `tools/camera_characterize/` (contract, capture matrix, validation, ChArUco calibration, centre/edge geometry, edge-rise focus, exposure, Scout repeatability/accuracy, three-role decision gate, report) — tested on **synthetic fixtures only**; **no camera has been characterized and no role is chosen**. B0393 autofocus is not exposed on UNO Q (PR #42 bench log: no lens subdev). See [CAMERA_CHARACTERIZATION.md](docs/hardware/CAMERA_CHARACTERIZATION.md) and [CAMERA_CAPTURE_MATRIX.md](docs/hardware/CAMERA_CAPTURE_MATRIX.md).
+
 ## Compact display (#41)
 
 Leading candidate **Waveshare 3.5inch DSI LCD (H)** (480×800 portrait, 3V3-only, GT911): reversible install, overlay, and D0–D7 bench procedure prepared in `tools/compact_display/`; **no compact panel has been run on the UNO Q yet**. See [selection](docs/hardware/COMPACT_DISPLAY_SELECTION.md) and [bench acceptance](docs/hardware/COMPACT_DISPLAY_BENCH_ACCEPTANCE.md). The 5" stays the dev fixture/fallback.

@@ -1,0 +1,50 @@
+{
+  "matrix_version": "2026-10-06",
+  "purpose": "Issue #40 IMX219 bench-off capture matrix. Distances are bench study points, not final product working distances.",
+  "cameras": ["B0394", "B0390", "B0393"],
+  "distances_mm": [150, 250, 400, 600],
+  "representative_distance_mm": 250,
+  "targets": ["charuco-7x10-20", "scout-ref-20", "part-1"],
+  "per_distance": [
+    {"cell": "ref-center", "scene": "dimensional_reference", "placement": "center", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 2,
+     "instruction": "Calibration sheet (20 mm square) + planar part flat, centred in frame, sheet parallel to sensor."},
+    {"cell": "ref-edge", "scene": "dimensional_reference", "placement": "edge", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 2,
+     "instruction": "Same sheet slid toward a frame corner: square and part fully inside, as close to the corner as possible."},
+    {"cell": "charuco-center", "scene": "geometry", "placement": "center", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 1,
+     "instruction": "ChArUco board flat, facing the camera, centred (partly outside the frame is fine at 150 mm)."},
+    {"cell": "charuco-edge", "scene": "geometry", "placement": "edge", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 1,
+     "instruction": "ChArUco board flat, facing the camera, pushed into a frame corner."}
+  ],
+  "at_representative": [
+    {"cell": "calib-A", "scene": "calibration", "placement": "varied", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 15, "calibration_set": "A", "mount_id": "mount-1",
+     "instruction": "Calibration set A: board tilted up to ~35 deg in varied directions; over the 15 shots put board corners into every image corner and edge. Board must be flat and still."},
+    {"cell": "repeat", "scene": "repeatability", "placement": "center", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 10, "repeat_series": "rep-250",
+     "instruction": "Fixture and scene untouched: 10 captures in a row. Do not move anything, do not touch the camera."},
+    {"cell": "rotated", "scene": "planar_part", "placement": "rotated", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 2,
+     "instruction": "Part rotated ~30 deg on the sheet; keep the 20 mm square square to the frame (analyzer limit ~8 deg)."},
+    {"cell": "light-hard-shadow", "scene": "lighting", "placement": "center", "lighting": "hard_shadow", "targets": ["scout-ref-20", "part-1"], "count": 2,
+     "instruction": "One low-angle point light casting a hard part shadow."},
+    {"cell": "light-low", "scene": "lighting", "placement": "center", "lighting": "low", "targets": ["scout-ref-20", "part-1"], "count": 2,
+     "instruction": "Dim room (same exposure/gain as the dataset unless recorded otherwise)."},
+    {"cell": "light-bright-overhead", "scene": "lighting", "placement": "center", "lighting": "bright_overhead", "targets": ["scout-ref-20", "part-1"], "count": 2,
+     "instruction": "Bright overhead light, specular glare allowed if it happens."},
+    {"cell": "clutter", "scene": "clutter", "placement": "center", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 2,
+     "instruction": "Moderate clutter: 2-3 unrelated small objects near (not touching) the sheet."},
+    {"cell": "calib-B", "scene": "calibration", "placement": "varied", "lighting": "even", "targets": ["charuco-7x10-20"], "count": 15, "calibration_set": "B", "mount_id": "mount-2",
+     "instruction": "Calibration set B AFTER removing and re-installing the camera in its fixture (focus untouched). Same pose rules as set A."}
+  ],
+  "camera_specific": {
+    "B0394": {
+      "before": "Set the M12 focus at the representative distance on the 20 mm square, lock it, photograph the ring. Record focus_mode=manual_locked and the ring position description. Do not touch focus until the dataset is finished.",
+      "extra": []
+    },
+    "B0390": {"before": "Fixed focus: record focus_mode=fixed.", "extra": []},
+    "B0393": {
+      "before": "First run tools/csi_bench/csi_bench.sh B0393 probe and record whether a lens/VCM subdevice exists. If none: focus_mode=not_exposed for every frame (compatibility result). If one exists: record its focus position control value on every quantitative frame (motorized_position).",
+      "extra": [
+        {"cell": "focus-rest", "scene": "focus", "placement": "center", "lighting": "even", "targets": ["scout-ref-20", "part-1"], "count": 5, "repeat_series": "focus-rest",
+         "instruction": "Cold power-cycle the board between each capture (scene untouched): does the lens come back to the same rest position? Compares edge rise across power cycles."}
+      ]
+    }
+  }
+}
