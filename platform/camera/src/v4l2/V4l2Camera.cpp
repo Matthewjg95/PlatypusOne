@@ -233,7 +233,7 @@ bool V4l2Camera::isOpen() const noexcept {
 
 Status V4l2Camera::setControls(const hal::CameraControls&) {
     // Exposure/gain/focus mapping to V4L2 CIDs is deliberately deferred until
-    // Scout calibration needs it (ROADMAP camera/libcamera-controls).
+    // Scout calibration needs it (V4L2 exposure/focus controls remain pending).
     return Error::NotSupported;
 }
 

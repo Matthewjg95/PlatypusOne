@@ -4,7 +4,9 @@
 //   mcuBridge  ✔ SerialMcuBridge over /dev/ttyRPMSG0 (override via ctor)
 //   storage    ✔ fixed data partition path
 //   display    ✖ TODO(board-bringup): panel driver pending hardware selection
-//   camera     ✖ TODO(board-bringup): libcamera backend (ROADMAP camera/libcamera)
+//   camera     ✖ TODO(board-bringup): not wired here yet. The V4L2 backend
+//              (platform/camera/src/v4l2) captured webcam frames on 2026-09-21
+//              (TEST_CHECKLISTS.md); used directly by tools/engineering_scout_capture
 //   sensors    ✖ TODO(board-bringup): IMU via MCU bridge (ROADMAP sensors/imu)
 //   audio      ✖ TODO(board-bringup)
 // Missing capabilities return nullptr per the IBoard contract; apps degrade.
@@ -21,6 +23,7 @@ class UnoQBoard final : public hal::IBoard {
    public:
     struct Config {
         std::string mcuDevice = "/dev/ttyRPMSG0";
+        SerialMcuBridge::Transport mcuTransport = SerialMcuBridge::Transport::Rpmsg;
         std::filesystem::path dataRoot = "/var/lib/platypusos";
         /// Injected by the composition root — a connected LinkedDisplay during
         /// the ADR-0001 prototype phase, a panel driver later. The board does

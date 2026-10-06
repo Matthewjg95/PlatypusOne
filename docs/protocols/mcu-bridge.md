@@ -59,5 +59,34 @@ topics must be ignored, never treated as errors).
 ## Open items
 
 - [ ] MCU-side firmware module implementing this spec (Arduino sketch / Zephyr)
-- [ ] Full baud-rate table in `SerialMcuBridge::open`
+- [x] Explicit supported UART baud table in `SerialMcuBridge::open`
 - [ ] Streaming sensor sample topics (`0x1000` range) for the IMU driver
+
+## Transport configuration and validation
+
+`SerialMcuBridge` defaults to `Transport::Uart`: supported rates are 9600,
+19200, 38400, 57600, 115200 and 230400; 460800 and 921600 are available when
+provided by the platform headers. Other rates return `InvalidArgument` before
+opening the device. UART termios failures or speed readback mismatches return
+`IoFailure` and release the descriptor. This does not prove the physical baud.
+
+`UnoQBoard::Config::mcuTransport` defaults to `Transport::Rpmsg` for
+`/dev/ttyRPMSG0`. This explicitly bypasses termios and ignores baud; it does
+not silently excuse UART configuration failures. When overriding `mcuDevice`
+with a UART, also select `Transport::Uart`.
+
+Linux `serial_mcu_bridge_tests` cover PTY speed readback, unsupported rates,
+configuration failure/retry, explicit RPMsg bypass, and idle close/reopen.
+These are host checks, not physical RPMsg/UART validation.
+
+PR #20 bench validation remains **PENDING**: the board was unreachable during
+initial implementation. On the reviewed revision, record commit, board image,
+compiler, device path, date and result for each check:
+
+- Native CMake build and `ctest --test-dir build-bench --output-on-failure`.
+- MCU firmware installed, RPMsg Ping/Pong and clean idle shutdown/reopen.
+- For UART use: matched peer baud and successful framed round-trip.
+- Discover the webcam with `v4l2-ctl --list-devices`; repeat capture using its
+  capture node (previously `/dev/video2`, not the codec `/dev/video0`).
+- Keep calibrated physical measurement pending until the printed-reference
+  validation in [TEST_CHECKLISTS.md](../hardware/TEST_CHECKLISTS.md) passes.

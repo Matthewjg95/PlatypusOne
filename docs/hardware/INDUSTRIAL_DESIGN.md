@@ -8,10 +8,10 @@ Status 2026-08-06: concept phase; **left-handed operation is a design driver**.
 
 | Concept | Sheet | Form | Hold |
 |---|---|---|---|
-| A. Pistol-grip | IMG_8050 / Prototype sketch 1 | 6.5"×3.8" (165×97 mm), screen + rear grip with trigger, top camera w/ LED ring, rotary encoder, speaker | One-handed, trigger under index |
-| B. Landscape tablet | IMG_8051 | 6.8" (172 mm) wide, 6–7" LCD, overmold grips both sides, encoder + button cluster right, kickstand, ¼"-20 tripod mount | Two-handed |
-| C. Vertical handheld | IMG_8052 | Phone-like, camera top, side encoder, trigger under index, kickstand, tripod mount | One-handed |
-| Vibe ref | Skannerz | Organic asymmetric shell, chunky rubberized texture, bold accent buttons | — |
+| A. Pistol-grip | [img-8050](../media/concept-a-pistol-grip-img-8050.jpg) / [sketch 1](../media/prototype-sketch-1.png) | 6.5"×3.8" (165×97 mm), screen + rear grip with trigger, top camera w/ LED ring, rotary encoder, speaker | One-handed, trigger under index |
+| B. Landscape tablet | [img-8051](../media/concept-b-landscape-tablet-img-8051.jpg) | 6.8" (172 mm) wide, 6–7" LCD, overmold grips both sides, encoder + button cluster right, kickstand, ¼"-20 tripod mount | Two-handed |
+| C. Vertical handheld | [img-8052](../media/concept-c-vertical-handheld-img-8052.jpg) | Phone-like, camera top, side encoder, trigger under index, kickstand, tripod mount | One-handed |
+| Vibe ref | [Skannerz](../media/skannerz-enclosure-inspo.jpg) | Organic asymmetric shell, chunky rubberized texture, bold accent buttons | — |
 
 Common DNA across all three: front camera with LED ring, push rotary encoder,
 scan trigger under the index finger, stereo speakers + mic, USB-C + microSD,
