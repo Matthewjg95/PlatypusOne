@@ -230,6 +230,12 @@ fall back to the USB-C link, fix networking, and retry.
 - [ ] Final BOM reconciled: every physical part appears in BOM.md with real price/source
 - [ ] Submission checklist in the contest snapshot doc 100% ticked
 
+## VL53L8CX first-ranging packet (issue #16)
+
+For the Tab5/M024/Pololu #3419 experiment, start with
+[TOF_BRINGUP.md](TOF_BRINGUP.md), its authoritative wiring table and human
+rail gates; use [TOF_EVIDENCE_TEMPLATE.md](TOF_EVIDENCE_TEMPLATE.md) per run.
+This is a standalone bench scaffold, not verified UNO Q sensor integration.
 
 ## Session B — Dream Lab first end-to-end pass (2026-09-28)
 
