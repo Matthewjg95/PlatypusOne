@@ -73,7 +73,7 @@ RF experiments, robotics; cosmetics; production certification; algorithm tuning.
 | Host-side pin assignment | **PROVISIONAL (TBD_*)** | candidates in [ICD](ICD_PERCEPTION_HEAD.md) |
 | ToF rail 3.29 V + voltage-domain crossings | **DECIDED by worst-case analysis (ICD §5a) – BENCH_VERIFY (T2, T13)** | 3.43 V is a conditional fallback only |
 | Board outline, hole positions, connector placement | **BLOCKED (MECHANICAL)** | [Fusion inputs](MECHANICAL_FUSION_INPUTS.md) |
-| Camera choice (B0394/B0393/B0390) | **BLOCKED (BENCH)** | [intake table](CAMERA_EVIDENCE_INTAKE.md) |
+| Camera choice (B0394/B0393/B0390) | **BLOCKED (BENCH)** — analysis pipeline ready, capture matrix not yet run | [intake table](CAMERA_EVIDENCE_INTAKE.md), [characterization](../../docs/hardware/CAMERA_CHARACTERIZATION.md) |
 | ToF usefulness / operating modes | **BLOCKED (BENCH, Platypus Lab #3)** | no physical ToF data yet |
 | Power budget | **BLOCKED (BENCH)** | [power tree](POWER_TREE_REV_A.md) |
 | Schematic ERC | **0 errors / 0 warnings** (2026-10-05, KiCad 9.0.9) | [report](perception_head_rev_a/outputs/erc_report.txt) |

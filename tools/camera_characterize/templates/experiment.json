@@ -1,0 +1,13 @@
+{
+  "schema": "platypus.camera_experiment/1",
+  "experiment_id": "imx219-benchoff-2026-10",
+  "evidence_type": "physical_capture",
+  "purpose": "Issue #40: B0394 / B0390 / B0393 on UNO Q + UNO Media Carrier, one comparable capture matrix",
+  "representative_distance_mm": 250,
+  "datasets": [
+    "datasets/b0394-YYYYMMDD",
+    "datasets/b0390-YYYYMMDD",
+    "datasets/b0393-YYYYMMDD"
+  ],
+  "notes": "Replace the YYYYMMDD dataset ids with the ones created by `camera_characterize.py init`."
+}

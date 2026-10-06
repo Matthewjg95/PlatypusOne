@@ -6,6 +6,26 @@ results here.** This page lists only what the head PCB consumes, so a result
 can be dropped in and immediately unblock a design item. Fill a cell only with
 a link to preserved evidence (image/JSON/photo/commit); otherwise leave `—`.
 
+**Producer (2026-10-06):** `tools/camera_characterize` turns the #40 capture
+matrix into `derived/<version>/report.md` + `decision.json`
+([CAMERA_CHARACTERIZATION.md](../../docs/hardware/CAMERA_CHARACTERIZATION.md)).
+Its per-camera **"PCB / Fusion handoff"** block carries the table B fields
+(measured envelope, holes, optical-centre offset, connector side, cable),
+the working-distance envelope, focus-access need and calibration stability
+after remove/reinstall. Copy values here only from a physical-capture report
+(never from the synthetic CI report) and link the report + its analysis
+version. Role outputs map to table A: PROPOSED → value; CANDIDATES /
+INSUFFICIENT EVIDENCE → leave `—`.
+
+Additional head-relevant fields the report provides:
+
+| Field | Report source | Feeds |
+|---|---|---|
+| Focus access (ring reachable / sealed / none / software-recorded) | handoff block, `focus_type` + `bringup.focus_control` | window/bezel, service cover |
+| Calibration survives remove/reinstall (focal Δ between sets A/B) | `calibration_focal_rel_delta` | datum-hole scheme (Rev A goal 3) |
+| Working-distance envelope (distances passing the edge-rise rule) | `working_envelope_distances` | baseline P2, illumination L2 |
+| B0393 focus control on UNO Q | `bringup.focus_control` (PR #42: no lens subdev) | whether AF is a product option at all |
+
 ## A. Decisions the head needs
 
 | Output | Value | Evidence link | Unblocks |

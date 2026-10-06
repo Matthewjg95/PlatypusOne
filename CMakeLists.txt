@@ -47,6 +47,7 @@ endif()
 
 add_subdirectory(tools/engineering_scout_capture)
 add_subdirectory(tools/scout_validation)
+add_subdirectory(tools/scout_measure)
 add_subdirectory(tools/ui_preview)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_subdirectory(tools/display_probe)
