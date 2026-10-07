@@ -1,0 +1,23 @@
+{
+  "resolver_version": "sketch-intent-0.1.0",
+  "source_sha256": "d2bf462c42a2ccc5ec572f680de19deec30f3e164a6f0c94d2db6814b17f9047",
+  "params": {
+    "tolerance_px": 2.0,
+    "question_factor": 2.0,
+    "gap_factor": 6.0,
+    "gap_min_px": 6.0,
+    "outlier_factor": 3.0,
+    "outlier_window": 5,
+    "angle_window_deg": 12.0,
+    "min_arc_span_deg": 20.0,
+    "min_arc_points": 6,
+    "max_radius_factor": 2.0,
+    "min_circle_span_deg": 300.0,
+    "equal_radius_rel": 0.25,
+    "concentric_factor": 1.0,
+    "min_corner_angle_deg": 8.0,
+    "rms_inflation": 1.25
+  },
+  "frozen_at_utc": "2026-10-07T09:23:41Z",
+  "note": "Parameters and resolver code frozen after development on the DEV fixtures only. Held-out fixtures, the ShadowScan renders and the scan-0053 washer were first run after this point; any later change to frozen code invalidates the held-out label."
+}
