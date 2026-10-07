@@ -1,0 +1,83 @@
+name: Sketch intent resolver
+
+on:
+  pull_request:
+    paths:
+      - "services/sketch_intent/**"
+      - ".github/workflows/sketch-intent.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "services/sketch_intent/**"
+      - ".github/workflows/sketch-intent.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sketch-intent-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Mesh2CAD PR #16 (feature/sketch-asset-library): the sketch-asset schema 1.1 the exporter targets.
+  MESH2CAD_SHA: 19e4281757fdc9ac1f4a3dd36a6ebed2ac0f57fc
+
+jobs:
+  test:
+    name: Tests, freeze check, benchmark smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r services/sketch_intent/requirements.txt opencv-python-headless==4.12.0.88
+
+      - name: Check out Mesh2CAD sketch-asset library (export validation)
+        id: mesh2cad
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: Matthewjg95/mesh2cad
+          ref: ${{ env.MESH2CAD_SHA }}
+          path: _mesh2cad
+
+      - name: Unit tests
+        env:
+          PYTHONPATH: services/sketch_intent
+          MESH2CAD_ROOT: ${{ steps.mesh2cad.outcome == 'success' && format('{0}/_mesh2cad', github.workspace) || '' }}
+        run: python -W error::DeprecationWarning -m unittest discover -s services/sketch_intent/tests -v
+
+      - name: Freeze status (informational)
+        run: python services/sketch_intent/bench/freeze.py || echo "::warning::resolver differs from bench/FREEZE.json; held-out results in the benchmark report are not held-out for this code"
+
+      - name: Benchmark smoke
+        env:
+          PYTHONPATH: services/sketch_intent
+        run: python services/sketch_intent/bench/benchmark.py --quick --out "$RUNNER_TEMP/benchmark.md"
+
+      - name: Demo
+        env:
+          PYTHONPATH: services/sketch_intent
+        run: |
+          args=(--out "$RUNNER_TEMP/demo")
+          if [ "${{ steps.mesh2cad.outcome }}" = "success" ]; then args+=(--mesh2cad _mesh2cad); fi
+          python services/sketch_intent/demo/run_demo.py "${args[@]}"
+
+      - name: Upload benchmark and demo outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sketch-intent-outputs
+          path: |
+            ${{ runner.temp }}/benchmark.md
+            ${{ runner.temp }}/demo
+          if-no-files-found: ignore

@@ -81,6 +81,10 @@ Evidence pipeline built: `tools/camera_characterize/` (contract, capture matrix,
 
 Leading candidate **Waveshare 3.5inch DSI LCD (H)** (480×800 portrait, 3V3-only, GT911): reversible install, overlay, and D0–D7 bench procedure prepared in `tools/compact_display/`; **no compact panel has been run on the UNO Q yet**. See [selection](docs/hardware/COMPACT_DISPLAY_SELECTION.md) and [bench acceptance](docs/hardware/COMPACT_DISPLAY_BENCH_ACCEPTANCE.md). The 5" stays the dev fixture/fallback.
 
+## Sketch intent resolver (#37)
+
+Deterministic contour → editable sketch proposal → review → Mesh2CAD sketch-asset export, in `services/sketch_intent/` (Python + numpy). Evidence stays unmodified; inferred constraints are proposed, questioned, or rejected by evidence with residuals and reasons. Tested on **synthetic fixtures** (dev and frozen held-out) plus one real-capture smoke test (washer scan-0053). **The issue #37 physical gate (planar parts, caliper truth, time-to-sketch) has not been run.** Known failures are listed in the benchmark. See [design](docs/architecture/SKETCH_INTENT_RESOLVER.md) and [benchmark](docs/architecture/SKETCH_INTENT_BENCHMARK.md).
+
 ## Immediate next action
 
 **Preserve the submission-night captures, JSON, conditions, caliper truth, media, and actual tested SHA, then replay the pinned baseline on the UNO Q.**

@@ -1,8 +1,9 @@
 """Record (or check) the frozen resolver: source hash + default parameters.
 
-The held-out set may only be scored against a frozen resolver. ``python3
-bench/freeze.py`` writes bench/FREEZE.json; benchmark.py refuses to label a
-held-out run "held-out" unless the current code still matches it.
+The held-out set may only be scored against a frozen resolver.
+``python3 bench/freeze.py`` checks the current code against bench/FREEZE.json;
+``--write`` records a new freeze (only before running a NEW held-out set).
+benchmark.py does not label a run "held-out" unless the code still matches.
 """
 
 from __future__ import annotations
@@ -35,7 +36,11 @@ def source_hash() -> str:
 
 
 def current() -> dict:
-    return {"resolver_version": RESOLVER_VERSION, "source_sha256": source_hash(), "params": asdict(Params())}
+    return {
+        "resolver_version": RESOLVER_VERSION,
+        "source_sha256": source_hash(),
+        "params": asdict(Params()),
+    }
 
 
 def check() -> tuple[bool, dict | None]:
@@ -48,6 +53,10 @@ def check() -> tuple[bool, dict | None]:
 
 
 if __name__ == "__main__":
+    if "--write" not in sys.argv:
+        ok, frozen = check()
+        print("matches FREEZE.json" if ok else "DIFFERS from FREEZE.json (or no freeze recorded)")
+        sys.exit(0 if ok else 1)
     rec = current()
     rec["frozen_at_utc"] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     rec["note"] = (
