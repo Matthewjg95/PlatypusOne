@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstring>
 
 namespace platypus::kiosk {
 
@@ -49,6 +50,31 @@ std::vector<std::uint8_t> yuyvToRgb(const hal::Frame& frame) {
         }
     }
     return rgb;
+}
+
+std::vector<std::uint8_t> frameToRgb(const hal::Frame& frame) {
+    const auto& m = frame.mode();
+    const auto px = frame.pixels();
+    const std::size_t n = std::size_t{m.width} * m.height;
+    switch (m.format) {
+        case hal::PixelFormat::YUYV:
+            return yuyvToRgb(frame);
+        case hal::PixelFormat::RGB888: {
+            if (px.size() < n * 3) return {};
+            std::vector<std::uint8_t> rgb(n * 3);
+            std::memcpy(rgb.data(), px.data(), rgb.size());
+            return rgb;
+        }
+        case hal::PixelFormat::Gray8: {
+            if (px.size() < n) return {};
+            std::vector<std::uint8_t> rgb(n * 3);
+            for (std::size_t i = 0; i < n; ++i)
+                rgb[3 * i] = rgb[3 * i + 1] = rgb[3 * i + 2] = std::to_integer<std::uint8_t>(px[i]);
+            return rgb;
+        }
+        default:
+            return {};
+    }
 }
 
 Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32_t camH) {
@@ -320,7 +346,7 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
     auto sceneError = vision::AnalyzeError::None;
     config.enrich = [&](const hal::Frame& frame, observation::EngineeringObservation& record) {
         const auto& m = frame.mode();
-        out.thumbnail = apps::CardImage{m.width, m.height, 3, yuyvToRgb(frame)};
+        out.thumbnail = apps::CardImage{m.width, m.height, 3, frameToRgb(frame)};
         const auto analyzed = vision::analyzeFrame(frame, spec);
         if (!analyzed.ok()) {
             sceneError = analyzed.error;
