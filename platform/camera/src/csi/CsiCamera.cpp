@@ -10,7 +10,9 @@
 #include <sys/select.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cerrno>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -146,6 +148,24 @@ std::optional<std::int32_t> queryMax(int fd, std::uint32_t id) {
     return q.maximum;
 }
 
+std::optional<std::int64_t> getCtrl(int fd, std::uint32_t id) {
+    v4l2_ext_control c{};
+    c.id = id;
+    v4l2_ext_controls cs{};
+    cs.which = V4L2_CTRL_WHICH_CUR_VAL;
+    cs.count = 1;
+    cs.controls = &c;
+    if (xioctl(fd, VIDIOC_G_EXT_CTRLS, &cs) != 0) return std::nullopt;
+    return id == V4L2_CID_PIXEL_RATE ? c.value64 : c.value;
+}
+
+bool setCtrl(int fd, std::uint32_t id, std::int32_t value) {
+    v4l2_control c{};
+    c.id = id;
+    c.value = value;
+    return xioctl(fd, VIDIOC_S_CTRL, &c) == 0;
+}
+
 }  // namespace
 
 CsiCamera::CsiCamera() = default;
@@ -168,7 +188,9 @@ std::string CsiCamera::deviceIdentity() const {
     return sensorName_ + " csi raw10 " + std::to_string(kRawWidth) + "x" +
            std::to_string(kRawHeight) + "->" + std::to_string(kMode.width) + "x" +
            std::to_string(kMode.height) + " exp=" + std::to_string(exposure_.lines) +
-           " gain=" + std::to_string(exposure_.gainCode);
+           " gain=" + std::to_string(exposure_.gainCode) +
+           " dgain=" + std::to_string(exposure_.digitalCode) +
+           " line_ns=" + std::to_string(lineTimeNs_);
 }
 
 Status CsiCamera::configureGraph() {
@@ -239,11 +261,28 @@ Status CsiCamera::configureGraph() {
         std::lock_guard lock(stateMutex_);
         sensorName_ = sensor->name;
     }
-    // Exposure range follows the mode's frame length; read it after S_FMT.
+    // The binned mode's default blanking runs the sensor near 60 fps, which
+    // caps exposure at ~16 ms. Stretch the frame to the mode's declared rate
+    // so dim benches get real light before any gain; the preview never draws
+    // faster than that anyway.
+    const auto pixelRate = getCtrl(sensorFd_, V4L2_CID_PIXEL_RATE);
+    const auto hblank = getCtrl(sensorFd_, V4L2_CID_HBLANK);
+    if (pixelRate && hblank && *pixelRate > 0) {
+        const double line = static_cast<double>(kRawWidth + *hblank) / static_cast<double>(*pixelRate);
+        const auto frameLines = std::lround(1.0 / (kMode.fps * line));
+        if (frameLines > static_cast<long>(kRawHeight))
+            setCtrl(sensorFd_, V4L2_CID_VBLANK, static_cast<std::int32_t>(frameLines - kRawHeight));
+        lineTimeNs_ = static_cast<std::uint32_t>(std::lround(line * 1e9));
+    }
+    // Exposure range follows the frame length; read it after S_FMT and VBLANK.
     if (const auto m = queryMax(sensorFd_, V4L2_CID_EXPOSURE); m && *m > 4)
         limits_.maxLines = static_cast<std::uint32_t>(*m);
     if (const auto g = queryMax(sensorFd_, V4L2_CID_ANALOGUE_GAIN); g && *g > 0)
         limits_.maxGainCode = static_cast<std::uint32_t>(*g);
+    // Digital gain only once the analogue range is spent, and at most 4x:
+    // past that it amplifies noise faster than it helps the threshold.
+    if (const auto d = queryMax(sensorFd_, V4L2_CID_DIGITAL_GAIN); d && *d >= 256)
+        limits_.maxDigitalCode = std::min<std::uint32_t>(static_cast<std::uint32_t>(*d), 1024);
     return {};
 }
 
@@ -358,13 +397,10 @@ Status CsiCamera::open(const hal::CameraMode&) {
 
 void CsiCamera::applyExposure(const bayer::Exposure& e) {
     if (sensorFd_ < 0) return;
-    v4l2_control c{};
-    c.id = V4L2_CID_EXPOSURE;
-    c.value = static_cast<std::int32_t>(e.lines);
-    xioctl(sensorFd_, VIDIOC_S_CTRL, &c);
-    c.id = V4L2_CID_ANALOGUE_GAIN;
-    c.value = static_cast<std::int32_t>(e.gainCode);
-    xioctl(sensorFd_, VIDIOC_S_CTRL, &c);
+    setCtrl(sensorFd_, V4L2_CID_EXPOSURE, static_cast<std::int32_t>(e.lines));
+    setCtrl(sensorFd_, V4L2_CID_ANALOGUE_GAIN, static_cast<std::int32_t>(e.gainCode));
+    if (limits_.maxDigitalCode > 256)
+        setCtrl(sensorFd_, V4L2_CID_DIGITAL_GAIN, static_cast<std::int32_t>(e.digitalCode));
     std::lock_guard lock(stateMutex_);
     exposure_ = e;
 }
@@ -420,7 +456,9 @@ Result<Frame> CsiCamera::dequeueFrame(std::chrono::milliseconds timeout) {
             current = exposure_;
         }
         const auto next = bayer::AutoExposure(limits_).next(stats, current);
-        if (next.lines != current.lines || next.gainCode != current.gainCode) applyExposure(next);
+        if (next.lines != current.lines || next.gainCode != current.gainCode ||
+            next.digitalCode != current.digitalCode)
+            applyExposure(next);
     }
 
     auto pixels = std::make_shared<std::vector<std::byte>>(rgb.size());

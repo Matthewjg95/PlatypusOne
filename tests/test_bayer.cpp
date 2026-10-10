@@ -114,6 +114,29 @@ void test_auto_exposure_converges() {
     }
 }
 
+void test_auto_exposure_digital_gain_is_last() {
+    // A scene too dim for lines x analogue gain reaches the target only
+    // through digital gain, and digital gain stays at 1x until both are spent.
+    const ExposureLimits limits{4, 1703, 232, 1024};
+    const AutoExposure ae(limits, 0.6);
+    for (const double scene : {0.00002, 0.0005}) {
+        Exposure e{1600, 0};
+        for (int i = 0; i < 40; ++i) {
+            CellStats s;
+            s.greenP90 = std::min(1.0, scene * e.lines * imx219Gain(e.gainCode) *
+                                           (e.digitalCode / 256.0));
+            e = ae.next(s, e);
+            assert(e.digitalCode >= 256 && e.digitalCode <= limits.maxDigitalCode);
+            if (e.digitalCode > 256)
+                assert(e.lines == limits.maxLines && e.gainCode == limits.maxGainCode);
+        }
+        const double level =
+            std::min(1.0, scene * e.lines * imx219Gain(e.gainCode) * (e.digitalCode / 256.0));
+        assert(std::abs(level - 0.6) < 0.08);
+        if (scene > 0.0001) assert(e.digitalCode == 256);  // bright enough: no digital gain
+    }
+}
+
 }  // namespace
 
 void test_bayer() {
@@ -122,5 +145,6 @@ void test_bayer() {
     test_gray_world_balances_a_tint();
     test_gain_codes();
     test_auto_exposure_converges();
+    test_auto_exposure_digital_gain_is_last();
     std::puts("test_bayer: OK");
 }

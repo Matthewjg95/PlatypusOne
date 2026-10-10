@@ -71,18 +71,23 @@ struct CellStats {
 struct Exposure {
     std::uint32_t lines = 0;     ///< sensor exposure, in line periods
     std::uint32_t gainCode = 0;  ///< IMX219 analogue gain register value
+    std::uint32_t digitalCode = 256;  ///< IMX219 digital gain, Q8 (256 = 1x)
 };
 
 struct ExposureLimits {
     std::uint32_t minLines = 4;
     std::uint32_t maxLines = 1703;  ///< at the binned mode's default frame length
     std::uint32_t maxGainCode = 232;
+    /// Digital gain is the last resort once lines and analogue gain are
+    /// spent; it lifts the signal and the noise together. 256 disables it.
+    std::uint32_t maxDigitalCode = 256;
 };
 
 [[nodiscard]] double imx219Gain(std::uint32_t gainCode);
 [[nodiscard]] std::uint32_t imx219GainCode(double gain, std::uint32_t maxCode);
 
-/// Steers the green 90th percentile toward `target` (fraction of range).
+/// Steers the green 90th percentile toward `target` (fraction of range),
+/// spending exposure lines first, then analogue gain, then digital gain.
 class AutoExposure {
    public:
     explicit AutoExposure(ExposureLimits limits = {}, double target = 0.6)

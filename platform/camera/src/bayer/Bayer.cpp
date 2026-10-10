@@ -154,14 +154,18 @@ Exposure AutoExposure::next(const CellStats& stats, const Exposure& current) con
     const double level = std::max(stats.greenP90, 1.0 / 255.0);
     const double ratio = std::clamp(target_ / level, 0.5, 2.0);
     if (std::abs(ratio - 1.0) < 0.08) return current;  // dead band: hold steady
-    const double total =
-        std::max(1.0, static_cast<double>(current.lines)) * imx219Gain(current.gainCode) * ratio;
+    const double digital = std::max(256u, current.digitalCode) / 256.0;
+    const double total = std::max(1.0, static_cast<double>(current.lines)) *
+                         imx219Gain(current.gainCode) * digital * ratio;
 
     Exposure out;
     const double lines = std::clamp(total, static_cast<double>(limits_.minLines),
                                     static_cast<double>(limits_.maxLines));
     out.lines = static_cast<std::uint32_t>(std::lround(lines));
     out.gainCode = imx219GainCode(total / lines, limits_.maxGainCode);
+    const double rest = total / (lines * imx219Gain(out.gainCode));
+    out.digitalCode = std::clamp(static_cast<std::uint32_t>(std::lround(256.0 * rest)), 256u,
+                                 std::max(256u, limits_.maxDigitalCode));
     return out;
 }
 

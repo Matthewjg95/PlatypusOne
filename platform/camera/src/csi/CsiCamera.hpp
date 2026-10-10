@@ -44,8 +44,9 @@ class CsiCamera final : public hal::ICamera {
     /// True when camss has a bound IMX219 sensor entity (cheap; no streaming).
     [[nodiscard]] static bool sensorPresent();
 
-    /// "imx219 3-0010 csi raw10 1640x1232->820x616 exp=1703 gain=12", or the
-    /// last error while closed. Exposure and gain are those of the latest frame.
+    /// "imx219 3-0010 csi raw10 1640x1232->820x616 exp=3415 gain=12 dgain=256
+    /// line_ns=9759", or the last error while closed. Exposure and gains are
+    /// those of the latest frame; exposure time is exp x line_ns.
     [[nodiscard]] std::string deviceIdentity() const;
 
     [[nodiscard]] std::vector<hal::CameraMode> supportedModes() const override { return {kMode}; }
@@ -80,6 +81,7 @@ class CsiCamera final : public hal::ICamera {
 
     hal::bayer::ExposureLimits limits_{};
     hal::bayer::Exposure exposure_{1600, 0};
+    std::uint32_t lineTimeNs_ = 0;  ///< sensor line period, recorded with each capture
     std::array<float, 3> wbGains_{1.0f, 1.0f, 1.0f};
     bool autoExposure_ = true;
     mutable std::mutex stateMutex_;
