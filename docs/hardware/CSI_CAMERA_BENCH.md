@@ -208,17 +208,38 @@ camera-end contact orientation, and the yellow cable (Arduino's reference
 photo uses an orange flex). Do not conclude the module is faulty until those
 are excluded.
 
+### 2026-10-09 — B0394 enumerates; kiosk CSI path
+
+- B0394 on CAMERA1 failed `failed to read chip id` (ENXIO) on every re-bind
+  with the cable as first fitted (`B0394/20261010T015449Z-probe`). Fitted
+  in the same orientation as the working B0393 (same cable type), its boot
+  probe hit the usual bus window and `platypus-imx219-rebind.service` bound
+  it automatically (`3-0010 driver=imx219`): the service's first real use.
+  Run `B0394/20261010T020409Z-all`: frames of a room scene.
+- The B0394's M12 lens is **staked** (thread fixed by the vendor): a
+  fixed-focus camera at Arducam's set distance. Its sharpness at the bench
+  working distance is to be measured, not assumed.
+- Live preview and capture on the panel now come from the kiosk's own CSI
+  raw camera (PR #48): raw SRGGB10 from the RDI node, 2×2 binning to
+  820×616, gray-world white balance, auto-exposure on the sensor controls.
+- Evidence backed up off the board: `Documents/PlatypusOne-board-backup/2026-10-09-csi/`.
+
+Quantitative characterization (calibration, focus, distortion, exposure,
+repeatability, the three-role decision) uses
+[CAMERA_CHARACTERIZATION.md](CAMERA_CHARACTERIZATION.md) and
+`tools/camera_characterize/` (#46); this document covers bring-up.
+
 ## Comparison (fill from evidence only)
 
 | Criterion | B0394 low-distortion, manual focus | B0393 autofocus | B0390 compact, fixed focus |
 |---|---|---|---|
-| T1 enumerates on Media Carrier | not yet (ENXIO at 0x10, 2026-10-04; overlay fix pending) | **yes on CAMERA1** after the PR #5 overlay fix + a manual re-bind past the boot-time bus window (2026-10-04) | UNRESOLVED |
+| T1 enumerates on Media Carrier | **yes on CAMERA1** (2026-10-09) after the overlay fix, cable orientation as the B0393, auto re-bind | **yes on CAMERA1** after the PR #5 overlay fix + a manual re-bind past the boot-time bus window (2026-10-04) | UNRESOLVED |
 | CSI port / lanes | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T2 working modes (format, size, fps) | UNRESOLVED | ABGR8888 640×480 and 1280×720 at ~60 fps; ≥1640×1232 blocked by 32 MB CMA (2026-10-04) | UNRESOLVED |
 | T3 repeat capture after reboot / power cycle | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T4 DSI + touch coexistence | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T5 envelope (measured) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
-| T6 focus control / working distance | UNRESOLVED | **no lens control enumerated**; rests at far focus, blurry at ~15 cm (2026-10-04) | UNRESOLVED |
+| T6 focus control / working distance | lens **staked** by the vendor: fixed focus, not adjustable (2026-10-09) | **no lens control enumerated**; rests at far focus, blurry at ~15 cm (2026-10-04) | UNRESOLVED |
 | T7 edge sharpness (centre / corner) | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T8 distortion residual | UNRESOLVED | UNRESOLVED | UNRESOLVED |
 | T9 exposure / low light | UNRESOLVED | UNRESOLVED | UNRESOLVED |
