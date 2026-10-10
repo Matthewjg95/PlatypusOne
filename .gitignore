@@ -11,6 +11,8 @@ __pycache__/
 # specific one deliberately with `git add -f observations/scan-NNNN` when it
 # is worth committing as a bring-up artifact.
 observations/
+sessions/
+evidence/
 
 # Private planning overlay: post-contest / research material stays out of the
 # public repository until its components are promoted into Contest Core.
