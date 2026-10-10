@@ -76,7 +76,7 @@ it), lens/focus state, working distance, lighting, what is in the scene.
 | T3 repeat / reboot | reboot, `capture` again; then a cold power cycle, `capture` again | three runs, three boot IDs |
 | T4 DSI coexistence | during T1–T3: panel lit, touch responds, kiosk still runs | `coexistence.txt` + a photo of the lit panel |
 | T5 physical envelope | calipers: board W×H, lens stack height above PCB, connector/cable exit, mounting holes | measured values; vendor drawing values recorded separately, labelled vendor |
-| T6 focus / working distance | choose the working distance (record mm); B0394: set the M12 lens ring and lock it; B0393: record the focus control value (or "no lens control enumerated"); B0390: fixed | notes + `lens.txt` |
+| T6 focus / working distance | choose the working distance (record mm); B0394: lens staked by the vendor (fixed focus) - record the distance at which it is sharpest; B0393: record the focus control value (or "no lens control enumerated"); B0390: fixed | notes + `lens.txt` |
 | T7 edge sharpness | calibration sheet flat at the working distance, centre and corner placements | frames; metric computed offline and archived with its script |
 | T8 calibration / distortion | a printed planar grid at the working distance, ≥10 poses | frames; reprojection residual from an archived offline method |
 | T9 exposure / lighting | the Scout lighting set: even desk, uneven overhead, hard shadow, dim | frames per condition; controls in `sensor.txt` |
@@ -89,8 +89,8 @@ Rules:
   intrinsics, so a calibration from one focus state does not hold at another.
   If no lens control enumerates, record that and treat the module as fixed at
   whatever position it rests in; do not assume.
-- **B0394 (manual focus):** once the ring is set for the working distance, do
-  not touch it between T7 and T8; note any change.
+- **B0394:** the M12 lens is staked (fixed focus); find and record the
+  distance at which it is sharpest rather than refocusing it.
 - Vendor specifications (FOV, distortion, board size) are recorded as vendor
   data, never as bench results.
 - No algorithm is tuned from these runs; they are fixtures.
