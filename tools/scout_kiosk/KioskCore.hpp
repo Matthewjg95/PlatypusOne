@@ -36,6 +36,10 @@ inline constexpr Color kWarn{255, 110, 90};
 /// Packed YUYV (BT.601, limited range) to tightly packed RGB888.
 [[nodiscard]] std::vector<std::uint8_t> yuyvToRgb(const hal::Frame& frame);
 
+/// Any measurable frame (YUYV from a webcam, RGB888 from the CSI camera,
+/// Gray8) as tightly packed RGB888 for the preview and the card thumbnail.
+[[nodiscard]] std::vector<std::uint8_t> frameToRgb(const hal::Frame& frame);
+
 /// Laid out against the display's real geometry (ADR-0001): the 800x480 panel
 /// and a 1080p bench monitor both come out right.
 struct Layout {

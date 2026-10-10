@@ -124,6 +124,7 @@ void test_renderer_geometry() {
 }
 
 void test_app_registry();
+void test_bayer();
 void test_event_queue();
 void test_export();
 void test_fastener_classifier();
@@ -147,6 +148,7 @@ int main() {
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
     test_app_registry();
+    test_bayer();
     test_event_queue();
     test_export();
     test_fastener_classifier();
