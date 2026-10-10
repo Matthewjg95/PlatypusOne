@@ -69,7 +69,9 @@ at the top/side edge (left-hand implications in
 - R3.4 Module depth includes any driver board on the back (4.3inch DSI LCD:
   14.05 mm overall, VENDOR) plus the FFC exit and its bend.
 - R3.5 Candidate ranking and the next panel to test:
-  [DISPLAY_CANDIDATES_REV_A.md](DISPLAY_CANDIDATES_REV_A.md). The 5" bench
+  [COMPACT_DISPLAY_SELECTION.md](COMPACT_DISPLAY_SELECTION.md) (#45: the 3.5"
+  DSI LCD (H) leads; the 4.3" DSI LCD is the no-new-driver fallback), with
+  its 3.5" envelope in [compact_display_mechanical.csv](compact_display_mechanical.csv). The 5" bench
   panel is outside the product envelope.
 
 ### R4 — sensor datum bracket (calibration survives service)
