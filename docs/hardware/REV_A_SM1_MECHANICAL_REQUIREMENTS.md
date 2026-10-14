@@ -9,10 +9,9 @@ number is tagged VENDOR (manufacturer data), PROVISIONAL (a target band to
 study) or UNRESOLVED (unknown; must be measured or chosen). Nothing here is
 bench evidence.
 
-Fusion user parameters: [rev_a_sm1_parameters.csv](rev_a_sm1_parameters.csv),
-importable with Fusion's Parameter I/O add-in (Name, Unit, Expression,
-Comment). UNRESOLVED values are `0 mm`; fill them before the geometry that
-uses them is trusted.
+Fusion user parameters are split by ownership. **Import [compact_display_mechanical.csv](compact_display_mechanical.csv) first**, then [rev_a_sm1_parameters.csv](rev_a_sm1_parameters.csv) with Fusion's Parameter I/O add-in (Name, Unit, Expression, Comment). The first CSV is the single source of vendor display dimensions; the second references those names without duplicating them. Both files are needed for the expressions to resolve. UNRESOLVED values are `0 mm`; fill them before the geometry that uses them is trusted.
+
+**Active display envelope (not a software-controlled switch):** the chassis CSV defaults to the leading 3.5-inch DSI LCD (H), SKU 33087, by referencing `disp35h_*`. To compare the 4.0-inch candidate, explicitly change the five `display_outline_w/h`, `display_active_w/h`, and `display_module_depth` expressions to `disp40_outline_w/h`, `disp40_active_w/h`, and `disp40_depth_total`. For the 4.3-inch fallback, use `disp43_outline_w/h`, `disp43_active_w/h`, and `disp43_module_depth`; **the 4.3-inch active dimensions are still zero/UNRESOLVED, so do not cut an aperture from them**. The `display_required_head_w` and `display_head_width_spare` parameters expose an envelope clash instead of silently widening the chassis. The display choice is not an automatic Fusion selector or a product freeze.
 
 ## Architecture
 
@@ -58,9 +57,7 @@ at the top/side edge (left-hand implications in
 
 ### R3 — display (swappable)
 
-- R3.1 The front aperture, rails and retention are driven by `display_choice`
-  and the `disp35_*` / `disp40_*` / `disp43_*` parameters, so 3.5, 4.0 and
-  4.3" envelopes swap without rebuilding the chassis.
+- R3.1 The front aperture, rails and retention reference the explicit `display_*` active-envelope parameters. Their expressions point to `disp35h_*` by default (leading 3.5-inch H), or can be changed to `disp40_*` / `disp43_*` after reviewing candidate-specific unknowns. There is no unimplemented `display_choice` selector; changing the envelope is a deliberate Fusion edit.
 - R3.2 Portrait orientation: the 480×800 candidates are portrait-native and
   the head band is portrait-shaped (e.g. 4.0": 65.1 + 2 × 8 = 81.1 mm wide,
   inside R2.1).
@@ -68,7 +65,8 @@ at the top/side edge (left-hand implications in
   mechanics are fixed.
 - R3.4 Module depth includes any driver board on the back (4.3inch DSI LCD:
   14.05 mm overall, VENDOR) plus the FFC exit and its bend.
-- R3.5 Candidate ranking and the next panel to test:
+- R3.5 The default 80 mm provisional head is wide enough for the H's 56 mm board + 2 × 8 mm edges = 72 mm (8 mm spare); the 4.0-inch A needs 81.1 mm, and the 4.3-inch fallback needs 84 mm before rotation. A negative `display_head_width_spare` is a study finding, not permission to trim required edges.
+- R3.6 Candidate ranking and the next panel to test:
   [COMPACT_DISPLAY_SELECTION.md](COMPACT_DISPLAY_SELECTION.md) (#45: the 3.5"
   DSI LCD (H) leads; the 4.3" DSI LCD is the no-new-driver fallback), with
   its 3.5" envelope in [compact_display_mechanical.csv](compact_display_mechanical.csv). The 5" bench
