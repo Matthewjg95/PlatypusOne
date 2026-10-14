@@ -10,9 +10,9 @@ head_height,mm,135 mm,PROVISIONAL target band 125-145
 head_depth,mm,28 mm,PROVISIONAL target band 24-32 before grip
 grip_thickness,mm,40 mm,PROVISIONAL band 35-45
 grip_angle,deg,12 deg,PROVISIONAL rearward rake band 10-15
-display_choice,,2,"1 = 3.5in, 2 = 4.0in, 3 = 4.3in; drives the active envelope set below"
-disp35_outline_w,mm,0 mm,UNRESOLVED Waveshare 3.5inch DSI LCD (E) drawing not yet recorded
-disp35_outline_h,mm,0 mm,UNRESOLVED
+display_choice,,1,"1 = leading 3.5in H; candidate selection is informational, not an automatic Fusion switch"
+disp35_outline_w,mm,56 mm,VENDOR leading Waveshare 3.5inch DSI LCD (H) SKU 33087 PCB width; see compact_display_mechanical.csv
+disp35_outline_h,mm,88.87 mm,VENDOR leading Waveshare 3.5inch DSI LCD (H) SKU 33087 cover lens height; see compact_display_mechanical.csv
 disp40_outline_w,mm,65.1 mm,VENDOR 4-DSI-TOUCH-A 108.30 x 65.10 (portrait: w = 65.10)
 disp40_outline_h,mm,108.3 mm,VENDOR 4-DSI-TOUCH-A
 disp40_active_w,mm,51.84 mm,VENDOR 4-DSI-TOUCH-A active area
