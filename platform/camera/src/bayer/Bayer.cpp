@@ -152,8 +152,11 @@ Exposure AutoExposure::next(const CellStats& stats, const Exposure& current) con
     // percentile at the target; damp the step so a single bright frame
     // cannot swing the next one wildly.
     const double level = std::max(stats.greenP90, 1.0 / 255.0);
-    const double ratio = std::clamp(target_ / level, 0.5, 2.0);
-    if (std::abs(ratio - 1.0) < 0.08) return current;  // dead band: hold steady
+    const double error = std::clamp(target_ / level, 0.5, 2.0);
+    if (std::abs(error - 1.0) < 0.08) return current;  // dead band: hold steady
+    // Take half the step (in log terms): the sensor applies settings a couple
+    // of frames late, and a full step on stale frames overshoots and hunts.
+    const double ratio = std::sqrt(error);
     const double digital = std::max(256u, current.digitalCode) / 256.0;
     const double total = std::max(1.0, static_cast<double>(current.lines)) *
                          imx219Gain(current.gainCode) * digital * ratio;

@@ -88,6 +88,12 @@ struct ExposureLimits {
 
 /// Steers the green 90th percentile toward `target` (fraction of range),
 /// spending exposure lines first, then analogue gain, then digital gain.
+/// Each call takes half the needed step; the caller must only feed it frames
+/// captured with the settings it last returned (see kAeSettleFrames).
+/// Frames to skip after changing exposure before judging the result: the
+/// IMX219 applies exposure and gain about two frames after they are set.
+inline constexpr unsigned kAeSettleFrames = 3;
+
 class AutoExposure {
    public:
     explicit AutoExposure(ExposureLimits limits = {}, double target = 0.6)

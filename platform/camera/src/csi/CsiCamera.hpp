@@ -84,6 +84,7 @@ class CsiCamera final : public hal::ICamera {
     std::uint32_t lineTimeNs_ = 0;  ///< sensor line period, recorded with each capture
     std::array<float, 3> wbGains_{1.0f, 1.0f, 1.0f};
     bool autoExposure_ = true;
+    unsigned aeSettle_ = 0;  ///< frames still in flight from the last exposure change
     mutable std::mutex stateMutex_;
     std::string lastError_;
 

@@ -137,6 +137,42 @@ void test_auto_exposure_digital_gain_is_last() {
     }
 }
 
+void test_auto_exposure_settles_with_sensor_latency() {
+    // The sensor applies settings two frames late. Feeding the controller only
+    // frames taken with its last settings must converge and then hold still,
+    // not hunt between bright and dark.
+    const ExposureLimits limits{4, 3412, 232, 1024};
+    const AutoExposure ae(limits, 0.6);
+    for (const double scene : {0.00002, 0.00008, 0.0005}) {
+        std::vector<Exposure> applied(2, Exposure{1600, 0});  // in flight
+        Exposure requested{1600, 0};
+        unsigned settle = 0, changesLate = 0;
+        for (int frame = 0; frame < 200; ++frame) {
+            const Exposure live = applied.front();
+            applied.erase(applied.begin());
+            applied.push_back(requested);
+            CellStats s;
+            s.greenP90 = std::min(1.0, scene * live.lines * imx219Gain(live.gainCode) *
+                                           (live.digitalCode / 256.0));
+            if (settle > 0) {
+                --settle;
+                continue;
+            }
+            const Exposure next = ae.next(s, requested);
+            if (next.lines != requested.lines || next.gainCode != requested.gainCode ||
+                next.digitalCode != requested.digitalCode) {
+                if (frame >= 120) ++changesLate;
+                requested = next;
+                settle = kAeSettleFrames;
+            }
+        }
+        const double level = std::min(1.0, scene * requested.lines * imx219Gain(requested.gainCode) *
+                                                (requested.digitalCode / 256.0));
+        assert(std::abs(level - 0.6) < 0.08);
+        assert(changesLate == 0);  // converged and holding, not oscillating
+    }
+}
+
 }  // namespace
 
 void test_bayer() {
@@ -146,5 +182,6 @@ void test_bayer() {
     test_gain_codes();
     test_auto_exposure_converges();
     test_auto_exposure_digital_gain_is_last();
+    test_auto_exposure_settles_with_sensor_latency();
     std::puts("test_bayer: OK");
 }

@@ -449,7 +449,9 @@ Result<Frame> CsiCamera::dequeueFrame(std::chrono::milliseconds timeout) {
     for (int c = 0; c < 3; ++c)
         wbGains_[static_cast<std::size_t>(c)] = 0.8f * wbGains_[static_cast<std::size_t>(c)] +
                                                 0.2f * target[static_cast<std::size_t>(c)];
-    if (autoExposure_) {
+    if (aeSettle_ > 0) {
+        --aeSettle_;  // this frame may predate the last change: do not judge it
+    } else if (autoExposure_) {
         bayer::Exposure current;
         {
             std::lock_guard lock(stateMutex_);
@@ -457,8 +459,10 @@ Result<Frame> CsiCamera::dequeueFrame(std::chrono::milliseconds timeout) {
         }
         const auto next = bayer::AutoExposure(limits_).next(stats, current);
         if (next.lines != current.lines || next.gainCode != current.gainCode ||
-            next.digitalCode != current.digitalCode)
+            next.digitalCode != current.digitalCode) {
             applyExposure(next);
+            aeSettle_ = bayer::kAeSettleFrames;
+        }
     }
 
     auto pixels = std::make_shared<std::vector<std::byte>>(rgb.size());
