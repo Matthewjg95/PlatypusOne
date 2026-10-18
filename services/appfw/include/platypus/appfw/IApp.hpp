@@ -20,6 +20,9 @@ struct AppManifest {
     std::string version;  ///< semver
     bool requiresCamera = false;
     bool requiresSensors = false;
+    std::string tagline;   ///< one line under the name on the home carousel
+    std::string icon;      ///< icon key the shell knows how to draw
+    bool preview = false;  ///< not built yet: the card and the app say so
 };
 
 /// Lifecycle:  onStart -> (onFrame | onTouch | onButton)* -> onStop

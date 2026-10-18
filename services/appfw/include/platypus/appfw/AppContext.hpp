@@ -24,6 +24,11 @@ struct AppContext {
     /// Request that the launcher switch to another app after this callback
     /// returns. Empty id = return to launcher home.
     std::function<void(const std::string& appId)> requestLaunch;
+    /// Where the app may draw. Under the device shell this is everything
+    /// below the shell bar, and the shell presents once per frame, so a
+    /// shell-hosted app fills this rect instead of clearing the screen and
+    /// does not call present(). Empty (w == 0) means the whole display.
+    renderer::Rect contentArea{};
 };
 
 }  // namespace platypus::appfw
