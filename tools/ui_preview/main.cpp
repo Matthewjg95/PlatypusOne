@@ -4,6 +4,7 @@
 //   ui_preview --scout-card RECORD.json OUT.ppm
 //   ui_preview --scout-card-demo OUT.ppm
 //   ui_preview --kiosk-session-demo OUTDIR
+//   ui_preview --kiosk-depth-demo OUTDIR
 //   ui_preview --analyze-yuyv SOURCE.yuyv   (re-run a board capture on the host)
 //
 // Draws through the real Renderer into an in-memory display and writes the
@@ -286,6 +287,65 @@ int renderKioskSessionDemo(const std::string& outDir) {
     return 0;
 }
 
+/// The kiosk's depth view with the synthetic camera and a synthetic ToF
+/// frame: a wall tilted 214..233 mm (as on the bench), a block 150 mm away,
+/// and a corner of invalid zones. Also the not-connected and preview states.
+int renderKioskDepthDemo(const std::string& outDir) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::create_directories(outDir, ec);
+    auto display = std::make_shared<MemoryDisplay>(std::uint16_t{800}, std::uint16_t{480});
+    renderer::Renderer r(display);
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    std::vector<std::uint8_t> rgb;
+    if (auto f = camera.capture(std::chrono::milliseconds(0)); f) rgb = kiosk::frameToRgb(f.value());
+    const auto camW = kiosk::SceneCamera::kMode.width, camH = kiosk::SceneCamera::kMode.height;
+
+    hal::tof::Frame frame;
+    frame.side = 8;
+    frame.seq = 1898;
+    frame.temperatureC = 55;
+    for (int row = 0; row < 8; ++row)
+        for (int col = 0; col < 8; ++col) {
+            hal::tof::Zone z;
+            z.distanceMm = 214 + 2 * row + col;
+            z.status = 5;
+            z.targets = 1;
+            if (row >= 2 && row <= 4 && col >= 4 && col <= 6) z.distanceMm = 150 + row;
+            if (row == 7 && col >= 6) z.status = col == 7 ? 255 : 4;
+            frame.zones.push_back(z);
+        }
+
+    kiosk::DepthState st;
+    st.connected = true;
+    st.frame = frame;
+    st.hz = 5.0;
+    st.frames = 120;
+    st.endpoint = "127.0.0.1:7500";
+    const auto layout = kiosk::computeDepthLayout(r.displayInfo());
+    const auto shot = [&](const std::string& name) {
+        (void)r.present();
+        return writePpm((fs::path(outDir) / name).string(), *display);
+    };
+    kiosk::drawDepthScreen(r, layout, rgb, camW, camH, st);
+    bool ok = shot("depth-live.ppm");
+    kiosk::DepthState down;
+    down.endpoint = st.endpoint;
+    down.lastError = "connect 127.0.0.1:7500: Connection refused";
+    kiosk::drawDepthScreen(r, layout, rgb, camW, camH, down);
+    ok = ok && shot("depth-not-connected.ppm");
+    kiosk::PanelState p;
+    p.depthAvailable = true;
+    p.status = "DEPTH opens the camera + ToF view.";
+    kiosk::drawPreviewScreen(r, kiosk::computeLayout(r.displayInfo(), camW, camH, true), rgb, camW,
+                             camH, p);
+    ok = ok && shot("preview-with-depth-button.ppm");
+    if (!ok) return 1;
+    std::printf("wrote depth view screens to %s\n", outDir.c_str());
+    return 0;
+}
+
 /// Re-analyze a frame the board saved (640x480 YUYV source.yuyv) with this
 /// build's analyzer + classifier and print the record: lets a change be
 /// checked against real bench captures without the board.
@@ -327,12 +387,14 @@ int main(int argc, char** argv) {
         return renderScoutCardDemo(args[1], args.size() == 3 ? args[2] : "bolt");
     if (args.size() == 2 && args[0] == "--kiosk-session-demo")
         return renderKioskSessionDemo(args[1]);
+    if (args.size() == 2 && args[0] == "--kiosk-depth-demo") return renderKioskDepthDemo(args[1]);
     if (args.size() == 2 && args[0] == "--analyze-yuyv") return analyzeYuyv(args[1]);
     std::fprintf(stderr,
                  "usage: ui_preview --font-specimen OUT.ppm\n"
                  "       ui_preview --scout-card RECORD.json OUT.ppm\n"
                  "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n"
                  "       ui_preview --kiosk-session-demo OUTDIR\n"
+                 "       ui_preview --kiosk-depth-demo OUTDIR\n"
                  "       ui_preview --analyze-yuyv SOURCE.yuyv\n");
     return 2;
 }

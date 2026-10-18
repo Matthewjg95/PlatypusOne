@@ -18,7 +18,8 @@ add_executable(platypus_tests
     test_scout_card.cpp
     test_scout_validation.cpp
     test_session.cpp
-    test_settings_store.cpp)
+    test_settings_store.cpp
+    test_tof.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
     platypus::ai
@@ -30,8 +31,10 @@ target_link_libraries(platypus_tests PRIVATE
     platypus::display_linked
     platypus::observation
     platypus::renderer
+    platypus::scout_kiosk_core
     platypus::scout_validation
     platypus::session
+    platypus::tof
     platypus::vision)
 
 platypus_set_warnings(platypus_tests)

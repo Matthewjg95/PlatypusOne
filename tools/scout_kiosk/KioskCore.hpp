@@ -9,6 +9,7 @@
 
 #include <platypus/apps/EngineeringScoutApp.hpp>
 #include <platypus/hal/ICamera.hpp>
+#include <platypus/hal/tof/TofProtocol.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/observation/CaptureService.hpp>
 #include <platypus/renderer/Renderer.hpp>
@@ -47,10 +48,12 @@ struct Layout {
     Rect panel;
     Rect capture;  ///< primary button
     Rect finish;   ///< closes the session
+    Rect depth;    ///< opens the depth view (shares the finish row)
     std::int32_t textScale = 2;
 };
+/// withDepth splits the finish row to make room for the DEPTH button.
 [[nodiscard]] Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW,
-                                   std::int32_t camH);
+                                   std::int32_t camH, bool withDepth = false);
 [[nodiscard]] bool inside(const Rect& r, std::int32_t x, std::int32_t y);
 
 /// Word-wraps `text` to `maxWidth` pixels from (x, y); returns the y below it.
@@ -68,10 +71,74 @@ struct PanelState {
     /// No camera: the button says so and the empty preview explains it,
     /// instead of a bare busy state.
     bool noCamera = false;
+    /// A ToF source is configured: show the DEPTH button.
+    bool depthAvailable = false;
 };
 
 void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector<std::uint8_t>& rgb,
                        std::int32_t camW, std::int32_t camH, const PanelState& panel);
+
+// --- depth view: camera, the ToF zone grid, and the two together ----------
+
+struct DepthLayout {
+    Rect camera;  ///< live camera
+    Rect tof;     ///< the zone grid as a heat map with distances
+    Rect fused;   ///< the grid laid over the camera image
+    Rect legend;  ///< colour scale under the ToF pane
+    Rect back;    ///< returns to the Scout view
+    std::int32_t infoY = 0;
+    std::int32_t textScale = 2;
+};
+[[nodiscard]] DepthLayout computeDepthLayout(const hal::DisplayInfo& info);
+
+/// Nominal fields of view. Until a rigid bracket and a calibration exist the
+/// overlay can only assume co-axial, parallel sensors with datasheet FOVs.
+struct FieldsOfView {
+    double cameraHDeg = 75.0;  ///< Arducam B0394 (VENDOR)
+    double cameraVDeg = 60.0;
+    double tofDeg = 45.0;  ///< VL53L8CX, horizontal and vertical (DS14161)
+};
+
+/// Fraction of the camera image's width and height the ToF field covers.
+struct Footprint {
+    double w = 0.0, h = 0.0;
+};
+[[nodiscard]] Footprint tofFootprint(const FieldsOfView& fov);
+
+struct DepthRange {
+    double nearMm = 0.0, farMm = 0.0;
+};
+/// Colour range from the frame's valid zones, widened to at least 40 mm so
+/// sensor noise on a flat target is not stretched into a rainbow.
+[[nodiscard]] std::optional<DepthRange> depthRange(const hal::tof::Frame& frame);
+/// Near is bright yellow, far is dark purple (viridis, reversed).
+[[nodiscard]] Color depthColour(double mm, const DepthRange& range);
+
+/// The camera image with the ToF grid blended over its footprint: valid
+/// zones tinted by distance, invalid zones darkened, cell borders drawn.
+[[nodiscard]] std::vector<std::uint8_t> fuseDepth(const std::vector<std::uint8_t>& rgb,
+                                                  std::int32_t camW, std::int32_t camH,
+                                                  const hal::tof::Frame& frame,
+                                                  hal::tof::Orientation orientation,
+                                                  const Footprint& footprint,
+                                                  const DepthRange& range);
+
+struct DepthState {
+    bool connected = false;
+    std::optional<hal::tof::Frame> frame;
+    bool stale = false;  ///< the newest frame is too old to show as live
+    double hz = 0.0;
+    std::uint64_t frames = 0, rejects = 0;
+    std::string lastEvent;
+    std::string lastError;
+    std::string endpoint;
+    hal::tof::Orientation orientation = hal::tof::Orientation::Raw;
+    FieldsOfView fov;
+};
+
+void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
+                     const std::vector<std::uint8_t>& rgb, std::int32_t camW, std::int32_t camH,
+                     const DepthState& state);
 
 /// The finish screen: what the session concluded and what it exported.
 void drawSessionSummary(renderer::Renderer& r, const session::ObjectSession& s,

@@ -7,6 +7,13 @@
 //
 //   scout_kiosk [--device /dev/videoN] [--out DIR] [--sessions DIR]
 //               [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR] [--fake]
+//               [--tof auto|off] [--tof-port N] [--camera-fov HxV]
+//               [--tof-orientation raw|fliph|flipv|rot180]
+//
+// DEPTH opens the depth view: camera, the VL53L8CX zone grid (UNO Q MCU
+// sketch, read through arduino-router's Monitor) and the two together. The
+// view owns the ToF stream only while it is open, so tools/tof_unoq/tof_log.py
+// can use it the rest of the time.
 //
 // A composition root: this file knows the Linux hardware (V4L2 discovery, the
 // DRM display, evdev input) and nothing else. Screens, capture, and the
@@ -24,6 +31,7 @@
 #include "csi/CsiCamera.hpp"
 #include "drm/DrmDisplay.hpp"
 #include "drm/KmsHelpers.hpp"
+#include "tof/TofMonitorClient.hpp"
 #include "v4l2/V4l2Camera.hpp"
 
 #include <algorithm>
@@ -122,7 +130,9 @@ int usage() {
                  "usage: scout_kiosk [--camera auto|usb|csi] [--device /dev/videoN] [--out DIR]\n"
                  "                   [--sessions DIR]\n"
                  "                   [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR]"
-                 " [--fake]\n");
+                 " [--fake]\n"
+                 "                   [--tof auto|off] [--tof-port N] [--camera-fov HxV]\n"
+                 "                   [--tof-orientation raw|fliph|flipv|rot180]\n");
     return 2;
 }
 
@@ -137,6 +147,10 @@ int main(int argc, char** argv) {
     bool fake = false;
     double referenceMm = vision::CalibrationSpec{}.referenceSideMm;
     drm::DrmDisplayConfig displayConfig;
+    bool tofEnabled = true;
+    int tofPort = 7500;
+    FieldsOfView fov;
+    auto orientation = hal::tof::Orientation::Raw;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -162,6 +176,32 @@ int main(int argc, char** argv) {
                 displayConfig.preferredConnectorType = drm::kConnectorDisplayPort;
             else if (which == "dsi")
                 displayConfig.preferredConnectorType = drm::kConnectorDsi;
+            else
+                return usage();
+        } else if (arg == "--tof") {
+            const auto v = next();
+            if (v != "auto" && v != "off") return usage();
+            tofEnabled = v == "auto";
+        } else if (arg == "--tof-port") {
+            tofPort = std::atoi(next().c_str());
+            if (tofPort <= 0 || tofPort > 65535) return usage();
+        } else if (arg == "--camera-fov") {
+            const auto v = next();
+            const auto x = v.find('x');
+            if (x == std::string::npos) return usage();
+            fov.cameraHDeg = std::atof(v.substr(0, x).c_str());
+            fov.cameraVDeg = std::atof(v.substr(x + 1).c_str());
+            if (fov.cameraHDeg <= 0 || fov.cameraVDeg <= 0) return usage();
+        } else if (arg == "--tof-orientation") {
+            const auto v = next();
+            if (v == "raw")
+                orientation = hal::tof::Orientation::Raw;
+            else if (v == "fliph")
+                orientation = hal::tof::Orientation::FlipH;
+            else if (v == "flipv")
+                orientation = hal::tof::Orientation::FlipV;
+            else if (v == "rot180")
+                orientation = hal::tof::Orientation::Rotate180;
             else
                 return usage();
         } else {
@@ -199,7 +239,13 @@ int main(int argc, char** argv) {
 
     renderer::Renderer r(display);
     std::int32_t camW = 640, camH = 480;
-    const auto layout = computeLayout(r.displayInfo(), camW, camH);
+    // The offscreen run renders the Scout flow only; it never opens the ToF.
+    std::unique_ptr<hal::tof::TofMonitorClient> tofClient;
+    if (tofEnabled && offscreen.empty())
+        tofClient = std::make_unique<hal::tof::TofMonitorClient>(
+            "127.0.0.1", static_cast<std::uint16_t>(tofPort));
+    const auto layout = computeLayout(r.displayInfo(), camW, camH, tofClient != nullptr);
+    const auto depthLayout = computeDepthLayout(r.displayInfo());
 
     // --- camera: acquired in a loop, so the kiosk waits for a webcam (and
     // recovers if it is unplugged) instead of exiting to a blank console.
@@ -295,6 +341,7 @@ int main(int argc, char** argv) {
         p.status = status;
         p.statusColour = statusColour;
         p.busy = busy;
+        p.depthAvailable = tofClient != nullptr;
         return p;
     };
     const auto doCapture = [&]() -> CaptureOutcome {
@@ -360,17 +407,26 @@ int main(int argc, char** argv) {
     }
 
     // --- input: handlers run on the display's input thread; the loop consumes.
-    enum class Screen { Preview, Card, Summary };
+    enum class Screen { Preview, Card, Summary, Depth };
     std::atomic<Screen> screen{Screen::Preview};
     std::atomic<bool> captureRequested{false}, finishRequested{false}, dismissRequested{false};
+    std::atomic<bool> depthRequested{false}, flipRequested{false};
     display->onTouch([&](const hal::TouchEvent& e) {
         if (e.type != hal::TouchEvent::Type::Down) return;
-        if (screen != Screen::Preview)
+        if (screen == Screen::Depth) {
+            if (inside(depthLayout.back, e.x, e.y))
+                dismissRequested = true;
+            else if (inside(depthLayout.tof, e.x, e.y) || inside(depthLayout.fused, e.x, e.y))
+                flipRequested = true;
+        } else if (screen != Screen::Preview) {
             dismissRequested = true;
-        else if (inside(layout.capture, e.x, e.y))
+        } else if (inside(layout.capture, e.x, e.y)) {
             captureRequested = true;
-        else if (inside(layout.finish, e.x, e.y))
+        } else if (inside(layout.finish, e.x, e.y)) {
             finishRequested = true;
+        } else if (tofClient && inside(layout.depth, e.x, e.y)) {
+            depthRequested = true;
+        }
     });
     display->onButton([&](const hal::ButtonEvent& e) {
         if (!e.pressed) return;
@@ -396,6 +452,7 @@ int main(int argc, char** argv) {
             camera.reset();
             csi = nullptr;
             lastRgb.clear();
+            if (tofClient) tofClient->stop();
             screen = Screen::Preview;
             if (!acquireCamera()) break;
             missedFrames = 0;
@@ -418,6 +475,49 @@ int main(int argc, char** argv) {
             continue;
         }
         if (frame) lastRgb = frameToRgb(frame.value());
+
+        if (screen == Screen::Depth) {
+            if (dismissRequested.exchange(false)) {
+                tofClient->stop();  // frees the Monitor for tof_log.py
+                std::printf("depth:   closed\n");
+                std::fflush(stdout);
+                screen = Screen::Preview;
+                continue;
+            }
+            if (flipRequested.exchange(false)) {
+                orientation = hal::tof::next(orientation);
+                const auto name = hal::tof::to_string(orientation);
+                std::printf("depth:   orientation %.*s\n", static_cast<int>(name.size()),
+                            name.data());
+                std::fflush(stdout);
+            }
+            const auto snap = tofClient->snapshot();
+            DepthState st;
+            st.connected = snap.connected;
+            st.frame = snap.frame;
+            st.stale = snap.frame && std::chrono::steady_clock::now() - snap.frameArrived >
+                                         std::chrono::milliseconds(1500);
+            st.hz = snap.hz;
+            st.frames = snap.frames;
+            st.rejects = snap.rejects;
+            st.lastEvent = snap.lastEvent;
+            st.lastError = snap.lastError;
+            st.endpoint = tofClient->endpoint();
+            st.orientation = orientation;
+            st.fov = fov;
+            drawDepthScreen(r, depthLayout, lastRgb, camW, camH, st);
+            (void)r.present();
+            continue;
+        }
+        if (depthRequested.exchange(false)) {
+            tofClient->start();
+            std::printf("depth:   opened, ToF via %s\n", tofClient->endpoint().c_str());
+            std::fflush(stdout);
+            dismissRequested = false;
+            flipRequested = false;
+            screen = Screen::Depth;
+            continue;
+        }
 
         if (captureRequested.exchange(false)) {
             const auto outcome = doCapture();
@@ -446,6 +546,7 @@ int main(int argc, char** argv) {
     // Join the display's input thread before the state its handlers capture
     // goes out of scope; close() also hands the screen back.
     if (drmDisplay) drmDisplay->close();
+    if (tofClient) tofClient->stop();
     if (camera) camera->close();
     return 0;
 }
