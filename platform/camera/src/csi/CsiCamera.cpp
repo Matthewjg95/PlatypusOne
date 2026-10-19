@@ -268,7 +268,8 @@ Status CsiCamera::configureGraph() {
     const auto pixelRate = getCtrl(sensorFd_, V4L2_CID_PIXEL_RATE);
     const auto hblank = getCtrl(sensorFd_, V4L2_CID_HBLANK);
     if (pixelRate && hblank && *pixelRate > 0) {
-        const double line = static_cast<double>(kRawWidth + *hblank) / static_cast<double>(*pixelRate);
+        const double line =
+            static_cast<double>(kRawWidth + *hblank) / static_cast<double>(*pixelRate);
         const auto frameLines = std::lround(1.0 / (kMode.fps * line));
         if (frameLines > static_cast<long>(kRawHeight))
             setCtrl(sensorFd_, V4L2_CID_VBLANK, static_cast<std::int32_t>(frameLines - kRawHeight));
