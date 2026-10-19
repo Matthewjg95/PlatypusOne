@@ -20,6 +20,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(scout_kiosk PRIVATE
         platypus::scout_kiosk_core
         platypus::camera_v4l2
+        platypus::camera_csi
         platypus::display_drm)
     platypus_set_warnings(scout_kiosk)
 endif()

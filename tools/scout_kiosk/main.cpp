@@ -21,6 +21,7 @@
 // The display needs DRM master (the desktop must be stopped — platypus-mode
 // does it). The camera is found by capability, never by node number.
 #include "KioskCore.hpp"
+#include "csi/CsiCamera.hpp"
 #include "drm/DrmDisplay.hpp"
 #include "drm/KmsHelpers.hpp"
 #include "v4l2/V4l2Camera.hpp"
@@ -118,7 +119,8 @@ class SnapshotDisplay final : public hal::IDisplay {
 
 int usage() {
     std::fprintf(stderr,
-                 "usage: scout_kiosk [--device /dev/videoN] [--out DIR] [--sessions DIR]\n"
+                 "usage: scout_kiosk [--camera auto|usb|csi] [--device /dev/videoN] [--out DIR]\n"
+                 "                   [--sessions DIR]\n"
                  "                   [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR]"
                  " [--fake]\n");
     return 2;
@@ -128,6 +130,7 @@ int usage() {
 
 int main(int argc, char** argv) {
     std::string device;
+    std::string cameraKind = "auto";  // auto: CSI when a sensor is bound, else the USB webcam
     std::string outDir = "observations";
     std::string sessionsDir = "sessions";
     std::string offscreen;
@@ -140,7 +143,10 @@ int main(int argc, char** argv) {
         const auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : ""; };
         if (arg == "--device")
             device = next();
-        else if (arg == "--out")
+        else if (arg == "--camera") {
+            cameraKind = next();
+            if (cameraKind != "auto" && cameraKind != "usb" && cameraKind != "csi") return usage();
+        } else if (arg == "--out")
             outDir = next();
         else if (arg == "--sessions")
             sessionsDir = next();
@@ -199,6 +205,7 @@ int main(int argc, char** argv) {
     // recovers if it is unplugged) instead of exiting to a blank console.
     std::unique_ptr<hal::ICamera> camera;
     std::string cameraPath, identity;
+    unoq::CsiCamera* csi = nullptr;  // set while the CSI camera is the source
     const auto acquireCamera = [&]() -> bool {
         if (fake) {
             camera = std::make_unique<SceneCamera>();
@@ -207,7 +214,29 @@ int main(int argc, char** argv) {
         }
         bool announced = false;
         while (g_running) {
-            if (const auto choice = findCamera(device)) {
+            csi = nullptr;
+            // CSI first when allowed: it is the product camera path. The USB
+            // webcam stays the proven fallback (--camera usb forces it).
+            if (cameraKind != "usb" && device.empty() && unoq::CsiCamera::sensorPresent()) {
+                auto cam = std::make_unique<unoq::CsiCamera>();
+                if (cam->open(unoq::CsiCamera::kMode)) {
+                    csi = cam.get();
+                    cameraPath = "csi";
+                    identity = cam->deviceIdentity();
+                    camW = unoq::CsiCamera::kMode.width;
+                    camH = unoq::CsiCamera::kMode.height;
+                    camera = std::move(cam);
+                    std::printf("camera:  %s %dx%d rgb\n", identity.c_str(), camW, camH);
+                    std::fflush(stdout);
+                    return true;
+                }
+                std::printf("camera:  csi sensor present but not usable: %s\n",
+                            cam->deviceIdentity().c_str());
+                std::fflush(stdout);
+            }
+            if (cameraKind == "csi") {
+                // CSI only: keep waiting for it rather than falling back.
+            } else if (const auto choice = findCamera(device)) {
                 auto v4l2 = std::make_unique<unoq::V4l2Camera>(choice->path);
                 if (v4l2->open(choice->mode)) {
                     cameraPath = choice->path;
@@ -239,7 +268,7 @@ int main(int argc, char** argv) {
         return false;
     };
     if (!acquireCamera()) {
-        if (g_running) std::fprintf(stderr, "error: no V4L2 camera with a YUYV mode found\n");
+        if (g_running) std::fprintf(stderr, "error: no usable camera (CSI or V4L2 YUYV) found\n");
         if (drmDisplay) drmDisplay->close();
         return g_running ? 1 : 0;
     }
@@ -276,7 +305,9 @@ int main(int argc, char** argv) {
             return p;
         }());
         (void)r.present();
-        auto outcome = captureOnce(*camera, service, spec, cameraPath, identity);
+        // The CSI camera's identity carries the exposure and gain in use.
+        auto outcome =
+            captureOnce(*camera, service, spec, cameraPath, csi ? csi->deviceIdentity() : identity);
         if (outcome.record) {
             current->add(sessionCapture(outcome, current->profile()));
             std::string error;
@@ -310,7 +341,7 @@ int main(int argc, char** argv) {
     // Offscreen: preview, one capture, the card, a finish, the summary.
     if (snapshot) {
         if (auto f = camera->capture(std::chrono::milliseconds(2000)); f)
-            lastRgb = yuyvToRgb(f.value());
+            lastRgb = frameToRgb(f.value());
         drawPreviewScreen(r, layout, lastRgb, camW, camH, panelState(false));
         (void)r.present();
         snapshot->writePpm(std::filesystem::path(offscreen) / "preview.ppm");
@@ -363,6 +394,7 @@ int main(int argc, char** argv) {
             std::fflush(stdout);
             camera->close();
             camera.reset();
+            csi = nullptr;
             lastRgb.clear();
             screen = Screen::Preview;
             if (!acquireCamera()) break;
@@ -385,7 +417,7 @@ int main(int argc, char** argv) {
             }
             continue;
         }
-        if (frame) lastRgb = yuyvToRgb(frame.value());
+        if (frame) lastRgb = frameToRgb(frame.value());
 
         if (captureRequested.exchange(false)) {
             const auto outcome = doCapture();
