@@ -69,8 +69,8 @@ struct CellStats {
 [[nodiscard]] std::array<float, 3> grayWorldGains(const CellStats& stats);
 
 struct Exposure {
-    std::uint32_t lines = 0;     ///< sensor exposure, in line periods
-    std::uint32_t gainCode = 0;  ///< IMX219 analogue gain register value
+    std::uint32_t lines = 0;          ///< sensor exposure, in line periods
+    std::uint32_t gainCode = 0;       ///< IMX219 analogue gain register value
     std::uint32_t digitalCode = 256;  ///< IMX219 digital gain, Q8 (256 = 1x)
 };
 

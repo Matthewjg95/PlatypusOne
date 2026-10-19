@@ -123,8 +123,8 @@ void test_auto_exposure_digital_gain_is_last() {
         Exposure e{1600, 0};
         for (int i = 0; i < 40; ++i) {
             CellStats s;
-            s.greenP90 = std::min(1.0, scene * e.lines * imx219Gain(e.gainCode) *
-                                           (e.digitalCode / 256.0));
+            s.greenP90 =
+                std::min(1.0, scene * e.lines * imx219Gain(e.gainCode) * (e.digitalCode / 256.0));
             e = ae.next(s, e);
             assert(e.digitalCode >= 256 && e.digitalCode <= limits.maxDigitalCode);
             if (e.digitalCode > 256)
@@ -152,8 +152,8 @@ void test_auto_exposure_settles_with_sensor_latency() {
             applied.erase(applied.begin());
             applied.push_back(requested);
             CellStats s;
-            s.greenP90 = std::min(1.0, scene * live.lines * imx219Gain(live.gainCode) *
-                                           (live.digitalCode / 256.0));
+            s.greenP90 = std::min(
+                1.0, scene * live.lines * imx219Gain(live.gainCode) * (live.digitalCode / 256.0));
             if (settle > 0) {
                 --settle;
                 continue;
@@ -166,8 +166,9 @@ void test_auto_exposure_settles_with_sensor_latency() {
                 settle = kAeSettleFrames;
             }
         }
-        const double level = std::min(1.0, scene * requested.lines * imx219Gain(requested.gainCode) *
-                                                (requested.digitalCode / 256.0));
+        const double level =
+            std::min(1.0, scene * requested.lines * imx219Gain(requested.gainCode) *
+                              (requested.digitalCode / 256.0));
         assert(std::abs(level - 0.6) < 0.08);
         assert(changesLate == 0);  // converged and holding, not oscillating
     }
