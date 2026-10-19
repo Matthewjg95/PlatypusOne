@@ -9,8 +9,8 @@
 
 #include <platypus/apps/EngineeringScoutApp.hpp>
 #include <platypus/hal/ICamera.hpp>
-#include <platypus/hal/tof/TofProtocol.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
+#include <platypus/hal/tof/TofProtocol.hpp>
 #include <platypus/observation/CaptureService.hpp>
 #include <platypus/renderer/Renderer.hpp>
 #include <platypus/session/SessionStore.hpp>

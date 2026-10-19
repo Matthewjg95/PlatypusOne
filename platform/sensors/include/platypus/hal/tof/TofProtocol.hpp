@@ -35,7 +35,9 @@ struct Zone {
 
 /// ST UM3109 Rev 7, note under Table 4: status 5 is 100 % valid; 6 and 9 are
 /// 50 % confidence; everything else is below that. Displays use only 5.
-[[nodiscard]] constexpr bool isValid(std::uint16_t status) noexcept { return status == 5; }
+[[nodiscard]] constexpr bool isValid(std::uint16_t status) noexcept {
+    return status == 5;
+}
 
 /// One FRM record: zones in the sensor's raw ULD index order (row-major,
 /// side x side, not flipped).
