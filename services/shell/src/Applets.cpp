@@ -44,7 +44,8 @@ std::int32_t paragraph(Renderer& r, std::int32_t x, std::int32_t y, std::int32_t
     };
     while (i <= text.size()) {
         const auto sp = text.find(' ', i);
-        const std::string word = text.substr(i, sp == std::string::npos ? std::string::npos : sp - i);
+        const std::string word =
+            text.substr(i, sp == std::string::npos ? std::string::npos : sp - i);
         const std::string candidate = line.empty() ? word : line + " " + word;
         if (!line.empty() && Renderer::textWidth(candidate, s) > w) flush();
         line = line.empty() ? word : line + " " + word;
@@ -94,8 +95,8 @@ std::vector<appfw::AppManifest> standardManifests() {
              true, true, true),
         card(ids::kViewer3d, "3D VIEWER", "Inspect models and scans in 3D.", "viewer3d", false,
              false, true),
-        card(ids::kSystem, "SYSTEM", "Camera, ToF, IMU, battery and build status.", "system",
-             false, false, false),
+        card(ids::kSystem, "SYSTEM", "Camera, ToF, IMU, battery and build status.", "system", false,
+             false, false),
     };
 }
 
@@ -108,7 +109,8 @@ std::vector<std::string> previewNotes(const std::string& id) {
                 "Needs the camera and the ToF sketch (PR #49). Built on claude/kiosk-depth-view."};
     if (id == ids::kShadowScan)
         return {"Turns a part's silhouette into a reviewable engineering sketch.",
-                "Consumes ShadowScan Mobile and Platypus Lab outputs; Lab owns the experiment (#37, #51)."};
+                "Consumes ShadowScan Mobile and Platypus Lab outputs; Lab owns the experiment "
+                "(#37, #51)."};
     if (id == ids::kRoomScan)
         return {"Maps walls, openings and objects from paired camera and depth evidence.",
                 "Consumes Platypus Lab's room-mapping contract; waits on ToF Gate E (#16, #51)."};
@@ -163,7 +165,8 @@ void SystemApplet::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
     row("SHELL", std::string("v") + kShellVersion, kText);
     row("BOARD", std::string(ctx.board.id()), kText);
     row("DISPLAY", std::to_string(info.width) + " x " + std::to_string(info.height), kText);
-    row("CAMERA", ctx.board.camera() ? "present" : "not on this board", ctx.board.camera() ? kGood : kMuted);
+    row("CAMERA", ctx.board.camera() ? "present" : "not on this board",
+        ctx.board.camera() ? kGood : kMuted);
     row("TOF", "Depth applet owns it (PR #49)", kMuted);
     row("IMU", "not wired yet (#50)", kWarn);
     row("TRIGGER", "not wired yet (#50)", kWarn);

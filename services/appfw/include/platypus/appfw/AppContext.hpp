@@ -17,9 +17,9 @@
 namespace platypus::appfw {
 
 struct AppContext {
-    hal::IBoard& board;                       ///< capability discovery
-    renderer::Renderer& renderer;             ///< all drawing goes here
-    filesystem::ProjectStore& projects;       ///< persistent user work
+    hal::IBoard& board;                  ///< capability discovery
+    renderer::Renderer& renderer;        ///< all drawing goes here
+    filesystem::ProjectStore& projects;  ///< persistent user work
 
     /// Request that the launcher switch to another app after this callback
     /// returns. Empty id = return to launcher home.

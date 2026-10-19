@@ -20,8 +20,8 @@
 
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
-#include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/filesystem/ProjectStore.hpp>
+#include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/renderer/Renderer.hpp>
 #include <platypus/shell/Applets.hpp>
 #include <platypus/shell/Shell.hpp>

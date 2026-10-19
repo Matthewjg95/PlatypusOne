@@ -103,10 +103,11 @@ void test_standard_applets() {
 
     // A host that provides an applet clears its preview flag.
     appfw::AppRegistry dev;
-    shell::registerStandardApplets(
-        dev, {{shell::ids::kDepth, +[]() -> std::unique_ptr<appfw::IApp> {
-                   return std::make_unique<shell::PreviewApplet>(appfw::AppManifest{}, std::vector<std::string>{});
-               }}});
+    shell::registerStandardApplets(dev,
+                                   {{shell::ids::kDepth, +[]() -> std::unique_ptr<appfw::IApp> {
+                                         return std::make_unique<shell::PreviewApplet>(
+                                             appfw::AppManifest{}, std::vector<std::string>{});
+                                     }}});
     for (const auto& a : dev.manifests())
         if (a.id == shell::ids::kDepth) assert(!a.preview);
     std::puts("test_shell_applets: OK");

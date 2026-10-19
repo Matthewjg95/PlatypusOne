@@ -71,7 +71,8 @@ std::int32_t wrapped(Renderer& r, const Rect& box, std::string_view text, Color 
     while (i <= text.size()) {
         const auto sp = text.find(' ', i);
         const auto word = text.substr(i, sp == text.npos ? text.npos : sp - i);
-        const std::string candidate = line.empty() ? std::string(word) : line + " " + std::string(word);
+        const std::string candidate =
+            line.empty() ? std::string(word) : line + " " + std::string(word);
         if (!line.empty() && Renderer::textWidth(candidate, scale) > box.w) flush();
         line = line.empty() ? std::string(word) : line + " " + std::string(word);
         if (sp == text.npos) break;
@@ -84,12 +85,12 @@ std::int32_t wrapped(Renderer& r, const Rect& box, std::string_view text, Color 
 /// The mascot: a platypus seen from the side, built from ellipses.
 void drawPlatypus(Renderer& r, std::int32_t cx, std::int32_t cy, std::int32_t size) {
     const std::int32_t u = std::max(2, size / 16);
-    fillEllipse(r, cx - 5 * u, cy + 2 * u, 5 * u, 2 * u, kBody);   // tail
-    fillEllipse(r, cx, cy, 6 * u, 4 * u, kBody);                   // body
-    fillEllipse(r, cx + 6 * u, cy - u, 3 * u, 3 * u, kBody);       // head
-    fillEllipse(r, cx + 10 * u, cy, 3 * u, u + u / 2, kBill);      // bill
+    fillEllipse(r, cx - 5 * u, cy + 2 * u, 5 * u, 2 * u, kBody);          // tail
+    fillEllipse(r, cx, cy, 6 * u, 4 * u, kBody);                          // body
+    fillEllipse(r, cx + 6 * u, cy - u, 3 * u, 3 * u, kBody);              // head
+    fillEllipse(r, cx + 10 * u, cy, 3 * u, u + u / 2, kBill);             // bill
     fillEllipse(r, cx + 7 * u, cy - 2 * u, u / 2 + 1, u / 2 + 1, kText);  // eye
-    r.fillRect({cx - 3 * u, cy + 3 * u, u * 2, u * 2}, kBill);     // feet
+    r.fillRect({cx - 3 * u, cy + 3 * u, u * 2, u * 2}, kBill);            // feet
     r.fillRect({cx + 2 * u, cy + 3 * u, u * 2, u * 2}, kBill);
     // a hard hat: the engineer's
     fillEllipse(r, cx + 6 * u, cy - 4 * u, 3 * u, 2 * u, kAccent);
@@ -104,7 +105,7 @@ void drawAppIcon(Renderer& r, const Rect& box, std::string_view key) {
     const std::int32_t t = std::max(2, s / 24);
     if (key == "scout") {
         r.fillRect({x + s / 10, y + s / 10, s * 8 / 10, s * 8 / 10}, kText);  // the card
-        r.fillRect({x + s / 5, y + s / 5, s / 5, s / 5}, kBackground);  // 20 mm square
+        r.fillRect({x + s / 5, y + s / 5, s / 5, s / 5}, kBackground);        // 20 mm square
         thickLine(r, x + s / 2, y + s * 4 / 10, x + s * 8 / 10, y + s * 7 / 10, s / 10, kBill);
         thickLine(r, x + s * 45 / 100, y + s * 35 / 100, x + s * 55 / 100, y + s * 45 / 100, s / 6,
                   kBill);  // bolt head
@@ -148,7 +149,8 @@ void drawAppIcon(Renderer& r, const Rect& box, std::string_view key) {
             thickLine(r, px, py + a, px, py, t, c);
         };
         sq(x0 + o, y0 - o, kMuted);
-        for (const auto& [dx, dy] : std::array<std::array<int, 2>, 4>{{{0, 0}, {a, 0}, {a, a}, {0, a}}})
+        for (const auto& [dx, dy] :
+             std::array<std::array<int, 2>, 4>{{{0, 0}, {a, 0}, {a, a}, {0, a}}})
             thickLine(r, x0 + dx, y0 + dy, x0 + dx + o, y0 + dy - o, t, kMuted);
         sq(x0, y0, kAccent);
     } else {  // system
