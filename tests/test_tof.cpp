@@ -124,11 +124,11 @@ void test_depth_view_helpers() {
     f4.side = 4;
     f4.zones.assign(16, tof::Zone{300, 5, 1, 0});
     f4.zones[0].status = 4;
-    const auto out = kiosk::fuseDepth(grey, w, h, f4, tof::Orientation::Raw, {0.8, 0.8},
-                                      {200, 400});
+    const auto out =
+        kiosk::fuseDepth(grey, w, h, f4, tof::Orientation::Raw, {0.8, 0.8}, {200, 400});
     const auto px = [&](int x, int y) { return &out[static_cast<std::size_t>((y * w + x) * 3)]; };
-    assert(px(2, 2)[0] == 120 && px(2, 2)[1] == 120);    // outside
-    assert(px(20, 20)[0] == 40);                          // zone 0: invalid, darkened
+    assert(px(2, 2)[0] == 120 && px(2, 2)[1] == 120);      // outside
+    assert(px(20, 20)[0] == 40);                           // zone 0: invalid, darkened
     assert(px(60, 60)[0] != 120 || px(60, 60)[2] != 120);  // valid: tinted
     std::puts("test_tof_depth_view: OK");
 }

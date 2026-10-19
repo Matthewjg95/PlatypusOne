@@ -196,8 +196,8 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
         const std::int32_t cell = g.w / f.side;
         for (std::int32_t row = 0; row < f.side; ++row) {
             for (std::int32_t col = 0; col < f.side; ++col) {
-                const auto& z =
-                    f.zones[static_cast<std::size_t>(tof::zoneIndexAt(row, col, f.side, st.orientation))];
+                const auto& z = f.zones[static_cast<std::size_t>(
+                    tof::zoneIndexAt(row, col, f.side, st.orientation))];
                 const Rect c{g.x + col * cell, g.y + row * cell, cell - 1, cell - 1};
                 if (tof::isValid(z.status) && range) {
                     const Color fill = depthColour(z.distanceMm, *range);
@@ -218,7 +218,8 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
     // Colour scale under the grid.
     if (range) {
         for (std::int32_t x = 0; x < l.legend.w; ++x) {
-            const double mm = range->nearMm + (range->farMm - range->nearMm) * x / std::max(1, l.legend.w - 1);
+            const double mm =
+                range->nearMm + (range->farMm - range->nearMm) * x / std::max(1, l.legend.w - 1);
             r.fillRect({l.legend.x + x, l.legend.y, 1, l.legend.h}, depthColour(mm, *range));
         }
         const std::string lo = number("%.0f", range->nearMm);
@@ -231,8 +232,8 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
 
     // 3. camera + ToF
     if (!rgb.empty() && st.frame && range) {
-        const auto fused = fuseDepth(rgb, camW, camH, *st.frame, st.orientation,
-                                     tofFootprint(st.fov), *range);
+        const auto fused =
+            fuseDepth(rgb, camW, camH, *st.frame, st.orientation, tofFootprint(st.fov), *range);
         r.drawImage(l.fused, fused, camW, camH, 3);
     } else if (!rgb.empty()) {
         r.drawImage(l.fused, rgb, camW, camH, 3);

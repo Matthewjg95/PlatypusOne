@@ -299,7 +299,8 @@ int renderKioskDepthDemo(const std::string& outDir) {
     kiosk::SceneCamera camera;
     (void)camera.open(kiosk::SceneCamera::kMode);
     std::vector<std::uint8_t> rgb;
-    if (auto f = camera.capture(std::chrono::milliseconds(0)); f) rgb = kiosk::frameToRgb(f.value());
+    if (auto f = camera.capture(std::chrono::milliseconds(0)); f)
+        rgb = kiosk::frameToRgb(f.value());
     const auto camW = kiosk::SceneCamera::kMode.width, camH = kiosk::SceneCamera::kMode.height;
 
     hal::tof::Frame frame;

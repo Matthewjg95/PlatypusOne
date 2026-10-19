@@ -52,7 +52,8 @@ void TofMonitorClient::handle(const std::string& line) {
     }
     if (rec->type == RecordType::Frame) {
         if (state_.frame && rec->frame->mcuUsReady > state_.frame->mcuUsReady) {
-            const double dt = static_cast<double>(rec->frame->mcuUsReady - state_.frame->mcuUsReady);
+            const double dt =
+                static_cast<double>(rec->frame->mcuUsReady - state_.frame->mcuUsReady);
             const double hz = 1e6 / dt;
             state_.hz = state_.hz > 0 ? 0.8 * state_.hz + 0.2 * hz : hz;
         }
