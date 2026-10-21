@@ -36,6 +36,7 @@ side grip, trigger and barrel camera pointing out of the grip's outer edge,
 | v2 (2026-10-17) | Side grip, barrel camera window, trigger hump, UNO Q stack above the display. |
 | v3 (2026-10-20) | Camera **and** ToF side by side in the barrel behind one notch open to the rim; A068 battery stand-ins in the grip; charging-port slot. |
 | v4 (2026-10-20) | Grip edge follows Matthew's sketched curve (waist, palm swell, sweep into the base); trigger moved in by its radius (tip level with the barrel face); battery stand-ins move under the display. |
+| v5 (2026-10-20) | Trigger on the outside: the grip wall steps in under the barrel and runs behind the trigger 10 mm inside the barrel face, then rejoins the curve. The barrel overhangs; the trigger tip is level with the barrel face with a 4 mm finger gap. |
 
 Every dimension's status is in the script's header. **Still estimated:** the
 27 mm height, which is set by the UNO Q + Media Carrier stack (22 mm + 3 mm for

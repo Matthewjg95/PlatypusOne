@@ -18,6 +18,13 @@ v4 (2026-10-20):
     display, since the narrowed grip is now about 15 mm wide inside;
   - the charging-port slot moves along the base to where the grip meets it.
 
+v5 (2026-10-20): the trigger is on the outside. Per Matthew's second sketch
+the grip wall steps in under the barrel, runs straight down behind the
+trigger 10 mm inside the barrel face, and rejoins the grip curve below it.
+The barrel overhangs the recessed grip, and the trigger is a solid hump on
+the outside of that wall, its tip level with the barrel face and a 4 mm
+finger gap under the barrel.
+
 Sections, sensor end first:
   sensor band   above the display: UNO Q + UNO Media Carrier shield, UNO
                 footprint 68.58 x 53.34 (VENDOR), stack ESTIMATED
@@ -47,7 +54,6 @@ GRIP_IN = 30.0  # grip column interior width at the barrel
 BARREL_L = 50.0  # camera 25 + gap 4 + ToF 12.7 + margins, below the corner
 NOTCH_L, NOTCH_Z0 = 42.0, 4.0
 TRIGGER_L, TRIGGER_OUT = 24.0, 10.0
-TRIGGER_IN = TRIGGER_OUT  # moved in by its radius: tip level with the barrel face
 USB_W, USB_H, USB_Z = 12.0, 7.0, 9.0
 NOTCH = 22.0
 
@@ -70,13 +76,14 @@ x_barrel0 = x_band1 + RIB
 y_barrel0 = YT - BARREL_L
 ty1 = y_barrel0 - RIB - 4.0
 ty0 = ty1 - TRIGGER_L
+y_overhang = y_barrel0 - RIB  # underside of the barrel, where the grip wall steps in
+x_recess = hw - TRIGGER_OUT  # grip wall behind the trigger; the tip reaches the barrel face
 
 # Matthew's sketched grip edge (2026-10-20), traced from the plan view in mm,
-# from the trigger's bottom on the outer wall down to the base at the rib.
+# from below the trigger (on the recessed wall) down to the base at the rib.
 GRIP_CURVE = [
-    (hw, ty0),
-    (44.0, -4.0),
-    (41.0, -15.0),
+    (x_recess, -10.0),
+    (40.5, -18.0),
     (37.5, -30.0),
     (35.8, -48.0),
     (37.5, -62.0),
@@ -143,7 +150,7 @@ def arc(cx, cy, r, a0):
 # those runs can be rebuilt as boxes around the opening.
 wy1 = hl - R_OUT - 1.0  # sensor notch, on the straight barrel face
 wy0 = wy1 - NOTCH_L
-assert y_barrel0 - RIB <= wy0 and ty1 < wy0, (wy0, ty1)
+assert y_barrel0 - RIB <= wy0 and ty1 < y_overhang < wy0 - 1.0, (wy0, ty1, y_overhang)
 usb_cx = x_grip0 - 8.0  # charging port where the grip meets the base
 sx0, sx1 = usb_cx - USB_W / 2, usb_cx + USB_W / 2
 
@@ -156,6 +163,7 @@ i_base_slot = len(outline)  # base run: ... -> slot start -> slot end -> ...
 outline += [(sx0 - 2.0, -hl), (sx1 + 2.0, -hl)]
 curve = catmull_rom(list(reversed(GRIP_CURVE)))  # base -> trigger bottom
 outline += curve
+outline += [(x_recess, y_overhang), (hw, y_overhang)]  # step out under the barrel
 outline.append((hw, wy0 - 1.0))  # right face below the notch
 i_notch = len(outline) - 1  # segment from here to vertex 0 holds the notch
 SKIP = {i_base_slot, i_notch}
@@ -288,16 +296,16 @@ box(X0 - EPS, x_disp1 + EPS, Y0 - EPS, Y0 + LEDGE, FLOOR - EPS, z_ledge)
 box(X0 - EPS, cx - NOTCH / 2, y_disp1 - LEDGE, y_disp1 + EPS, FLOOR - EPS, z_ledge)
 box(cx + NOTCH / 2, x_disp1 + EPS, y_disp1 - LEDGE, y_disp1 + EPS, FLOOR - EPS, z_ledge)
 
-# Trigger: the same hump as before, moved in by its radius so its tip is
-# level with the barrel face; below it the grip curve scoops away.
-o, s = TRIGGER_OUT, TRIGGER_IN
+# Trigger: a solid hump on the outside of the recessed grip wall (its base
+# overlaps the wall by 1 mm), tip level with the barrel face.
+o = TRIGGER_OUT
 trig = [
-    (hw - 1.0 - s, ty0),
-    (hw + 0.6 * o - s, ty0 + 2.5),
-    (hw + o - s, ty0 + 9.0),
-    (hw + o - s, ty1 - 5.0),
-    (hw + 0.6 * o - s, ty1 - 1.0),
-    (hw - 1.0 - s, ty1),
+    (x_recess - 1.0, ty0),
+    (x_recess + 0.6 * o, ty0 + 2.5),
+    (x_recess + o, ty0 + 9.0),
+    (x_recess + o, ty1 - 5.0),
+    (x_recess + 0.6 * o, ty1 - 1.0),
+    (x_recess - 1.0, ty1),
 ]
 prism_poly(trig, 0, H)
 
@@ -312,7 +320,7 @@ def normal(a, b, c):
 
 out = sys.argv[1] if len(sys.argv) > 1 else "platypusone_tray_40a.stl"
 with open(out, "wb") as f:
-    f.write(b"PlatypusOne open tray v4, left-hand side grip, 4in display".ljust(80, b" "))
+    f.write(b"PlatypusOne open tray v5, left-hand side grip, 4in display".ljust(80, b" "))
     f.write(struct.pack("<I", len(tris)))
     for t in tris:
         f.write(struct.pack("<3f", *normal(*t)))
@@ -323,6 +331,7 @@ waist = min(p[0] for p in curve if p[1] > -80.0)
 print(f"{out}: {OUT_W:.1f} W x {OUT_L:.1f} L x {H:.1f} H mm, {len(tris)} triangles")
 print(f"grip: outer edge at the waist x={waist:.1f}, inside {waist - WALL - x_grip0:.1f} mm wide")
 print(
-    f"trigger x {hw - 1 - s:.2f}..{hw + o - s:.2f} y {ty0:.2f}..{ty1:.2f}; "
+    f"trigger x {x_recess:.2f}..{x_recess + o:.2f} y {ty0:.2f}..{ty1:.2f} "
+    f"(finger gap {y_overhang - ty1:.1f} mm); "
     f"notch y {wy0:.2f}..{wy1:.2f}; usb x {sx0:.2f}..{sx1:.2f}"
 )
