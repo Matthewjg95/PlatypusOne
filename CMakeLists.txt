@@ -38,6 +38,7 @@ add_subdirectory(services/session)
 add_subdirectory(services/vision)
 add_subdirectory(services/ai)
 add_subdirectory(services/appfw)
+add_subdirectory(services/shell)
 
 # App *libraries* build unconditionally (tests and tools link them); the
 # guard only gates app executables like the launcher.

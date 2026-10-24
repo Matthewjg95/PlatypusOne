@@ -5,6 +5,7 @@
 //   ui_preview --scout-card-demo OUT.ppm
 //   ui_preview --kiosk-session-demo OUTDIR
 //   ui_preview --kiosk-depth-demo OUTDIR
+//   ui_preview --shell-demo OUTDIR
 //   ui_preview --analyze-yuyv SOURCE.yuyv   (re-run a board capture on the host)
 //
 // Draws through the real Renderer into an in-memory display and writes the
@@ -19,8 +20,11 @@
 
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
+#include <platypus/filesystem/ProjectStore.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/renderer/Renderer.hpp>
+#include <platypus/shell/Applets.hpp>
+#include <platypus/shell/Shell.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
 
 #include <chrono>
@@ -347,6 +351,49 @@ int renderKioskDepthDemo(const std::string& outDir) {
     return 0;
 }
 
+/// The device shell on the 800x480 panel geometry: splash, home, a swipe in
+/// progress, a preview applet under the shell bar, and the System applet.
+int renderShellDemo(const std::string& outDir) {
+    namespace fs = std::filesystem;
+    using namespace std::chrono_literals;
+    std::error_code ec;
+    fs::create_directories(outDir, ec);
+    auto display = std::make_shared<MemoryDisplay>(std::uint16_t{800}, std::uint16_t{480});
+    renderer::Renderer r(display);
+    shell::MinimalBoard board(display);
+    filesystem::ProjectStore projects(nullptr);
+    appfw::AppRegistry registry;
+    shell::registerStandardApplets(registry);
+    shell::Shell sh(registry, appfw::AppContext{board, r, projects, {}});
+    const auto shot = [&](const std::string& name) {
+        return writePpm((fs::path(outDir) / name).string(), *display);
+    };
+    using T = hal::TouchEvent::Type;
+    bool ok = true;
+    sh.frame(1000ms);  // splash, part way
+    ok = ok && shot("01-splash.ppm");
+    sh.frame(1000ms);
+    sh.frame(16ms);
+    ok = ok && shot("02-home.ppm");
+    sh.onTouch({T::Down, 600, 240});  // finger halfway through a swipe
+    sh.onTouch({T::Move, 400, 240});
+    sh.frame(16ms);
+    ok = ok && shot("03-swiping.ppm");
+    sh.onTouch({T::Up, 380, 240});
+    for (int i = 0; i < 60; ++i)
+        sh.frame(16ms);
+    ok = ok && shot("04-home-depth.ppm");
+    sh.open(shell::ids::kRoomScan);
+    sh.frame(16ms);
+    ok = ok && shot("05-preview-applet.ppm");
+    sh.open(shell::ids::kSystem);
+    sh.frame(16ms);
+    ok = ok && shot("06-system.ppm");
+    if (!ok) return 1;
+    std::printf("wrote shell screens to %s\n", outDir.c_str());
+    return 0;
+}
+
 /// Re-analyze a frame the board saved (640x480 YUYV source.yuyv) with this
 /// build's analyzer + classifier and print the record: lets a change be
 /// checked against real bench captures without the board.
@@ -389,6 +436,7 @@ int main(int argc, char** argv) {
     if (args.size() == 2 && args[0] == "--kiosk-session-demo")
         return renderKioskSessionDemo(args[1]);
     if (args.size() == 2 && args[0] == "--kiosk-depth-demo") return renderKioskDepthDemo(args[1]);
+    if (args.size() == 2 && args[0] == "--shell-demo") return renderShellDemo(args[1]);
     if (args.size() == 2 && args[0] == "--analyze-yuyv") return analyzeYuyv(args[1]);
     std::fprintf(stderr,
                  "usage: ui_preview --font-specimen OUT.ppm\n"
@@ -396,6 +444,7 @@ int main(int argc, char** argv) {
                  "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n"
                  "       ui_preview --kiosk-session-demo OUTDIR\n"
                  "       ui_preview --kiosk-depth-demo OUTDIR\n"
+                 "       ui_preview --shell-demo OUTDIR\n"
                  "       ui_preview --analyze-yuyv SOURCE.yuyv\n");
     return 2;
 }

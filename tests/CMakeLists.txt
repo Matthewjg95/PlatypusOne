@@ -19,6 +19,7 @@ add_executable(platypus_tests
     test_scout_validation.cpp
     test_session.cpp
     test_settings_store.cpp
+    test_shell.cpp
     test_tof.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
@@ -34,6 +35,7 @@ target_link_libraries(platypus_tests PRIVATE
     platypus::scout_kiosk_core
     platypus::scout_validation
     platypus::session
+    platypus::shell
     platypus::tof
     platypus::vision)
 
