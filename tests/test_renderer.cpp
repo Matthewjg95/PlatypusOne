@@ -124,6 +124,7 @@ void test_renderer_geometry() {
 }
 
 void test_app_registry();
+void test_applets();
 void test_bayer();
 void test_event_queue();
 void test_export();
@@ -151,6 +152,7 @@ int main() {
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
     test_app_registry();
+    test_applets();
     test_bayer();
     test_event_queue();
     test_export();

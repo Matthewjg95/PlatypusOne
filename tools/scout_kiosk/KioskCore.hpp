@@ -81,15 +81,19 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
 // --- depth view: camera, the ToF zone grid, and the two together ----------
 
 struct DepthLayout {
+    Rect area;    ///< everything the view draws in
     Rect camera;  ///< live camera
     Rect tof;     ///< the zone grid as a heat map with distances
     Rect fused;   ///< the grid laid over the camera image
     Rect legend;  ///< colour scale under the ToF pane
-    Rect back;    ///< returns to the Scout view
+    Rect back;    ///< returns to the Scout view; empty (w == 0) when hosted by the shell
     std::int32_t infoY = 0;
     std::int32_t textScale = 2;
 };
 [[nodiscard]] DepthLayout computeDepthLayout(const hal::DisplayInfo& info);
+/// Inside `area` (e.g. a shell applet's content area). Text is sized from
+/// the display height the area ends at, so it stays readable under a bar.
+[[nodiscard]] DepthLayout computeDepthLayout(const Rect& area, bool withBack);
 
 /// Nominal fields of view. Until a rigid bracket and a calibration exist the
 /// overlay can only assume co-axial, parallel sensors with datasheet FOVs.

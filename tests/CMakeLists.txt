@@ -2,6 +2,7 @@
 # third_party once vendoring policy is decided (ROADMAP: infra/test-framework).
 add_executable(platypus_tests
     test_app_registry.cpp
+    test_applets.cpp
     test_bayer.cpp
     test_event_queue.cpp
     test_export.cpp

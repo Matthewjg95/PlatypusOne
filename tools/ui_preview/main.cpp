@@ -17,6 +17,7 @@
 // --kiosk-session-demo scripts a whole Scout session through the kiosk's own
 // screens and the real capture, analyzer, session and export code, writing
 // one PPM per screen plus the session folder with its CAD artifacts.
+#include "KioskApplets.hpp"
 #include "KioskCore.hpp"
 
 #include <platypus/ai/FastenerClassifier.hpp>
@@ -24,6 +25,7 @@
 #include <platypus/filesystem/ProjectStore.hpp>
 #include <platypus/hal/Bayer.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
+#include <platypus/hal/tof/ITofSource.hpp>
 #include <platypus/renderer/Renderer.hpp>
 #include <platypus/shell/Applets.hpp>
 #include <platypus/shell/Shell.hpp>
@@ -367,8 +369,38 @@ int renderShellDemo(const std::string& outDir) {
     renderer::Renderer r(display);
     shell::MinimalBoard board(display);
     filesystem::ProjectStore projects(nullptr);
+    // Scout and Depth run for real on the synthetic camera and a fake ToF,
+    // writing captures and sessions under OUTDIR.
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    fs::remove_all(fs::path(outDir) / "observations", ec);
+    fs::remove_all(fs::path(outDir) / "sessions", ec);
+    observation::CaptureService captures(fs::path(outDir) / "observations");
+    session::SessionStore sessions(fs::path(outDir) / "sessions");
+    hal::tof::FakeTofSource tof;
+    const auto camW = kiosk::SceneCamera::kMode.width, camH = kiosk::SceneCamera::kMode.height;
     appfw::AppRegistry registry;
-    shell::registerStandardApplets(registry);
+    shell::registerStandardApplets(registry,
+                                   {{shell::ids::kScout,
+                                     [&]() -> std::unique_ptr<appfw::IApp> {
+                                         kiosk::ScoutDeps d;
+                                         d.camera = &camera;
+                                         d.camW = camW;
+                                         d.camH = camH;
+                                         d.captures = &captures;
+                                         d.sessions = &sessions;
+                                         d.spec = vision::CalibrationSpec{20.0};
+                                         d.device = "synthetic";
+                                         return std::make_unique<kiosk::ScoutApplet>(std::move(d));
+                                     }},
+                                    {shell::ids::kDepth, [&]() -> std::unique_ptr<appfw::IApp> {
+                                         kiosk::DepthDeps d;
+                                         d.camera = &camera;
+                                         d.camW = camW;
+                                         d.camH = camH;
+                                         d.tof = &tof;
+                                         return std::make_unique<kiosk::DepthApplet>(std::move(d));
+                                     }}});
     shell::Shell sh(registry, appfw::AppContext{board, r, projects, {}});
     const auto shot = [&](const std::string& name) {
         return writePpm((fs::path(outDir) / name).string(), *display);
@@ -394,6 +426,22 @@ int renderShellDemo(const std::string& outDir) {
     sh.open(shell::ids::kSystem);
     sh.frame(16ms);
     ok = ok && shot("06-system.ppm");
+    sh.open(shell::ids::kScout);
+    sh.frame(16ms);
+    ok = ok && shot("07-scout.ppm");
+    sh.onButton({1, true});  // board button A: capture
+    sh.frame(16ms);
+    sh.frame(16ms);
+    ok = ok && shot("08-scout-card.ppm");
+    sh.onButton({1, true});  // dismiss the card
+    sh.frame(16ms);
+    ok = ok && shot("09-scout-after.ppm");
+    sh.open(shell::ids::kDepth);
+    sh.frame(16ms);
+    ok = ok && shot("10-depth.ppm");
+    sh.home();
+    sh.frame(16ms);
+    ok = ok && shot("11-home-ready.ppm");
     if (!ok) return 1;
     std::printf("wrote shell screens to %s\n", outDir.c_str());
     return 0;

@@ -45,10 +45,16 @@ Rect gridRect(const Rect& pane, std::int32_t side) {
 }  // namespace
 
 DepthLayout computeDepthLayout(const hal::DisplayInfo& info) {
-    const std::int32_t w = info.width, h = info.height;
-    const std::int32_t m = std::max(8, h / 30);
+    return computeDepthLayout(Rect{0, 0, info.width, info.height}, true);
+}
+
+DepthLayout computeDepthLayout(const Rect& area, bool withBack) {
+    const std::int32_t w = area.w, h = area.h;
+    const std::int32_t ref = area.y + area.h;  // the display height, for text size
+    const std::int32_t m = std::max(8, ref / 30);
     DepthLayout l;
-    l.textScale = std::max(1, h / 240);
+    l.area = area;
+    l.textScale = std::max(1, ref / 240);
     const std::int32_t s = l.textScale;
     const std::int32_t labelY = m + renderer::Renderer::textHeight(s) + m / 2;
     const std::int32_t paneY = labelY + renderer::Renderer::textHeight(s) + 4;
@@ -62,9 +68,16 @@ DepthLayout computeDepthLayout(const hal::DisplayInfo& info) {
     l.fused = {x0 + c + t + 2 * m, paneY, c, t};
     l.legend = {l.tof.x, paneY + t + m / 2, l.tof.w, std::max(6, h / 48)};
     l.infoY = l.legend.y + l.legend.h + renderer::Renderer::textHeight(s) + m;
-    const std::int32_t bh = h / 9;
+    const std::int32_t bh = ref / 9;
     const std::int32_t bw = c * 3 / 4;
-    l.back = {w - m - bw, h - m - bh, bw, bh};
+    if (withBack) l.back = {w - m - bw, h - m - bh, bw, bh};
+    // Everything above was laid out from the area's corner.
+    for (Rect* r : {&l.camera, &l.tof, &l.fused, &l.legend, &l.back}) {
+        if (r->w == 0) continue;
+        r->x += area.x;
+        r->y += area.y;
+    }
+    l.infoY += area.y;
     return l;
 }
 
@@ -159,7 +172,8 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
     r.clear(kBackground);
 
     // Title, and the stream's state where the eye lands first.
-    r.drawText(m, m, "DEPTH VIEW", kAccent, s);
+    const std::int32_t ax = l.area.x, ay = l.area.y;
+    r.drawText(ax + m, ay + m, "DEPTH VIEW", kAccent, s);
     std::string live;
     Color liveColour = kWarn;
     if (!st.connected) {
@@ -173,8 +187,8 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
         live = "TOF LIVE " + number("%.1f", st.hz) + " HZ";
         liveColour = kGood;
     }
-    const auto infoW = static_cast<std::int32_t>(r.displayInfo().width);
-    r.drawText(infoW - m - renderer::Renderer::textWidth(live, s), m, live, liveColour, s);
+    r.drawText(ax + l.area.w - m - renderer::Renderer::textWidth(live, s), ay + m, live, liveColour,
+               s);
 
     const std::int32_t labelY = l.camera.y - renderer::Renderer::textHeight(s) - 4;
     r.drawText(l.camera.x, labelY, "CAMERA", kMuted, s);
@@ -243,11 +257,13 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
     r.drawRect(l.fused, kMuted);
 
     // Readings and the honest caveats.
-    const std::int32_t tx = m;
-    const std::int32_t tw = l.back.x - 2 * m;
+    const bool hasBack = l.back.w > 0;
+    const std::int32_t tx = ax + m;
+    const std::int32_t tw = (hasBack ? l.back.x : ax + l.area.w) - tx - m;
+    const std::int32_t textBottom = hasBack ? l.back.y + l.back.h : ay + l.area.h - m;
     std::int32_t y = l.infoY;
     const auto line = [&](const std::string& text, Color c, std::int32_t scale) {
-        if (y < l.back.y + l.back.h - renderer::Renderer::textHeight(scale))
+        if (y < textBottom - renderer::Renderer::textHeight(scale))
             y = drawWrapped(r, tx, y, tw, text, c, scale);
     };
     if (st.frame) {
@@ -274,9 +290,11 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
              number("%.0f", st.fov.cameraHDeg) + "x" + number("%.0f", st.fov.cameraVDeg),
          kMuted, small);
 
-    r.fillRect(l.back, kPanel);
-    r.drawRect(l.back, kAccent);
-    centredText(r, l.back, "SCOUT VIEW", kAccent, s);
+    if (hasBack) {
+        r.fillRect(l.back, kPanel);
+        r.drawRect(l.back, kAccent);
+        centredText(r, l.back, "SCOUT VIEW", kAccent, s);
+    }
 }
 
 }  // namespace platypus::kiosk

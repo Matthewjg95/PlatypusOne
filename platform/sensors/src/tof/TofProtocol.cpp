@@ -173,3 +173,36 @@ std::int32_t zoneIndexAt(std::int32_t row, std::int32_t col, std::int32_t side,
 }
 
 }  // namespace platypus::hal::tof
+
+#include <platypus/hal/tof/ITofSource.hpp>
+
+namespace platypus::hal::tof {
+
+FakeTofSource::FakeTofSource() {
+    frame_.side = 8;
+    frame_.seq = 1898;
+    frame_.temperatureC = 55;
+    for (int row = 0; row < 8; ++row)
+        for (int col = 0; col < 8; ++col) {
+            Zone z;
+            z.distanceMm = 214 + 2 * row + col;
+            z.status = 5;
+            z.targets = 1;
+            if (row >= 2 && row <= 4 && col >= 4 && col <= 6) z.distanceMm = 150 + row;
+            if (row == 7 && col >= 6) z.status = col == 7 ? 255 : 4;
+            frame_.zones.push_back(z);
+        }
+}
+
+TofSnapshot FakeTofSource::snapshot() const {
+    TofSnapshot s;
+    if (!running_) return s;
+    s.connected = true;
+    s.frame = frame_;
+    s.frameArrived = std::chrono::steady_clock::now();
+    s.hz = 5.0;
+    s.frames = 1;
+    return s;
+}
+
+}  // namespace platypus::hal::tof

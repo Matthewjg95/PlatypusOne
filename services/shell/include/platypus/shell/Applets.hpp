@@ -64,7 +64,7 @@ class SystemApplet final : public appfw::IApp {
 /// the real applet, a PreviewApplet otherwise, and the SystemApplet.
 struct ProvidedApplet {
     std::string id;
-    appfw::AppFactory factory = nullptr;
+    appfw::AppFactory factory;
 };
 void registerStandardApplets(appfw::AppRegistry& registry,
                              const std::vector<ProvidedApplet>& provided = {});
