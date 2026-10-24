@@ -40,6 +40,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -352,9 +353,39 @@ int main(int argc, char** argv) {
             return p;
         }());
         (void)r.present();
-        // The CSI camera's identity carries the exposure and gain in use.
-        auto outcome =
-            captureOnce(*camera, service, spec, cameraPath, csi ? csi->deviceIdentity() : identity);
+        // The CSI camera's identity carries the exposure and gain in use, and
+        // every CSI capture keeps its raw frame for re-analysis on a host
+        // (ui_preview --analyze): analysis improves; old captures do not.
+        const observation::AttachFn attachRaw = [&](const hal::Frame&) {
+            std::vector<observation::AttachedFile> files;
+            if (!csi) return files;
+            auto raw = csi->lastRaw();
+            if (raw.packed.empty()) return files;
+            char meta[640];
+            std::snprintf(meta, sizeof(meta),
+                          "{\"format\":\"SRGGB10P\",\"cfa\":\"RGGB\",\"width\":%u,\"height\":%u,"
+                          "\"bytes_per_line\":%u,\"black_level\":%u,\"white_level\":1023,"
+                          "\"requested_exposure_lines\":%u,\"requested_analogue_gain_code\":%u,"
+                          "\"requested_digital_gain_q8\":%u,\"line_time_ns\":%u,"
+                          "\"white_balance_gains\":[%.4f,%.4f,%.4f],"
+                          "\"note\":\"exposure changes reach the sensor about two frames "
+                          "late\"}\n",
+                          raw.width, raw.height, raw.bytesPerLine, unsigned{raw.blackLevel},
+                          raw.requested.lines, raw.requested.gainCode, raw.requested.digitalCode,
+                          raw.lineTimeNs, static_cast<double>(raw.whiteBalance[0]),
+                          static_cast<double>(raw.whiteBalance[1]),
+                          static_cast<double>(raw.whiteBalance[2]));
+            const std::string m(meta);
+            std::vector<std::byte> metaBytes(m.size());
+            std::memcpy(metaBytes.data(), m.data(), m.size());
+            files.push_back(
+                {"raw-frame", "image/x-raw-srggb10p", "raw.raw10", std::move(raw.packed)});
+            files.push_back(
+                {"raw-frame-meta", "application/json", "raw.json", std::move(metaBytes)});
+            return files;
+        };
+        auto outcome = captureOnce(*camera, service, spec, cameraPath,
+                                   csi ? csi->deviceIdentity() : identity, attachRaw);
         if (outcome.record) {
             current->add(sessionCapture(outcome, current->profile()));
             std::string error;

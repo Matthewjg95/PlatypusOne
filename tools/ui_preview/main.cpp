@@ -6,6 +6,7 @@
 //   ui_preview --kiosk-session-demo OUTDIR
 //   ui_preview --kiosk-depth-demo OUTDIR
 //   ui_preview --shell-demo OUTDIR
+//   ui_preview --analyze CAPTURE_DIR | source.ppm | raw.json
 //   ui_preview --analyze-yuyv SOURCE.yuyv   (re-run a board capture on the host)
 //
 // Draws through the real Renderer into an in-memory display and writes the
@@ -21,6 +22,7 @@
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
 #include <platypus/filesystem/ProjectStore.hpp>
+#include <platypus/hal/Bayer.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/renderer/Renderer.hpp>
 #include <platypus/shell/Applets.hpp>
@@ -30,9 +32,12 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -425,6 +430,106 @@ int analyzeYuyv(const std::string& path) {
     return 0;
 }
 
+/// A binary PPM (P6, maxval 255) as an RGB888 frame; nullopt if unreadable.
+std::optional<hal::Frame> loadPpm(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    std::string magic;
+    in >> magic;
+    if (magic != "P6") return std::nullopt;
+    const auto token = [&]() -> long {
+        while (in >> std::ws && in.peek() == '#')
+            in.ignore(1 << 16, '\n');
+        long v = -1;
+        in >> v;
+        return v;
+    };
+    const long w = token(), h = token(), maxval = token();
+    if (w <= 0 || h <= 0 || maxval != 255) return std::nullopt;
+    in.get();  // the single whitespace before the pixels
+    auto bytes = std::make_shared<std::vector<std::byte>>(static_cast<std::size_t>(w * h * 3));
+    if (!in.read(reinterpret_cast<char*>(bytes->data()),
+                 static_cast<std::streamsize>(bytes->size())))
+        return std::nullopt;
+    return hal::Frame({static_cast<std::uint16_t>(w), static_cast<std::uint16_t>(h),
+                       hal::PixelFormat::RGB888, 0.0f},
+                      bytes, std::chrono::steady_clock::time_point{});
+}
+
+/// Number after "key": in a flat JSON object (raw.json is written by the
+/// kiosk with a fixed shape); NaN when absent.
+double jsonNumber(const std::string& json, const std::string& key, std::size_t index = 0) {
+    auto at = json.find("\"" + key + "\":");
+    if (at == std::string::npos) return std::nan("");
+    at += key.size() + 3;
+    if (json[at] == '[') {
+        ++at;
+        for (std::size_t i = 0; i < index; ++i)
+            at = json.find(',', at) + 1;
+    }
+    return std::strtod(json.c_str() + at, nullptr);
+}
+
+/// The raw frame a CSI capture kept, decoded the way the kiosk does (2x2
+/// binning, the white balance recorded with it, gamma).
+std::optional<hal::Frame> loadRaw(const std::filesystem::path& metaPath) {
+    std::ifstream metaIn(metaPath);
+    const std::string meta((std::istreambuf_iterator<char>(metaIn)), {});
+    const auto w = static_cast<std::uint32_t>(jsonNumber(meta, "width"));
+    const auto h = static_cast<std::uint32_t>(jsonNumber(meta, "height"));
+    const auto bpl = static_cast<std::uint32_t>(jsonNumber(meta, "bytes_per_line"));
+    std::ifstream rawIn(metaPath.parent_path() / "raw.raw10", std::ios::binary);
+    std::vector<std::byte> packed(static_cast<std::size_t>(bpl) * h);
+    if (w == 0 || h == 0 ||
+        !rawIn.read(reinterpret_cast<char*>(packed.data()),
+                    static_cast<std::streamsize>(packed.size())))
+        return std::nullopt;
+    const auto raw = hal::bayer::unpackRaw10(packed, {w, h, bpl});
+    if (raw.empty()) return std::nullopt;
+    hal::bayer::RgbParams p;
+    p.blackLevel = static_cast<std::uint16_t>(jsonNumber(meta, "black_level"));
+    for (std::size_t c = 0; c < 3; ++c) {
+        const double g = jsonNumber(meta, "white_balance_gains", c);
+        p.gains[c] = std::isnan(g) ? 1.0f : static_cast<float>(g);
+    }
+    auto rgb = std::make_shared<std::vector<std::byte>>();
+    for (const auto v : hal::bayer::binnedRgb(raw, w, h, p, nullptr))
+        rgb->push_back(static_cast<std::byte>(v));
+    return hal::Frame({static_cast<std::uint16_t>(w / 2), static_cast<std::uint16_t>(h / 2),
+                       hal::PixelFormat::RGB888, 0.0f},
+                      rgb, std::chrono::steady_clock::time_point{});
+}
+
+/// Re-runs a saved capture through this build's inspection: a capture
+/// directory (prefers raw.json, else source.ppm), a source.ppm, or a raw.json.
+int analyzeCapture(const std::string& pathArg) {
+    namespace fs = std::filesystem;
+    fs::path path(pathArg);
+    if (fs::is_directory(path))
+        path = fs::exists(path / "raw.json") ? path / "raw.json" : path / "source.ppm";
+    const bool isRaw = path.extension() == ".json";
+    const auto frame = isRaw ? loadRaw(path) : loadPpm(path);
+    if (!frame) {
+        std::fprintf(stderr, "error: cannot read %s as a PPM or a raw capture\n",
+                     path.string().c_str());
+        return 1;
+    }
+    const vision::CalibrationSpec spec{20.0};
+    const auto inspection = vision::inspectFrame(*frame, spec);
+    observation::EngineeringObservation record;
+    record.observationId = "reanalysis";
+    record.timestampUtc = "1970-01-01T00:00:00Z";
+    record.source = {{"app", "ui_preview"}, {"input", path.string()}};
+    record.artifacts.push_back({"source-image",
+                                isRaw ? "image/x-raw-srggb10p" : "image/x-portable-pixmap",
+                                path.string()});
+    vision::appendInspection(record, inspection, spec, "source-image");
+    if (inspection.strict.ok())
+        ai::appendClassification(record, ai::classify(*inspection.strict.analysis));
+    std::fprintf(stderr, "%s: %s\n", path.string().c_str(), vision::summarize(inspection).c_str());
+    std::printf("%s\n", observation::toJson(record).c_str());
+    return observation::validate(record).empty() ? 0 : 3;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -438,6 +543,7 @@ int main(int argc, char** argv) {
     if (args.size() == 2 && args[0] == "--kiosk-depth-demo") return renderKioskDepthDemo(args[1]);
     if (args.size() == 2 && args[0] == "--shell-demo") return renderShellDemo(args[1]);
     if (args.size() == 2 && args[0] == "--analyze-yuyv") return analyzeYuyv(args[1]);
+    if (args.size() == 2 && args[0] == "--analyze") return analyzeCapture(args[1]);
     std::fprintf(stderr,
                  "usage: ui_preview --font-specimen OUT.ppm\n"
                  "       ui_preview --scout-card RECORD.json OUT.ppm\n"
@@ -445,6 +551,7 @@ int main(int argc, char** argv) {
                  "       ui_preview --kiosk-session-demo OUTDIR\n"
                  "       ui_preview --kiosk-depth-demo OUTDIR\n"
                  "       ui_preview --shell-demo OUTDIR\n"
-                 "       ui_preview --analyze-yuyv SOURCE.yuyv\n");
+                 "       ui_preview --analyze-yuyv SOURCE.yuyv\n"
+                 "       ui_preview --analyze CAPTURE_DIR | source.ppm | raw.json\n");
     return 2;
 }

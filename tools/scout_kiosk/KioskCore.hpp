@@ -158,10 +158,12 @@ struct CaptureOutcome {
     Color statusColour = kText;
 };
 
-/// One capture: frame -> analyzer + classifier -> all-or-nothing record.
+/// One capture: frame -> inspection (+ classifier when measured) ->
+/// all-or-nothing record. `attach` adds files such as the raw sensor frame.
 [[nodiscard]] CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& service,
                                          const vision::CalibrationSpec& spec,
-                                         const std::string& device, const std::string& identity);
+                                         const std::string& device, const std::string& identity,
+                                         const observation::AttachFn& attach = {});
 
 /// What the session keeps of a capture: claims by name, plus the outline and
 /// image the finish-time export needs.

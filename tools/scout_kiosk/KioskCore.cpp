@@ -345,7 +345,7 @@ std::string guidanceFor(vision::AnalyzeError error) {
 
 CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& service,
                            const vision::CalibrationSpec& spec, const std::string& device,
-                           const std::string& identity) {
+                           const std::string& identity, const observation::AttachFn& attach) {
     observation::CaptureConfig config;
     config.observationId = service.nextObservationId();
     config.timestampUtc = observation::CaptureService::currentUtcTimestamp();
@@ -353,17 +353,23 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
 
     CaptureOutcome out;
     auto sceneError = vision::AnalyzeError::None;
+    std::string bestEffort;
+    config.attach = attach;
     config.enrich = [&](const hal::Frame& frame, observation::EngineeringObservation& record) {
         const auto& m = frame.mode();
         out.thumbnail = apps::CardImage{m.width, m.height, 3, frameToRgb(frame)};
-        const auto analyzed = vision::analyzeFrame(frame, spec);
-        if (!analyzed.ok()) {
-            sceneError = analyzed.error;
+        // Every capture is inspected and keeps what it supports: a poor bench
+        // still yields quality facts, pixel sizes and a flagged scale to work
+        // with, never a bare refusal.
+        const auto inspection = vision::inspectFrame(frame, spec);
+        vision::appendInspection(record, inspection, spec, "source-image");
+        if (!inspection.strict.ok()) {
+            sceneError = inspection.strict.error;
+            bestEffort = vision::summarize(inspection);
             return;
         }
-        vision::appendEvidence(record, *analyzed.analysis, spec, "source-image");
-        ai::appendClassification(record, ai::classify(*analyzed.analysis));
-        out.analysis = *analyzed.analysis;
+        ai::appendClassification(record, ai::classify(*inspection.strict.analysis));
+        out.analysis = *inspection.strict.analysis;
         out.measured = true;
     };
 
@@ -386,12 +392,11 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
             out.statusColour = kWarn;
         }
     } else {
-        // The capture-only record is still written — honest evidence that the
-        // attempt happened. The operator is told what to change through the
-        // session's guidance, which carries the refusal; the status line only
-        // records that the attempt was kept.
+        // Not a measurement, so the session does not count it (the refusal
+        // carries the guidance), but the record keeps everything the frame
+        // supported for analysis; the status line says what that was.
         out.refusal = guidanceFor(sceneError);
-        out.status = out.record->observationId + ": no measurement";
+        out.status = "saved " + out.record->observationId + ": " + bestEffort;
         out.statusColour = kWarn;
     }
     return out;

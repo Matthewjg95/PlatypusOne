@@ -49,6 +49,20 @@ class CsiCamera final : public hal::ICamera {
     /// those of the latest frame; exposure time is exp x line_ns.
     [[nodiscard]] std::string deviceIdentity() const;
 
+    /// The newest frame exactly as the sensor sent it (SRGGB10, MIPI-packed),
+    /// with what it takes to decode it again, so a capture can keep its raw
+    /// data for later re-analysis. `requested` is the exposure set when the
+    /// frame arrived; the sensor applies changes about two frames late.
+    struct RawCapture {
+        std::vector<std::byte> packed;
+        std::uint32_t width = 0, height = 0, bytesPerLine = 0;
+        hal::bayer::Exposure requested;
+        std::uint32_t lineTimeNs = 0;
+        std::uint16_t blackLevel = 0;
+        std::array<float, 3> whiteBalance{1.0f, 1.0f, 1.0f};  ///< gains used for source.ppm
+    };
+    [[nodiscard]] RawCapture lastRaw() const;
+
     [[nodiscard]] std::vector<hal::CameraMode> supportedModes() const override { return {kMode}; }
     hal::Status open(const hal::CameraMode& mode) override;
     hal::Status close() override;
@@ -85,6 +99,7 @@ class CsiCamera final : public hal::ICamera {
     std::array<float, 3> wbGains_{1.0f, 1.0f, 1.0f};
     bool autoExposure_ = true;
     unsigned aeSettle_ = 0;  ///< frames still in flight from the last exposure change
+    RawCapture lastRaw_;     ///< guarded by stateMutex_
     mutable std::mutex stateMutex_;
     std::string lastError_;
 
