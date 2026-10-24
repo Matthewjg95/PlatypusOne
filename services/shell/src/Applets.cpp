@@ -175,8 +175,8 @@ void SystemApplet::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
 
 void registerStandardApplets(appfw::AppRegistry& registry,
                              const std::vector<ProvidedApplet>& provided) {
-    static constexpr appfw::AppFactory kPreview[] = {makePreview<0>, makePreview<1>, makePreview<2>,
-                                                     makePreview<3>, makePreview<4>};
+    static constexpr std::unique_ptr<appfw::IApp> (*kPreview[])() = {
+        makePreview<0>, makePreview<1>, makePreview<2>, makePreview<3>, makePreview<4>};
     auto manifests = standardManifests();
     for (std::size_t i = 0; i < manifests.size(); ++i) {
         auto m = manifests[i];

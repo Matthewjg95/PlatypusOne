@@ -182,6 +182,11 @@ bool CsiCamera::sensorPresent() {
     return present;
 }
 
+CsiCamera::RawCapture CsiCamera::lastRaw() const {
+    std::lock_guard lock(stateMutex_);
+    return lastRaw_;
+}
+
 std::string CsiCamera::deviceIdentity() const {
     std::lock_guard lock(stateMutex_);
     if (sensorName_.empty()) return lastError_;
@@ -435,8 +440,20 @@ Result<Frame> CsiCamera::dequeueFrame(std::chrono::milliseconds timeout) {
     const std::size_t used = mplane_ ? plane.bytesused : buf.bytesused;
     const auto* src = static_cast<const std::byte*>(buffers_[buf.index].start);
     const bayer::Raw10Layout layout{kRawWidth, kRawHeight, bytesPerLine_};
-    auto raw =
-        bayer::unpackRaw10(std::span(src, std::min(used, buffers_[buf.index].length)), layout);
+    const std::size_t bytes = std::min(used, buffers_[buf.index].length);
+    auto raw = bayer::unpackRaw10(std::span(src, bytes), layout);
+    {
+        // Kept for captures that attach their raw frame; the buffer is reused.
+        std::lock_guard lock(stateMutex_);
+        lastRaw_.packed.assign(src, src + bytes);
+        lastRaw_.width = kRawWidth;
+        lastRaw_.height = kRawHeight;
+        lastRaw_.bytesPerLine = bytesPerLine_;
+        lastRaw_.requested = exposure_;
+        lastRaw_.lineTimeNs = lineTimeNs_;
+        lastRaw_.blackLevel = bayer::RgbParams{}.blackLevel;
+        lastRaw_.whiteBalance = wbGains_;
+    }
     if (xioctl(videoFd_, VIDIOC_QBUF, &buf) != 0) return Error::IoFailure;
     if (raw.empty()) return Error::IoFailure;
 

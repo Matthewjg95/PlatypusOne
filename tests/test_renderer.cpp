@@ -124,10 +124,12 @@ void test_renderer_geometry() {
 }
 
 void test_app_registry();
+void test_applets();
 void test_bayer();
 void test_event_queue();
 void test_export();
 void test_fastener_classifier();
+void test_inspect();
 void test_kms_helpers();
 void test_linked_display();
 void test_mcu_framing();
@@ -150,10 +152,12 @@ int main() {
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
     test_app_registry();
+    test_applets();
     test_bayer();
     test_event_queue();
     test_export();
     test_fastener_classifier();
+    test_inspect();
     test_kms_helpers();
     test_linked_display();
     test_mcu_framing();

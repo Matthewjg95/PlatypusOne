@@ -8,7 +8,11 @@
 //   scout_kiosk [--device /dev/videoN] [--out DIR] [--sessions DIR]
 //               [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR] [--fake]
 //               [--tof auto|off] [--tof-port N] [--camera-fov HxV]
-//               [--tof-orientation raw|fliph|flipv|rot180]
+//               [--tof-orientation raw|fliph|flipv|rot180] [--shell]
+//
+// --shell runs the device shell instead (issue #51): splash, the swipeable
+// applet carousel, and Scout and the depth view as applets on this camera,
+// capture store and ToF client.
 //
 // DEPTH opens the depth view: camera, the VL53L8CX zone grid (UNO Q MCU
 // sketch, read through arduino-router's Monitor) and the two together. The
@@ -27,6 +31,7 @@
 //
 // The display needs DRM master (the desktop must be stopped — platypus-mode
 // does it). The camera is found by capability, never by node number.
+#include "KioskApplets.hpp"
 #include "KioskCore.hpp"
 #include "csi/CsiCamera.hpp"
 #include "drm/DrmDisplay.hpp"
@@ -34,18 +39,26 @@
 #include "tof/TofMonitorClient.hpp"
 #include "v4l2/V4l2Camera.hpp"
 
+#include <platypus/appfw/AppRegistry.hpp>
+#include <platypus/filesystem/ProjectStore.hpp>
+#include <platypus/shell/Applets.hpp>
+#include <platypus/shell/Shell.hpp>
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -132,7 +145,7 @@ int usage() {
                  "                   [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR]"
                  " [--fake]\n"
                  "                   [--tof auto|off] [--tof-port N] [--camera-fov HxV]\n"
-                 "                   [--tof-orientation raw|fliph|flipv|rot180]\n");
+                 "                   [--tof-orientation raw|fliph|flipv|rot180] [--shell]\n");
     return 2;
 }
 
@@ -148,6 +161,7 @@ int main(int argc, char** argv) {
     double referenceMm = vision::CalibrationSpec{}.referenceSideMm;
     drm::DrmDisplayConfig displayConfig;
     bool tofEnabled = true;
+    bool shellMode = false;  // the device shell (#51) instead of the single-purpose kiosk
     int tofPort = 7500;
     FieldsOfView fov;
     auto orientation = hal::tof::Orientation::Raw;
@@ -166,6 +180,8 @@ int main(int argc, char** argv) {
             sessionsDir = next();
         else if (arg == "--offscreen")
             offscreen = next();
+        else if (arg == "--shell")
+            shellMode = true;
         else if (arg == "--fake")
             fake = true;
         else if (arg == "--reference-mm")
@@ -344,6 +360,35 @@ int main(int argc, char** argv) {
         p.depthAvailable = tofClient != nullptr;
         return p;
     };
+    // The CSI camera's identity carries the exposure and gain in use, and
+    // every CSI capture keeps its raw frame for re-analysis on a host
+    // (ui_preview --analyze): analysis improves; old captures do not.
+    const observation::AttachFn attachRaw = [&](const hal::Frame&) {
+        std::vector<observation::AttachedFile> files;
+        if (!csi) return files;
+        auto raw = csi->lastRaw();
+        if (raw.packed.empty()) return files;
+        char meta[640];
+        std::snprintf(meta, sizeof(meta),
+                      "{\"format\":\"SRGGB10P\",\"cfa\":\"RGGB\",\"width\":%u,\"height\":%u,"
+                      "\"bytes_per_line\":%u,\"black_level\":%u,\"white_level\":1023,"
+                      "\"requested_exposure_lines\":%u,\"requested_analogue_gain_code\":%u,"
+                      "\"requested_digital_gain_q8\":%u,\"line_time_ns\":%u,"
+                      "\"white_balance_gains\":[%.4f,%.4f,%.4f],"
+                      "\"note\":\"exposure changes reach the sensor about two frames "
+                      "late\"}\n",
+                      raw.width, raw.height, raw.bytesPerLine, unsigned{raw.blackLevel},
+                      raw.requested.lines, raw.requested.gainCode, raw.requested.digitalCode,
+                      raw.lineTimeNs, static_cast<double>(raw.whiteBalance[0]),
+                      static_cast<double>(raw.whiteBalance[1]),
+                      static_cast<double>(raw.whiteBalance[2]));
+        const std::string m(meta);
+        std::vector<std::byte> metaBytes(m.size());
+        std::memcpy(metaBytes.data(), m.data(), m.size());
+        files.push_back({"raw-frame", "image/x-raw-srggb10p", "raw.raw10", std::move(raw.packed)});
+        files.push_back({"raw-frame-meta", "application/json", "raw.json", std::move(metaBytes)});
+        return files;
+    };
     const auto doCapture = [&]() -> CaptureOutcome {
         drawPreviewScreen(r, layout, lastRgb, camW, camH, [&] {
             auto p = panelState(true);
@@ -352,9 +397,8 @@ int main(int argc, char** argv) {
             return p;
         }());
         (void)r.present();
-        // The CSI camera's identity carries the exposure and gain in use.
-        auto outcome =
-            captureOnce(*camera, service, spec, cameraPath, csi ? csi->deviceIdentity() : identity);
+        auto outcome = captureOnce(*camera, service, spec, cameraPath,
+                                   csi ? csi->deviceIdentity() : identity, attachRaw);
         if (outcome.record) {
             current->add(sessionCapture(outcome, current->profile()));
             std::string error;
@@ -403,6 +447,85 @@ int main(int argc, char** argv) {
             snapshot->writePpm(std::filesystem::path(offscreen) / "summary.ppm");
         }
         camera->close();
+        return 0;
+    }
+
+    // --- the device shell (#51): splash, applet carousel, and Scout and Depth
+    // as applets on this camera, capture store and ToF client.
+    if (shellMode) {
+        shell::MinimalBoard board(display);
+        filesystem::ProjectStore projects(nullptr);
+        appfw::AppRegistry registry;
+        std::vector<shell::ProvidedApplet> provided;
+        provided.push_back({shell::ids::kScout, [&]() -> std::unique_ptr<appfw::IApp> {
+                                ScoutDeps d;
+                                d.camera = camera.get();
+                                d.camW = camW;
+                                d.camH = camH;
+                                d.captures = &service;
+                                d.sessions = &store;
+                                d.spec = spec;
+                                d.device = cameraPath;
+                                d.identity = [&] { return csi ? csi->deviceIdentity() : identity; };
+                                d.attach = attachRaw;
+                                d.buttonCapture = drm::kBoardButtonA;
+                                d.buttonFinish = drm::kBoardButtonB;
+                                return std::make_unique<ScoutApplet>(std::move(d));
+                            }});
+        if (tofClient)
+            provided.push_back({shell::ids::kDepth, [&]() -> std::unique_ptr<appfw::IApp> {
+                                    DepthDeps d;
+                                    d.camera = camera.get();
+                                    d.camW = camW;
+                                    d.camH = camH;
+                                    d.tof = tofClient.get();
+                                    d.fov = fov;
+                                    d.orientation = orientation;
+                                    return std::make_unique<DepthApplet>(std::move(d));
+                                }});
+        shell::registerStandardApplets(registry, provided);
+        shell::ShellOptions options;
+        options.buttonNext = drm::kBoardButtonA;
+        options.buttonOpen = drm::kBoardButtonB;
+        shell::Shell sh(registry, appfw::AppContext{board, r, projects, {}}, options);
+
+        // Input arrives on the display's thread; the shell runs on this one.
+        std::mutex inputMutex;
+        std::vector<std::variant<hal::TouchEvent, hal::ButtonEvent>> inputs;
+        display->onTouch([&](const hal::TouchEvent& e) {
+            std::lock_guard lock(inputMutex);
+            inputs.emplace_back(e);
+        });
+        display->onButton([&](const hal::ButtonEvent& e) {
+            std::lock_guard lock(inputMutex);
+            inputs.emplace_back(e);
+        });
+        std::printf(
+            "running: shell - swipe the cards, tap to open, HOME returns; Ctrl-C to quit\n");
+        std::fflush(stdout);
+        auto last = std::chrono::steady_clock::now();
+        while (g_running) {
+            std::vector<std::variant<hal::TouchEvent, hal::ButtonEvent>> batch;
+            {
+                std::lock_guard lock(inputMutex);
+                batch.swap(inputs);
+            }
+            for (const auto& ev : batch) {
+                if (const auto* t = std::get_if<hal::TouchEvent>(&ev))
+                    sh.onTouch(*t);
+                else
+                    sh.onButton(std::get<hal::ButtonEvent>(ev));
+            }
+            const auto now = std::chrono::steady_clock::now();
+            sh.frame(std::chrono::duration_cast<std::chrono::milliseconds>(now - last));
+            last = now;
+            // Applets pace themselves on camera frames; the home screen does not.
+            if (sh.state() != shell::Shell::State::App)
+                std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
+        if (drmDisplay) drmDisplay->close();  // joins the input thread first
+        sh.home();                            // stops the active applet: releases the ToF
+        if (camera) camera->close();
         return 0;
     }
 

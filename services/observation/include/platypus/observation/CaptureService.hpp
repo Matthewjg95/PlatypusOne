@@ -27,8 +27,19 @@
 #include <chrono>
 #include <filesystem>
 #include <functional>
+#include <vector>
 
 namespace platypus::observation {
+
+/// An extra file written into the observation directory with the image and
+/// the record (e.g. the raw sensor frame), and listed as an artifact.
+struct AttachedFile {
+    std::string artifactId;  ///< unique in the record, e.g. "raw-frame"
+    std::string kind;        ///< MIME-style kind, e.g. "image/x-raw-srggb10p"
+    std::string fileName;    ///< plain name inside the directory, no separators
+    std::vector<std::byte> bytes;
+};
+using AttachFn = std::function<std::vector<AttachedFile>(const hal::Frame&)>;
 
 struct CaptureConfig {
     std::string observationId;  ///< directory name; use nextObservationId()
@@ -43,6 +54,9 @@ struct CaptureConfig {
     /// with the image. It must not throw; a scene it cannot analyze should
     /// simply add no claims, leaving an honest capture-only record.
     std::function<void(const hal::Frame&, EngineeringObservation&)> enrich;
+    /// Optional. Extra files for this frame, written in the same
+    /// all-or-nothing step; called before enrich, so claims may cite them.
+    AttachFn attach;
 };
 
 struct CaptureResult {
