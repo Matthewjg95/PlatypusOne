@@ -77,7 +77,8 @@ std::vector<std::uint8_t> frameToRgb(const hal::Frame& frame) {
     }
 }
 
-Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32_t camH) {
+Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32_t camH,
+                     bool withDepth) {
     const std::int32_t w = info.width, h = info.height;
     const std::int32_t margin = std::max(8, h / 30);
     Layout l;
@@ -100,6 +101,12 @@ Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32
                 l.panel.w - margin, finishH};
     l.capture = {l.panel.x + margin / 2, l.finish.y - margin / 2 - captureH, l.panel.w - margin,
                  captureH};
+    if (withDepth) {
+        const std::int32_t gap = margin / 2;
+        const std::int32_t fw = (l.finish.w - gap) * 55 / 100;
+        l.depth = {l.finish.x + fw + gap, l.finish.y, l.finish.w - fw - gap, l.finish.h};
+        l.finish.w = fw;
+    }
     return l;
 }
 
@@ -208,6 +215,8 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
                              : kPanel,
                anyMeasured ? kBackground : kMuted, s);
     if (!anyMeasured) r.drawRect(l.finish, kMuted);
+    if (panel.depthAvailable && l.depth.w > 0) drawButton(r, l.depth, "DEPTH", kPanel, kAccent, s);
+    if (panel.depthAvailable && l.depth.w > 0) r.drawRect(l.depth, kAccent);
 }
 
 namespace {

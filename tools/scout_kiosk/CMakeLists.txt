@@ -1,7 +1,7 @@
 # Portable core: layout, screens, capture and the synthetic camera. Builds
 # everywhere so tools/ui_preview can render the kiosk's session flow on a
 # host, and so the logic is compiled by every CI job, not only Linux.
-add_library(platypus_scout_kiosk_core STATIC KioskCore.cpp)
+add_library(platypus_scout_kiosk_core STATIC KioskCore.cpp DepthView.cpp)
 add_library(platypus::scout_kiosk_core ALIAS platypus_scout_kiosk_core)
 target_include_directories(platypus_scout_kiosk_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(platypus_scout_kiosk_core PUBLIC
@@ -11,6 +11,7 @@ target_link_libraries(platypus_scout_kiosk_core PUBLIC
     platypus::observation
     platypus::renderer
     platypus::session
+    platypus::tof
     platypus::vision)
 platypus_set_warnings(platypus_scout_kiosk_core)
 
@@ -21,6 +22,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         platypus::scout_kiosk_core
         platypus::camera_v4l2
         platypus::camera_csi
-        platypus::display_drm)
+        platypus::display_drm
+        platypus::tof_monitor)
     platypus_set_warnings(scout_kiosk)
 endif()
