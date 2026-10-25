@@ -293,8 +293,108 @@ void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
     if (hasBack) {
         r.fillRect(l.back, kPanel);
         r.drawRect(l.back, kAccent);
-        centredText(r, l.back, "SCOUT VIEW", kAccent, s);
+        centredText(r, l.back, st.backLabel, kAccent, s);
     }
+}
+
+void drawCaptureReview(renderer::Renderer& r, const Rect& area, const CaptureOutcome& out,
+                       tof::Orientation orientation, const FieldsOfView& fov) {
+    const std::int32_t ref = area.y + area.h;
+    const std::int32_t s = std::max(1, ref / 240);
+    const std::int32_t m = std::max(8, ref / 30);
+    const std::int32_t x0 = area.x + m, y0 = area.y + m;
+    r.clear(kBackground);
+
+    // What this capture is, in the colour of what it achieved.
+    const std::string head = out.record ? out.status : "capture failed: " + out.status;
+    r.drawText(x0, y0, head, out.measured ? kGood : kWarn, s);
+
+    const std::int32_t top = y0 + renderer::Renderer::textHeight(s) + m / 2;
+    const std::int32_t pw = std::min(area.w * 56 / 100 - m, (area.h * 58 / 100) * 4 / 3);
+    const std::int32_t ph = pw * 3 / 4;
+    const Rect photo{x0, top, pw, ph};
+    const std::int32_t gs = std::min(area.x + area.w - m - (photo.x + pw + m), ph);
+    const Rect gridBox{photo.x + pw + m, top, gs, gs};
+
+    const auto range = out.tofFrame ? depthRange(*out.tofFrame) : std::nullopt;
+    if (out.thumbnail && !out.thumbnail->pixels.empty()) {
+        const auto& t = *out.thumbnail;
+        if (out.tofFrame && range)
+            r.drawImage(photo,
+                        fuseDepth(t.pixels, t.width, t.height, *out.tofFrame, orientation,
+                                  tofFootprint(fov), *range),
+                        t.width, t.height, 3);
+        else
+            r.drawImage(photo, t.pixels, t.width, t.height, 3);
+    } else {
+        centredText(r, photo, "NO IMAGE", kWarn, s);
+    }
+    r.drawRect(photo, kMuted);
+
+    // The ToF grid, and its centre reading large beneath it.
+    if (out.tofFrame && out.tofFrame->side > 0) {
+        const auto& f = *out.tofFrame;
+        const Rect g = gridRect(gridBox, f.side);
+        const std::int32_t cell = g.w / f.side;
+        for (std::int32_t row = 0; row < f.side; ++row)
+            for (std::int32_t col = 0; col < f.side; ++col) {
+                const auto& z = f.zones[static_cast<std::size_t>(
+                    tof::zoneIndexAt(row, col, f.side, orientation))];
+                const Rect c{g.x + col * cell, g.y + row * cell, cell - 1, cell - 1};
+                if (tof::isValid(z.status) && range)
+                    r.fillRect(c, depthColour(z.distanceMm, *range));
+                else
+                    r.fillRect(c, kPanel);
+            }
+    } else {
+        r.drawRect(gridBox, kMuted);
+        centredText(r, gridBox, "NO TOF", kMuted, s);
+    }
+    const auto centre = out.tofFrame ? tof::centralMedianMm(*out.tofFrame) : std::nullopt;
+    const std::string big = centre ? "TOF " + number("%.0f", *centre) + " MM" : "TOF --";
+    const std::int32_t bigY = gridBox.y + gridBox.h + m / 2;
+    r.drawText(gridBox.x, bigY, big, out.tofOk ? kText : kWarn, s + 1);
+
+    // What the analysis got, the capture's quality, and the ToF's state,
+    // below both the photo and the large ToF reading.
+    std::int32_t y = std::max(top + ph, bigY + renderer::Renderer::textHeight(s + 1)) + m / 2;
+    const std::int32_t tw = area.x + area.w - m - x0;
+    const auto line = [&](const std::string& text, Color c) {
+        if (y < area.y + area.h - renderer::Renderer::textHeight(s))
+            y = drawWrapped(r, x0, y, tw, text, c, s);
+    };
+    if (out.analysis) {
+        line("L " + number("%.2f", out.analysis->subjectLengthMm) + " MM   W " +
+                 number("%.2f", out.analysis->subjectWidthMm) + " MM   tilt ~" +
+                 number("%.0f", out.analysis->cameraTiltDeg) + " deg",
+             kText);
+    } else if (out.inspection) {
+        const auto& in = *out.inspection;
+        std::string t;
+        if (in.subject) {
+            t = "part " + number("%.0f", in.subject->lengthPx) + " x " +
+                number("%.0f", in.subject->widthPx) + " px";
+            if (in.bestEffortMmPerPixel > 0.0)
+                t += " = ~" + number("%.1f", in.subject->lengthPx * in.bestEffortMmPerPixel) +
+                     " x " + number("%.1f", in.subject->widthPx * in.bestEffortMmPerPixel) +
+                     " mm (conf " + number("%.2f", in.bestEffortConfidence) + ")";
+        } else {
+            t = "no part found";
+        }
+        line(t, kText);
+        if (!in.failedChecks.empty()) line(in.failedChecks.front(), kMuted);
+    }
+    if (out.inspection) {
+        const auto& q = out.inspection->quality;
+        line("contrast " + number("%.2f", q.contrast) + "  median " + number("%.0f", q.lumaP50) +
+                 "  sharp " + number("%.1f", q.sharpnessIndex) + "  clipped " +
+                 number("%.1f", 100.0 * q.clippedFraction) + "%",
+             kMuted);
+    }
+    if (!out.tofStatus.empty()) line(out.tofStatus, out.tofOk ? kMuted : kWarn);
+    const std::string tap = "TAP TO CONTINUE";
+    r.drawText(area.x + area.w - m - renderer::Renderer::textWidth(tap, s),
+               area.y + area.h - m - renderer::Renderer::textHeight(s), tap, kAccent, s);
 }
 
 }  // namespace platypus::kiosk

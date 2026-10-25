@@ -10,6 +10,7 @@
 #include <platypus/apps/EngineeringScoutApp.hpp>
 #include <platypus/hal/ICamera.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
+#include <platypus/hal/tof/ITofSource.hpp>
 #include <platypus/hal/tof/TofProtocol.hpp>
 #include <platypus/observation/CaptureService.hpp>
 #include <platypus/renderer/Renderer.hpp>
@@ -73,6 +74,9 @@ struct PanelState {
     bool noCamera = false;
     /// A ToF source is configured: show the DEPTH button.
     bool depthAvailable = false;
+    /// Live ToF reading for the panel ("ToF 412 mm"), empty without a ToF.
+    std::string tofLine;
+    Color tofColour = kMuted;
 };
 
 void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector<std::uint8_t>& rgb,
@@ -138,6 +142,7 @@ struct DepthState {
     std::string endpoint;
     hal::tof::Orientation orientation = hal::tof::Orientation::Raw;
     FieldsOfView fov;
+    std::string backLabel = "SCOUT VIEW";  ///< the bottom-right button's label
 };
 
 void drawDepthScreen(renderer::Renderer& r, const DepthLayout& l,
@@ -152,22 +157,45 @@ void drawSessionSummary(renderer::Renderer& r, const session::ObjectSession& s,
 /// than guess, and the operator is told what to change.
 [[nodiscard]] std::string guidanceFor(vision::AnalyzeError error);
 
+/// The ToF as it stood when a capture was taken. The camera and the ToF run
+/// independently: the pairing is by software time, and the record says so.
+struct TofAtCapture {
+    hal::tof::TofSnapshot snapshot;
+    hal::tof::Orientation orientation = hal::tof::Orientation::Raw;
+};
+
+/// Frames older than this are recorded but flagged stale.
+inline constexpr std::chrono::milliseconds kTofStaleAfter{1500};
+
 struct CaptureOutcome {
     std::optional<observation::EngineeringObservation> record;  ///< always set when saved
     bool measured = false;
     std::optional<apps::CardImage> thumbnail;
     std::optional<vision::ScoutAnalysis> analysis;
-    std::string refusal;  ///< guidance when the scene was refused
-    std::string status;   ///< one line for the panel
+    std::optional<vision::Inspection> inspection;  ///< quality, strict or best effort
+    std::string refusal;                           ///< guidance when the scene was refused
+    std::string status;                            ///< one line for the panel
     Color statusColour = kText;
+    // ToF, when the device has one:
+    std::optional<hal::tof::Frame> tofFrame;  ///< the frame recorded with the capture
+    std::string tofStatus;  ///< "centre 412 mm, 64/64 valid, 80 ms old" or why not
+    bool tofOk = false;     ///< a fresh frame with a valid centre
 };
 
 /// One capture: frame -> inspection (+ classifier when measured) ->
-/// all-or-nothing record. `attach` adds files such as the raw sensor frame.
+/// all-or-nothing record. `attach` adds files such as the raw sensor frame;
+/// `tof` adds the ToF frame (tof.json) and its readings, or says why not.
 [[nodiscard]] CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& service,
                                          const vision::CalibrationSpec& spec,
                                          const std::string& device, const std::string& identity,
-                                         const observation::AttachFn& attach = {});
+                                         const observation::AttachFn& attach = {},
+                                         const std::optional<TofAtCapture>& tof = std::nullopt);
+
+/// After every capture while scans are not yet rejected (dev mode): the photo
+/// with the ToF overlay, the ToF grid and centre distance, what the analysis
+/// got, and the capture's quality, drawn in `area`.
+void drawCaptureReview(renderer::Renderer& r, const Rect& area, const CaptureOutcome& outcome,
+                       hal::tof::Orientation orientation, const FieldsOfView& fov);
 
 /// What the session keeps of a capture: claims by name, plus the outline and
 /// image the finish-time export needs.

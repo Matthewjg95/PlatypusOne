@@ -55,8 +55,14 @@ void ScoutApplet::newSession() {
 
 void ScoutApplet::onStart(appfw::AppContext& ctx) {
     layout_ = scoutLayout(ctx, deps_.camW, deps_.camH);
+    area_ = contentOf(ctx);
     screen_ = Screen::Preview;
     if (!current_) newSession();
+    if (deps_.tof) deps_.tof->start();
+}
+
+void ScoutApplet::onStop() {
+    if (deps_.tof) deps_.tof->stop();
 }
 
 void ScoutApplet::onTouch(const hal::TouchEvent& e) {
@@ -81,8 +87,10 @@ void ScoutApplet::onButton(const hal::ButtonEvent& e) {
 
 void ScoutApplet::capture(renderer::Renderer& r) {
     const auto identity = deps_.identity ? deps_.identity() : deps_.device;
+    std::optional<TofAtCapture> tof;
+    if (deps_.tof) tof = TofAtCapture{deps_.tof->snapshot(), deps_.tofOrientation};
     auto out = captureOnce(*deps_.camera, *deps_.captures, deps_.spec, deps_.device, identity,
-                           deps_.attach);
+                           deps_.attach, tof);
     if (out.record) {
         current_->add(sessionCapture(out, current_->profile()));
         std::string error;
@@ -91,10 +99,14 @@ void ScoutApplet::capture(renderer::Renderer& r) {
     }
     status_ = out.status;
     statusColour_ = out.statusColour;
-    if (out.measured) {
+    if (deps_.reviewEveryCapture && out.record) {
+        drawCaptureReview(r, area_, out, deps_.tofOrientation, deps_.fov);
+        screen_ = Screen::Card;
+    } else if (out.measured) {
         apps::drawObservationCard(r, *out.record, out.thumbnail);
         screen_ = Screen::Card;
     }
+    last_ = std::move(out);
 }
 
 void ScoutApplet::finish(renderer::Renderer& r) {
@@ -145,6 +157,22 @@ void ScoutApplet::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
     p.status = status_;
     p.statusColour = statusColour_;
     p.noCamera = deps_.camera == nullptr;
+    if (deps_.tof) {
+        const auto snap = deps_.tof->snapshot();
+        const auto centre = snap.frame ? hal::tof::centralMedianMm(*snap.frame) : std::nullopt;
+        if (!snap.connected) {
+            p.tofLine = "ToF not connected";
+            p.tofColour = kWarn;
+        } else if (!snap.frame) {
+            p.tofLine = "ToF starting...";
+        } else if (centre) {
+            p.tofLine = "ToF " + std::to_string(static_cast<int>(*centre)) + " mm";
+            p.tofColour = kGood;
+        } else {
+            p.tofLine = "ToF: no valid centre";
+            p.tofColour = kWarn;
+        }
+    }
     drawPreviewScreen(r, layout_, lastRgb_, deps_.camW, deps_.camH, p);
 }
 
@@ -154,7 +182,10 @@ DepthApplet::DepthApplet(DepthDeps deps)
     : manifest_(manifestFor(shell::ids::kDepth)), deps_(std::move(deps)) {}
 
 void DepthApplet::onStart(appfw::AppContext& ctx) {
-    layout_ = computeDepthLayout(contentOf(ctx), false);
+    // With a capture store the bottom-right button is CAPTURE (the shell
+    // bar provides HOME).
+    layout_ = computeDepthLayout(contentOf(ctx), deps_.captures != nullptr);
+    reviewing_ = false;
     if (deps_.tof) deps_.tof->start();
 }
 
@@ -163,12 +194,31 @@ void DepthApplet::onStop() {
 }
 
 void DepthApplet::onTouch(const hal::TouchEvent& e) {
-    if (e.type == hal::TouchEvent::Type::Down &&
-        (inside(layout_.tof, e.x, e.y) || inside(layout_.fused, e.x, e.y)))
+    if (e.type != hal::TouchEvent::Type::Down) return;
+    if (reviewing_)
+        dismissRequested_ = true;
+    else if (layout_.back.w > 0 && inside(layout_.back, e.x, e.y))
+        captureRequested_ = true;
+    else if (inside(layout_.tof, e.x, e.y) || inside(layout_.fused, e.x, e.y))
         flipRequested_ = true;
 }
 
 void DepthApplet::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
+    if (reviewing_) {
+        // The review stays on screen (drawn once) until a tap.
+        if (!std::exchange(dismissRequested_, false)) return;
+        reviewing_ = false;
+    }
+    if (std::exchange(captureRequested_, false) && deps_.camera && deps_.captures) {
+        std::optional<TofAtCapture> tof;
+        if (deps_.tof) tof = TofAtCapture{deps_.tof->snapshot(), deps_.orientation};
+        const auto identity = deps_.identity ? deps_.identity() : deps_.device;
+        last_ = captureOnce(*deps_.camera, *deps_.captures, deps_.spec, deps_.device, identity,
+                            deps_.attach, tof);
+        drawCaptureReview(ctx.renderer, contentOf(ctx), *last_, deps_.orientation, deps_.fov);
+        reviewing_ = true;
+        return;
+    }
     if (deps_.camera)
         if (auto f = deps_.camera->capture(std::chrono::milliseconds(30)); f)
             lastRgb_ = frameToRgb(f.value());
@@ -191,6 +241,7 @@ void DepthApplet::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
     }
     st.orientation = deps_.orientation;
     st.fov = deps_.fov;
+    st.backLabel = "CAPTURE";
     drawDepthScreen(ctx.renderer, layout_, lastRgb_, deps_.camW, deps_.camH, st);
 }
 

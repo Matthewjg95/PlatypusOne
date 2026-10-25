@@ -391,6 +391,7 @@ int renderShellDemo(const std::string& outDir) {
                                          d.sessions = &sessions;
                                          d.spec = vision::CalibrationSpec{20.0};
                                          d.device = "synthetic";
+                                         d.tof = &tof;
                                          return std::make_unique<kiosk::ScoutApplet>(std::move(d));
                                      }},
                                     {shell::ids::kDepth, [&]() -> std::unique_ptr<appfw::IApp> {
@@ -399,6 +400,9 @@ int renderShellDemo(const std::string& outDir) {
                                          d.camW = camW;
                                          d.camH = camH;
                                          d.tof = &tof;
+                                         d.captures = &captures;
+                                         d.spec = vision::CalibrationSpec{20.0};
+                                         d.device = "synthetic";
                                          return std::make_unique<kiosk::DepthApplet>(std::move(d));
                                      }}});
     shell::Shell sh(registry, appfw::AppContext{board, r, projects, {}});
@@ -436,9 +440,23 @@ int renderShellDemo(const std::string& outDir) {
     sh.onButton({1, true});  // dismiss the card
     sh.frame(16ms);
     ok = ok && shot("09-scout-after.ppm");
+    camera.setPose(-1);  // part removed: a refused, best-effort capture
+    sh.onButton({1, true});
+    sh.frame(16ms);
+    sh.frame(16ms);
+    ok = ok && shot("09b-scout-review-refused.ppm");
+    sh.onButton({1, true});
+    sh.frame(16ms);
+    camera.setPose(1);
     sh.open(shell::ids::kDepth);
     sh.frame(16ms);
     ok = ok && shot("10-depth.ppm");
+    sh.onTouch({T::Down, 700, 440});  // the depth view's CAPTURE (bottom right)
+    sh.frame(16ms);
+    sh.frame(16ms);
+    ok = ok && shot("10b-depth-review.ppm");
+    sh.onTouch({T::Down, 400, 300});  // tap to continue
+    sh.frame(16ms);
     sh.home();
     sh.frame(16ms);
     ok = ok && shot("11-home-ready.ppm");
