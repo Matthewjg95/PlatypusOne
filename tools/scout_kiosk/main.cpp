@@ -470,6 +470,9 @@ int main(int argc, char** argv) {
                                 d.attach = attachRaw;
                                 d.buttonCapture = drm::kBoardButtonA;
                                 d.buttonFinish = drm::kBoardButtonB;
+                                d.tof = tofClient.get();  // every capture carries the ToF
+                                d.tofOrientation = orientation;
+                                d.fov = fov;
                                 return std::make_unique<ScoutApplet>(std::move(d));
                             }});
         if (tofClient)
@@ -481,6 +484,13 @@ int main(int argc, char** argv) {
                                     d.tof = tofClient.get();
                                     d.fov = fov;
                                     d.orientation = orientation;
+                                    d.captures = &service;  // CAPTURE: photo + ToF together
+                                    d.spec = spec;
+                                    d.device = cameraPath;
+                                    d.identity = [&] {
+                                        return csi ? csi->deviceIdentity() : identity;
+                                    };
+                                    d.attach = attachRaw;
                                     return std::make_unique<DepthApplet>(std::move(d));
                                 }});
         shell::registerStandardApplets(registry, provided);

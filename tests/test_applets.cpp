@@ -88,8 +88,101 @@ void test_scout_and_depth_through_the_shell() {
     std::puts("test_applets_through_shell: OK");
 }
 
+bool hasName(const std::vector<observation::Claim>& claims, const std::string& name) {
+    for (const auto& c : claims)
+        if (c.name == name) return true;
+    return false;
+}
+
+bool unresolvedNamed(const observation::EngineeringObservation& r, const std::string& name) {
+    for (const auto& u : r.unresolved)
+        if (u.name == name) return true;
+    return false;
+}
+
+void test_every_capture_carries_the_tof() {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / "platypus_test_tofcap";
+    std::error_code ec;
+    fs::remove_all(root, ec);
+
+    auto display = std::make_shared<AppletDisplay>();
+    renderer::Renderer r(display);
+    shell::MinimalBoard board(display);
+    filesystem::ProjectStore projects(nullptr);
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    observation::CaptureService captures(root / "observations");
+    session::SessionStore sessions(root / "sessions");
+    hal::tof::FakeTofSource tof;
+    appfw::AppContext ctx{board, r, projects, {}};
+    ctx.contentArea = {0, 37, 800, 443};
+
+    // Scout: the ToF runs while it is open, and the capture records it.
+    kiosk::ScoutDeps sd;
+    sd.camera = &camera;
+    sd.captures = &captures;
+    sd.sessions = &sessions;
+    sd.tof = &tof;
+    kiosk::ScoutApplet scout(std::move(sd));
+    scout.onStart(ctx);
+    assert(tof.running());
+    scout.onFrame(ctx, 16ms);
+    scout.onButton({1, true});
+    scout.onFrame(ctx, 16ms);
+    assert(scout.screen() == kiosk::ScoutApplet::Screen::Card);  // review, every capture
+    const auto& out = *scout.lastCapture();
+    assert(out.record && out.tofFrame && out.tofOk);
+    assert(hasName(out.record->observed, "tof_central_median"));
+    assert(hasName(out.record->observed, "tof_valid_zones"));
+    assert(fs::exists(root / "observations" / out.record->observationId / "tof.json"));
+    assert(out.tofStatus.find("ToF ") == 0);
+    scout.onStop();
+    assert(!tof.running());
+
+    // Depth: its CAPTURE button records photo + ToF and shows the review.
+    kiosk::DepthDeps dd;
+    dd.camera = &camera;
+    dd.tof = &tof;
+    dd.captures = &captures;
+    kiosk::DepthApplet depth(std::move(dd));
+    depth.onStart(ctx);
+    const auto& b = depth.layout().back;
+    assert(b.w > 0);
+    depth.onTouch({hal::TouchEvent::Type::Down, static_cast<std::uint16_t>(b.x + b.w / 2),
+                   static_cast<std::uint16_t>(b.y + b.h / 2)});
+    depth.onFrame(ctx, 16ms);
+    assert(depth.reviewing() && depth.lastCapture() && depth.lastCapture()->tofFrame);
+    depth.onTouch({hal::TouchEvent::Type::Down, 100, 100});  // tap to continue
+    depth.onFrame(ctx, 16ms);
+    assert(!depth.reviewing());
+    depth.onStop();
+
+    // No ToF connection: the record says so instead of skipping it.
+    hal::tof::FakeTofSource off;  // never started: not connected
+    const auto noTof =
+        kiosk::captureOnce(camera, captures, vision::CalibrationSpec{20.0}, "synthetic",
+                           "synthetic", {}, kiosk::TofAtCapture{off.snapshot(), {}});
+    assert(noTof.record && !noTof.tofFrame && !noTof.tofOk);
+    assert(unresolvedNamed(*noTof.record, "tof"));
+
+    // A stale frame is recorded but flagged as not the same moment.
+    tof.start();
+    auto snap = tof.snapshot();
+    snap.frameArrived -= std::chrono::seconds(5);
+    const auto stale =
+        kiosk::captureOnce(camera, captures, vision::CalibrationSpec{20.0}, "synthetic",
+                           "synthetic", {}, kiosk::TofAtCapture{snap, {}});
+    assert(stale.tofFrame && !stale.tofOk && unresolvedNamed(*stale.record, "tof_pairing"));
+    assert(stale.tofStatus.find("STALE") != std::string::npos);
+
+    fs::remove_all(root, ec);
+    std::puts("test_applets_tof_in_every_capture: OK");
+}
+
 }  // namespace
 
 void test_applets() {
     test_scout_and_depth_through_the_shell();
+    test_every_capture_carries_the_tof();
 }

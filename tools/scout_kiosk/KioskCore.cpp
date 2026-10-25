@@ -203,6 +203,10 @@ void drawPreviewScreen(renderer::Renderer& r, const Layout& l, const std::vector
         y += 3 * s;
         section(panel.status, panel.statusColour, s);
     }
+    if (!panel.tofLine.empty()) {
+        y += 3 * s;
+        section(panel.tofLine, panel.tofColour, s);
+    }
 
     const char* captureLabel = panel.noCamera ? "NO CAMERA" : panel.busy ? "WAIT" : "CAPTURE";
     drawButton(r, l.capture, captureLabel, panel.noCamera || panel.busy ? kMuted : kAccent,
@@ -343,9 +347,42 @@ std::string guidanceFor(vision::AnalyzeError error) {
     }
 }
 
+namespace {
+
+/// The ToF frame as recorded beside the photo: every zone in the sensor's raw
+/// order, plus what is needed to read it again.
+std::string tofJson(const hal::tof::Frame& f, hal::tof::Orientation o, double ageMs, bool stale) {
+    std::string j = "{\"sensor\":\"VL53L8CX\",\"source\":\"UNO Q MCU sketch via arduino-router\",";
+    char head[256];
+    std::snprintf(head, sizeof(head),
+                  "\"seq\":%llu,\"streamcount\":%llu,\"mcu_us_ready\":%llu,\"side\":%d,"
+                  "\"temperature_c\":%d,\"age_ms_at_capture\":%.0f,\"stale\":%s,",
+                  static_cast<unsigned long long>(f.seq),
+                  static_cast<unsigned long long>(f.streamcount),
+                  static_cast<unsigned long long>(f.mcuUsReady), f.side, f.temperatureC, ageMs,
+                  stale ? "true" : "false");
+    j += head;
+    j += "\"zone_order\":\"uld_index_raw_no_flip\",\"display_orientation\":\"" +
+         std::string(hal::tof::to_string(o)) +
+         "\",\"pairing\":\"independent acquisition; software timestamps\","
+         "\"zone_fields\":[\"distance_mm\",\"target_status\",\"nb_target_detected\","
+         "\"range_sigma_mm\"],\"zones\":[";
+    for (std::size_t i = 0; i < f.zones.size(); ++i) {
+        const auto& z = f.zones[i];
+        char zone[64];
+        std::snprintf(zone, sizeof(zone), "%s[%d,%u,%u,%u]", i ? "," : "", z.distanceMm,
+                      unsigned{z.status}, unsigned{z.targets}, unsigned{z.sigmaMm});
+        j += zone;
+    }
+    return j + "]}\n";
+}
+
+}  // namespace
+
 CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& service,
                            const vision::CalibrationSpec& spec, const std::string& device,
-                           const std::string& identity, const observation::AttachFn& attach) {
+                           const std::string& identity, const observation::AttachFn& attach,
+                           const std::optional<TofAtCapture>& tof) {
     observation::CaptureConfig config;
     config.observationId = service.nextObservationId();
     config.timestampUtc = observation::CaptureService::currentUtcTimestamp();
@@ -354,15 +391,89 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
     CaptureOutcome out;
     auto sceneError = vision::AnalyzeError::None;
     std::string bestEffort;
-    config.attach = attach;
+
+    // The ToF frame that stands beside this photo, or why there is none.
+    std::string tofProblem;
+    if (tof) {
+        const auto& snap = tof->snapshot;
+        if (!snap.connected)
+            tofProblem = "ToF not connected" +
+                         (snap.lastError.empty() ? std::string{} : " (" + snap.lastError + ")");
+        else if (!snap.frame)
+            tofProblem = "ToF connected, no frame yet (sensor starting?)";
+        else
+            out.tofFrame = snap.frame;
+    }
+    double tofAgeMs = -1.0;
+    bool tofStale = false;
+    config.attach = [&](const hal::Frame& frame) {
+        auto files = attach ? attach(frame) : std::vector<observation::AttachedFile>{};
+        if (out.tofFrame) {
+            // Measured when the camera frame is in hand: the pairing gap.
+            tofAgeMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() -
+                                                                 tof->snapshot.frameArrived)
+                           .count();
+            tofStale = tofAgeMs > static_cast<double>(kTofStaleAfter.count());
+            const auto j = tofJson(*out.tofFrame, tof->orientation, tofAgeMs, tofStale);
+            std::vector<std::byte> bytes(j.size());
+            std::memcpy(bytes.data(), j.data(), j.size());
+            files.push_back({"tof-frame", "application/json", "tof.json", std::move(bytes)});
+        }
+        return files;
+    };
     config.enrich = [&](const hal::Frame& frame, observation::EngineeringObservation& record) {
         const auto& m = frame.mode();
         out.thumbnail = apps::CardImage{m.width, m.height, 3, frameToRgb(frame)};
+
+        if (out.tofFrame) {
+            const std::string method =
+                "tof.vl53l8cx.uno_q_sketch; paired with the camera frame by software time "
+                "(independent acquisition)";
+            const auto observed = [&](std::string id, std::string name, double value,
+                                      std::optional<std::string> unit) {
+                record.observed.push_back(observation::Claim{std::move(id),
+                                                             std::move(name),
+                                                             value,
+                                                             std::move(unit),
+                                                             std::nullopt,
+                                                             {"tof-frame"},
+                                                             method});
+            };
+            std::int32_t valid = 0;
+            for (const auto& z : out.tofFrame->zones)
+                valid += hal::tof::isValid(z.status) ? 1 : 0;
+            observed("tof-valid", "tof_valid_zones", valid, std::nullopt);
+            observed("tof-age", "tof_frame_age", tofAgeMs, "ms");
+            observed("tof-temp", "tof_temperature", out.tofFrame->temperatureC, "C");
+            observed("tof-seq", "tof_frame_seq", static_cast<double>(out.tofFrame->seq),
+                     std::nullopt);
+            const auto centre = hal::tof::centralMedianMm(*out.tofFrame);
+            if (centre)
+                observed("tof-centre", "tof_central_median", *centre, "mm");
+            else
+                record.unresolved.push_back({"tof_central", "no valid zone in the central 2x2"});
+            if (tofStale)
+                record.unresolved.push_back(
+                    {"tof_pairing", "ToF frame " + std::to_string(static_cast<int>(tofAgeMs)) +
+                                        " ms old at capture: not the same moment as the photo"});
+            char line[128];
+            std::snprintf(
+                line, sizeof(line), "ToF %s, %d/%zu valid, %.0f ms old%s",
+                centre ? (std::to_string(static_cast<int>(*centre)) + " mm").c_str() : "centre --",
+                valid, out.tofFrame->zones.size(), tofAgeMs, tofStale ? " STALE" : "");
+            out.tofStatus = line;
+            out.tofOk = centre.has_value() && !tofStale;
+        } else if (tof) {
+            record.unresolved.push_back({"tof", tofProblem});
+            out.tofStatus = tofProblem;
+        }
+
         // Every capture is inspected and keeps what it supports: a poor bench
         // still yields quality facts, pixel sizes and a flagged scale to work
         // with, never a bare refusal.
         const auto inspection = vision::inspectFrame(frame, spec);
         vision::appendInspection(record, inspection, spec, "source-image");
+        out.inspection = inspection;
         if (!inspection.strict.ok()) {
             sceneError = inspection.strict.error;
             bestEffort = vision::summarize(inspection);
