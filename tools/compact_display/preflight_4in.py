@@ -81,8 +81,10 @@ def compile_only(driver: Path, patcher: Path, out: Path, kernel_build: Path,
                  facts: dict[str, object]) -> None:
     if hasattr(os, 'geteuid') and os.geteuid() == 0:
         raise SourceError('refusing to compile as root; no sudo is needed')
-    if (out.resolve().is_relative_to(Path('/lib/modules'))
-            or out.resolve().is_relative_to(Path('/boot')):
+    if (
+        out.resolve().is_relative_to(Path('/lib/modules'))
+        or out.resolve().is_relative_to(Path('/boot'))
+    ):
         raise SourceError('output must not be inside a system module/boot directory')
     if not patcher.is_file():
         raise SourceError(f'upstream patcher not found: {patcher}')
