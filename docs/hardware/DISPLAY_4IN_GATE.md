@@ -42,10 +42,10 @@ The Raspberry Pi driver includes the `waveshare,4.0-dsi-touch-a` match, a 480x80
 
 ### Reproducible, non-installing probe
 
-On a development machine or UNO Q, fetch the reviewed driver source (or copy it from another machine). Because the upstream branch is mutable, **check its Git blob hash** before claiming reproduction of this review:
+On a development machine or UNO Q, fetch the reviewed driver source (or copy it from another machine). Use the immutable Raspberry Pi source commit **97b5af2dde50c0acace6d406208dec3fc8dfe888** (2026-10-21) and **check its Git blob hash** before claiming reproduction of this review:
 
 ~~~sh
-curl -fL https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.18.y/drivers/gpu/drm/panel/panel-waveshare-dsi-v2.c \
+curl -fL https://raw.githubusercontent.com/raspberrypi/linux/97b5af2dde50c0acace6d406208dec3fc8dfe888/drivers/gpu/drm/panel/panel-waveshare-dsi-v2.c \
   -o /tmp/panel-waveshare-dsi-v2.c
 git hash-object /tmp/panel-waveshare-dsi-v2.c
 # Expected reviewed blob: c6cc003a35337971eef670587b200928ca1c1814
