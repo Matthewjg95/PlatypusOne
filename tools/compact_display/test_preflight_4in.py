@@ -55,7 +55,9 @@ class Preflight(unittest.TestCase):
 
     def test_rejects_wrong_compatible(self):
         with self.assertRaises(preflight.SourceError):
-            preflight.inspect(SAMPLE.replace('waveshare,4.0-dsi-touch-a', 'waveshare,4.0-dsi-touch-c'))
+            preflight.inspect(
+                SAMPLE.replace('waveshare,4.0-dsi-touch-a', 'waveshare,4.0-dsi-touch-c')
+            )
 
     def test_no_compile_without_explicit_args(self):
         with tempfile.TemporaryDirectory() as td:
