@@ -94,7 +94,7 @@ class Preflight(unittest.TestCase):
             try:
                 os.environ["PATH"] = str(fakebin) + os.pathsep + original
                 facts = preflight.inspect(driver.read_text())
-                with patch.object(preflight.os, "geteuid", return_value=1000):
+                with patch.object(preflight.os, "geteuid", return_value=1000, create=True):
                     preflight.compile_only(driver, patcher, out, headers, facts)
             finally:
                 os.environ["PATH"] = original
