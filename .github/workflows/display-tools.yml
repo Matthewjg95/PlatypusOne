@@ -48,11 +48,6 @@ jobs:
           test "$(git hash-object /tmp/panel-waveshare-dsi-v2.c)" = c6cc003a35337971eef670587b200928ca1c1814
           python3 tools/compact_display/preflight_4in.py --driver /tmp/panel-waveshare-dsi-v2.c
 
-      - name: Temporary format diagnosis for new Python files
-        run: |
-          python3 -m pip install -q ruff==0.12.10
-          ruff format --diff tools/compact_display/preflight_4in.py tools/compact_display/test_preflight_4in.py || true
-
       - name: Dry-run installer (generate + compile both panels)
         run: |
           tools/compact_display/install_panel.sh --dry-run \
