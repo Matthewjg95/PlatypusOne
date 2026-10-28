@@ -26,3 +26,13 @@ Procedure: [COMPACT_DISPLAY_BENCH_ACCEPTANCE.md](../../docs/hardware/COMPACT_DIS
 The board scripts call upstream scripts for the module build. Upstream files
 are not copied here: the upstream repository is the one that built our working
 5", and we keep it as the single source.
+
+## 4-DSI-TOUCH-A: source/compile-only gate (2026-10-28)
+
+The 4-inch portrait Waveshare SKU 34354 is the **current product envelope target**, but the existing 3.5-inch H installer does **not** apply to it. The 4-inch A requires a 5 V supply and a host DSI initialization sequence. No panel has been tested here.
+
+- Run `python3 -m unittest -v tools/compact_display/test_preflight_4in.py` for **synthetic** source-layout and safe-build orchestration tests.
+- Run `python3 tools/compact_display/preflight_4in.py --driver /path/to/panel-waveshare-dsi-v2.c` to inspect the real Raspberry Pi rpi-6.18.y source **without changing anything**.
+- With the matching UNO Q kernel headers and the community upstream patcher, pass `--compile --patcher /path/to/tools/patch-waveshare-panel.py --out /new/empty/dir` to attempt a **module build only**. This never installs the module or touches boot configuration.
+
+Follow [the source provenance, exact commands, and remaining gates](../../docs/hardware/DISPLAY_4IN_GATE.md). Preserve the five-inch recovery path. **Do not run install_panel.sh with a 4-inch A.**
