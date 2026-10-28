@@ -37,6 +37,9 @@ jobs:
       - name: Unit tests
         run: python3 -m unittest -v tools/compact_display/test_compact_display.py
 
+      - name: Four-inch A source preflight unit tests (synthetic; no kernel compile)
+        run: python3 -m unittest -v tools/compact_display/test_preflight_4in.py
+
       - name: Dry-run installer (generate + compile both panels)
         run: |
           tools/compact_display/install_panel.sh --dry-run \
