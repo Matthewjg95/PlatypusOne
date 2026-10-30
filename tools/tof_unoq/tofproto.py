@@ -9,13 +9,18 @@ classes are ST's own statement under that table ("status 5 is considered as
 100% valid. A status of 6 or 9 can be considered with a confidence value of
 50%. All other statuses are below the 50% confidence level."). Nothing here
 corrects or calibrates a distance.
+
+Protocol 2 adds the trigger and the IMU on the same bus (qwiic_peripherals.h):
+``EVT ... TRIGGER`` (edge=press|release, presses, src) and ``IMU`` records with
+acceleration in mg and angular rate in mdps on the BMI270's own axes. Protocol 1
+streams parse unchanged.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 
 # ST UM3109 Rev 7, Table 4 "List of available target status".
 TARGET_STATUS = {
@@ -109,6 +114,15 @@ class Record:
     zones_count: int | None = None
     temp_c: int | None = None
     zones: list[Zone] = field(default_factory=list)
+    # IMU (BMI270 sensor axes; no mounting transform, no calibration)
+    sensortime: int | None = None
+    acc_mg: tuple[int, int, int] | None = None
+    gyr_mdps: tuple[int, int, int] | None = None
+
+    @property
+    def temp_cc(self) -> int | None:
+        """IMU die temperature in centi-degC, when the record carries one."""
+        return int(self.kv["t_cc"]) if "t_cc" in self.kv else None
 
 
 def _kv(items: list[str]) -> dict[str, str]:
@@ -191,6 +205,17 @@ def parse_line(line: str) -> Record:
                     _int(p[3], "sigma"),
                 )
             )
+    elif rtype == "IMU":
+        if len(rest) < 9:
+            raise ProtocolError("IMU needs mcu_us, seq, sensortime, 3 acc, 3 gyr")
+        rec.mcu_us = _int(rest[0], "mcu_us")
+        rec.seq = _int(rest[1], "seq")
+        rec.sensortime = _int(rest[2], "sensortime")
+        acc = [_int(v, "acc") for v in rest[3:6]]
+        gyr = [_int(v, "gyr") for v in rest[6:9]]
+        rec.acc_mg = (acc[0], acc[1], acc[2])
+        rec.gyr_mdps = (gyr[0], gyr[1], gyr[2])
+        rec.kv = _kv(rest[9:])
     else:
         raise ProtocolError(f"unknown record type {rtype!r}")
     return rec

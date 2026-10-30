@@ -69,6 +69,23 @@ DIAGNOSIS = {
 }
 FATAL_CODES = set(DIAGNOSIS)
 
+# Trigger and IMU failures never end a ToF session; they get their own diagnosis.
+PERIPHERAL_DIAGNOSIS = {
+    "TRIGGER_FAIL": (
+        "Nothing answered as a Qwiic Button at 0x6F (or its ID is not 0x5D). Check the Qwiic "
+        "daisy chain order and seating, and that the breakout's address jumpers are open."
+    ),
+    "TRIGGER_LOST": (
+        "The button stopped answering after bring-up. Re-seat the Qwiic cables, scope SCL for "
+        "clock stretching, try I2CHZ 100, then send PERIPH."
+    ),
+    "IMU_FAIL": (
+        "BMI270 bring-up failed; the event's stage says where (chip_id: no 0x24 at 0x68; "
+        "init_status: the 8 KB config was not accepted - power-cycle and retry)."
+    ),
+    "IMU_LOST": "The BMI270 stopped answering after bring-up. Re-seat the cables, then PERIPH.",
+}
+
 
 class OutputExists(RuntimeError):
     pass
@@ -92,6 +109,26 @@ class TofSession:
         self._ev_f = self._open("events.csv")
         self._fr_f = self._open("frames.csv")
         self._zn_f = self._open("zones.csv")
+        self._imu_f = self._open("imu.csv")
+        self.imu = csv.writer(self._imu_f)
+        self.imu.writerow(
+            [
+                "host_mono_ns",
+                "host_real_ns",
+                "mcu_us",
+                "seq",
+                "sensortime",
+                "ax_mg",
+                "ay_mg",
+                "az_mg",
+                "gx_mdps",
+                "gy_mdps",
+                "gz_mdps",
+                "temp_cc",
+            ]
+        )
+        self.trigger_presses = 0
+        self.peripheral_errors: list[dict] = []
         self.ev = csv.writer(self._ev_f)
         self.fr = csv.writer(self._fr_f)
         self.zn = csv.writer(self._zn_f)
@@ -157,6 +194,12 @@ class TofSession:
         self.counts[rec.type] += 1
         if rec.type == "FRM":
             self._frame(rec, mono_ns, real_ns)
+        elif rec.type == "IMU":
+            t = rec.temp_cc
+            self.imu.writerow(
+                [mono_ns, real_ns, rec.mcu_us, rec.seq, rec.sensortime, *rec.acc_mg]
+                + [*rec.gyr_mdps, "" if t is None else t]
+            )
         else:
             self.ev.writerow(
                 [
@@ -176,6 +219,12 @@ class TofSession:
             elif rec.type == "HB":
                 self.last_hb = rec.kv
                 self.state = rec.kv.get("state", self.state)
+            elif rec.type == "EVT" and rec.code == "TRIGGER" and rec.kv.get("edge") == "press":
+                self.trigger_presses += 1
+            elif rec.type == "EVT" and rec.level == "E" and rec.code in PERIPHERAL_DIAGNOSIS:
+                self.peripheral_errors.append(
+                    {"code": rec.code, "fields": rec.kv, "host_mono_ns": mono_ns}
+                )
             elif rec.type == "EVT" and rec.level == "E":
                 self.errors.append({"code": rec.code, "fields": rec.kv, "host_mono_ns": mono_ns})
         return rec
@@ -232,7 +281,7 @@ class TofSession:
         return None
 
     def close(self, exit_reason: str) -> dict:
-        for f in (self.raw, self._ev_f, self._fr_f, self._zn_f):
+        for f in (self.raw, self._ev_f, self._fr_f, self._zn_f, self._imu_f):
             f.flush()
             f.close()
         fatal = self.fatal_error()
@@ -264,6 +313,12 @@ class TofSession:
             "sensor_streamcount_gaps": self.stream_gaps,
             "errors": self.errors,
             "diagnosis": DIAGNOSIS.get(fatal["code"]) if fatal else None,
+            "trigger_presses": self.trigger_presses,
+            "imu_samples": self.counts["IMU"],
+            "peripheral_errors": self.peripheral_errors,
+            "peripheral_diagnosis": [
+                PERIPHERAL_DIAGNOSIS[e["code"]] for e in self.peripheral_errors
+            ],
             "exit_reason": exit_reason,
             "evidence_class": "raw sensor output; no calibration or correction applied",
             "timestamp_note": (
@@ -309,6 +364,17 @@ class MonitorClient:
         self.sock.close()
 
 
+def imu_console_line(rec: tofproto.Record) -> str:
+    """One IMU sample for the operator: sensor axes, magnitude, no calibration."""
+    ax, ay, az = rec.acc_mg
+    mag = (ax * ax + ay * ay + az * az) ** 0.5
+    gx, gy, gz = rec.gyr_mdps
+    return (
+        f"[IMU] #{rec.seq} acc mg ({ax}, {ay}, {az}) |a|={mag:.0f} mg  "
+        f"gyr dps ({gx / 1000:.2f}, {gy / 1000:.2f}, {gz / 1000:.2f})"
+    )
+
+
 def run(args, session_factory=TofSession, client_factory=MonitorClient) -> int:
     operator = {
         "ref_distance_mm": args.ref_distance_mm,
@@ -333,6 +399,8 @@ def run(args, session_factory=TofSession, client_factory=MonitorClient) -> int:
         return 3
 
     client.send("STATUS")  # the sketch may already be running from an earlier connection
+    for cmd in args.send or []:
+        client.send(cmd)
     reconfig = []
     if args.res:
         reconfig.append(f"RES {args.res}")
@@ -348,6 +416,8 @@ def run(args, session_factory=TofSession, client_factory=MonitorClient) -> int:
                 rec = session.handle(line, mono, real)
                 if rec and rec.type == "EVT":
                     print(f"[{rec.level}] {rec.code} {rec.kv}", file=sys.stderr)
+                elif rec and rec.type == "IMU" and rec.seq % 10 == 0:
+                    print(imu_console_line(rec), file=sys.stderr)
                 if not reconfig_sent and rec and rec.type in ("FRM", "CFG"):
                     for cmd in ["STOP", *reconfig, "START"]:
                         client.send(cmd)
@@ -400,6 +470,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--res", type=int, choices=(4, 8), help="re-configure resolution after start")
     p.add_argument("--hz", type=int, help="re-configure ranging frequency after start")
     p.add_argument("--stop-on-exit", action="store_true", help="send STOP when the logger exits")
+    p.add_argument(
+        "--send",
+        action="append",
+        metavar="CMD",
+        help="extra sketch command after STATUS, repeatable (e.g. PERIPH, 'I2CHZ 100')",
+    )
     p.add_argument(
         "--label", default="", help="free text stored with every frame, e.g. 500mm-white-card"
     )

@@ -20,6 +20,12 @@
 //   HB     mcu_us, k=v...                 heartbeat every few seconds
 //   FRM    seq, streamcount, us_ready, us_read_done, zones, temp_c, z0, z1, ...
 //          each zone = distance_mm:target_status:nb_target_detected:sigma_mm
+//   IMU    mcu_us, seq, sensortime, ax, ay, az, gx, gy, gz, k=v...    (protocol 2)
+//          acceleration in mg and angular rate in mdps, BMI270 sensor axes;
+//          sensortime is the BMI270's own 24-bit counter (39.0625 us/LSB);
+//          optional t_cc = die temperature in centi-degC
+// Protocol 2 also adds EVT codes TRIGGER (edge=press|release, presses=<n>,
+// src=level|click_latch), TRIGGER_OK/FAIL/LOST and IMU_INIT_START/OK/FAIL/LOST.
 #pragma once
 
 #include <stddef.h>
@@ -27,7 +33,7 @@
 
 namespace tofproto {
 
-constexpr int kProtocolVersion = 1;
+constexpr int kProtocolVersion = 2;
 
 inline uint16_t crc16_ccitt_false(const char* data, size_t len) {
     uint16_t crc = 0xFFFF;
@@ -82,6 +88,19 @@ class Line {
         raw(key);
         raw("=");
         rawU64(v);
+    }
+
+    // ",key=value" with a signed value.
+    void kvi(const char* key, int32_t v) {
+        raw(",");
+        raw(key);
+        raw("=");
+        if (v < 0) {
+            raw("-");
+            rawU64(static_cast<uint64_t>(-static_cast<int64_t>(v)));
+        } else {
+            rawU64(static_cast<uint64_t>(v));
+        }
     }
 
     // ",key=value" with a string value. Values must not contain ',', '*', '$'

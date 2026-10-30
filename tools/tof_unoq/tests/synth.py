@@ -24,6 +24,16 @@ def evt(us: int, level: str, code: str, **kv) -> str:
     return make_line(f"TOF,EVT,{us},{level},{code}{extra}")
 
 
+def trigger(us: int, edge: str, presses: int, src: str = "level") -> str:
+    return evt(us, "I", "TRIGGER", edge=edge, presses=presses, src=src)
+
+
+def imu(us: int, seq: int, acc=(0, 0, 1000), gyr=(0, 0, 0), t_cc: int | None = 2400) -> str:
+    tail = f",t_cc={t_cc}" if t_cc is not None else ""
+    vals = ",".join(str(v) for v in (*acc, *gyr))
+    return make_line(f"TOF,IMU,{us},{seq},{seq * 256},{vals}{tail}")
+
+
 def cfg(us: int = 3_000_000, zones: int = 64, hz: int = 5) -> str:
     return make_line(
         f"TOF,CFG,{us},zones={zones},hz={hz},mode=continuous,integration_ms=20,sharpener_pct=5,"
