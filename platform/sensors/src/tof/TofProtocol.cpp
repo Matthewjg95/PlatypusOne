@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <cmath>
 
 namespace platypus::hal::tof {
 
@@ -54,7 +55,49 @@ std::optional<Frame> parseFrame(const std::vector<std::string_view>& f) {
     return frame;
 }
 
+// IMU fields: mcu_us, seq, sensortime, ax, ay, az, gx, gy, gz, then k=v.
+std::optional<ImuSample> parseImu(const std::vector<std::string_view>& f) {
+    if (f.size() < 9) return std::nullopt;
+    ImuSample s;
+    if (!toNumber(f[0], s.mcuUs) || !toNumber(f[1], s.seq) || !toNumber(f[2], s.sensortime))
+        return std::nullopt;
+    for (std::size_t i = 0; i < 3; ++i)
+        if (!toNumber(f[3 + i], s.accMg[i]) || !toNumber(f[6 + i], s.gyrMdps[i]))
+            return std::nullopt;
+    for (std::size_t i = 9; i < f.size(); ++i) {
+        const auto eq = f[i].find('=');
+        if (eq == std::string_view::npos) return std::nullopt;
+        if (f[i].substr(0, eq) == "t_cc") {
+            std::int32_t cc = 0;
+            if (!toNumber(f[i].substr(eq + 1), cc)) return std::nullopt;
+            s.temperatureC = cc / 100.0;
+        }
+    }
+    return s;
+}
+
 }  // namespace
+
+double accelMagnitudeMg(const ImuSample& s) noexcept {
+    const double x = s.accMg[0], y = s.accMg[1], z = s.accMg[2];
+    return std::sqrt(x * x + y * y + z * z);
+}
+
+std::optional<GravityTilt> gravityTilt(const ImuSample& s) noexcept {
+    if (accelMagnitudeMg(s) < 100.0) return std::nullopt;  // free fall or no data
+    constexpr double kDeg = 57.29577951308232;
+    const double x = s.accMg[0], y = s.accMg[1], z = s.accMg[2];
+    return GravityTilt{std::atan2(y, z) * kDeg, std::atan2(-x, std::sqrt(y * y + z * z)) * kDeg};
+}
+
+std::optional<std::string_view> fieldValue(const Record& record, std::string_view key) noexcept {
+    for (const auto& f : record.fields) {
+        const std::string_view v(f);
+        if (v.size() > key.size() && v.substr(0, key.size()) == key && v[key.size()] == '=')
+            return v.substr(key.size() + 1);
+    }
+    return std::nullopt;
+}
 
 std::uint16_t crc16CcittFalse(std::string_view data) noexcept {
     std::uint16_t crc = 0xFFFF;
@@ -98,6 +141,10 @@ std::optional<Record> parseLine(std::string_view line) {
         if (fields.size() < 3 || fields[1].size() != 1) return std::nullopt;
         rec.level = fields[1][0];
         rec.code = std::string(fields[2]);
+    } else if (rec.typeName == "IMU") {
+        rec.type = RecordType::Imu;
+        rec.imu = parseImu(fields);
+        if (!rec.imu) return std::nullopt;
     } else if (rec.typeName == "HELLO") {
         rec.type = RecordType::Hello;
     } else if (rec.typeName == "CFG") {
@@ -202,6 +249,11 @@ TofSnapshot FakeTofSource::snapshot() const {
     s.frameArrived = std::chrono::steady_clock::now();
     s.hz = 5.0;
     s.frames = 1;
+    s.triggerPresses = presses_;
+    if (imu_) {
+        s.imu = imu_;
+        s.imuArrived = s.frameArrived;
+    }
     return s;
 }
 

@@ -166,6 +166,31 @@ struct TofAtCapture {
 
 /// Frames older than this are recorded but flagged stale.
 inline constexpr std::chrono::milliseconds kTofStaleAfter{1500};
+/// IMU samples arrive at 10 Hz; older than this is not the capture's moment.
+inline constexpr std::chrono::milliseconds kImuStaleAfter{500};
+/// |a| further than this from 1 g: the device was moving, tilt is unreliable.
+inline constexpr double kImuStillToleranceMg = 100.0;
+
+/// New trigger presses on a ToF source since the last call (the trigger rides
+/// on the ToF stream, so an applet holding the ToF also holds the trigger).
+class TriggerWatch {
+   public:
+    void reset(const hal::tof::ITofSource* tof) {
+        seen_ = tof ? tof->snapshot().triggerPresses : 0;
+    }
+    /// True once per batch of new presses (several presses between two frames
+    /// are one request, never a burst of captures).
+    bool fired(const hal::tof::ITofSource* tof) {
+        if (!tof) return false;
+        const auto n = tof->snapshot().triggerPresses;
+        const bool fresh = n > seen_;
+        seen_ = n;  // also follows a reset to 0 after a reconnect
+        return fresh;
+    }
+
+   private:
+    std::uint64_t seen_ = 0;
+};
 
 struct CaptureOutcome {
     std::optional<observation::EngineeringObservation> record;  ///< always set when saved
@@ -180,6 +205,10 @@ struct CaptureOutcome {
     std::optional<hal::tof::Frame> tofFrame;  ///< the frame recorded with the capture
     std::string tofStatus;  ///< "centre 412 mm, 64/64 valid, 80 ms old" or why not
     bool tofOk = false;     ///< a fresh frame with a valid centre
+    // IMU, when the device has one (rides on the ToF stream):
+    std::optional<hal::tof::ImuSample> imu;
+    std::string imuStatus;  ///< "IMU roll 3.1 pitch -12.4 deg (sensor axes), 1003 mg" or why not
+    bool imuOk = false;     ///< a fresh sample taken while still
 };
 
 /// One capture: frame -> inspection (+ classifier when measured) ->

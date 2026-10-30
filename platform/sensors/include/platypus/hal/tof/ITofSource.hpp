@@ -1,5 +1,8 @@
 // PlatypusOS HAL — a stream of ToF frames, as an applet sees it.
 //
+// The same stream carries the trigger and the IMU (protocol 2): they share the
+// sensor's Qwiic bus and the MCU sketch, so whoever holds the ToF holds them.
+//
 // The device implements it with TofMonitorClient (the UNO Q MCU sketch over
 // arduino-router's Monitor); hosts and tests use FakeTofSource. start()/stop()
 // bracket ownership: the Monitor serves one client well, so an applet holds
@@ -25,6 +28,11 @@ struct TofSnapshot {
     char lastLevel = 0;         ///< level of the newest EVT
     std::string lastEvent;      ///< code of the newest EVT
     std::string lastError;      ///< newest EVT at level E, or the connect error
+    // Trigger and IMU (protocol 2):
+    std::uint64_t triggerPresses = 0;  ///< press edges received since start()
+    bool triggerDown = false;
+    std::optional<ImuSample> imu;  ///< newest IMU record
+    std::chrono::steady_clock::time_point imuArrived{};
 };
 
 class ITofSource {
@@ -41,8 +49,14 @@ class ITofSource {
 class FakeTofSource final : public ITofSource {
    public:
     FakeTofSource();
-    void start() override { running_ = true; }
+    void start() override {
+        running_ = true;
+        presses_ = 0;  // counted since start(), like the device client
+    }
     void stop() override { running_ = false; }
+    /// Test/demo controls: a trigger press, and the IMU sample to serve.
+    void pressTrigger() noexcept { ++presses_; }
+    void setImu(std::optional<ImuSample> s) { imu_ = std::move(s); }
     [[nodiscard]] TofSnapshot snapshot() const override;
     [[nodiscard]] std::string endpoint() const override { return "fake"; }
     [[nodiscard]] bool running() const noexcept { return running_; }
@@ -50,6 +64,8 @@ class FakeTofSource final : public ITofSource {
    private:
     Frame frame_;
     bool running_ = false;
+    std::uint64_t presses_ = 0;
+    std::optional<ImuSample> imu_;
 };
 
 }  // namespace platypus::hal::tof

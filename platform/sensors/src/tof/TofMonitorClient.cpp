@@ -60,6 +60,17 @@ void TofMonitorClient::handle(const std::string& line) {
         state_.frame = std::move(rec->frame);
         state_.frameArrived = std::chrono::steady_clock::now();
         ++state_.frames;
+    } else if (rec->type == RecordType::Imu) {
+        state_.imu = rec->imu;
+        state_.imuArrived = std::chrono::steady_clock::now();
+    } else if (rec->type == RecordType::Event && rec->code == "TRIGGER") {
+        const auto edge = fieldValue(*rec, "edge");
+        if (edge == "press") {
+            ++state_.triggerPresses;
+            state_.triggerDown = true;
+        } else if (edge == "release") {
+            state_.triggerDown = false;
+        }
     } else if (rec->type == RecordType::Event) {
         state_.lastLevel = rec->level;
         state_.lastEvent = rec->code;
