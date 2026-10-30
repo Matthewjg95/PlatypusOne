@@ -73,6 +73,77 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn(13, tofproto.TARGET_STATUS)
 
 
+class PeripheralProtocolTests(unittest.TestCase):
+    """Protocol 2: trigger events and IMU records (SYNTHETIC lines)."""
+
+    def test_imu_round_trip(self):
+        rec = tofproto.parse_line(synth.imu(5_000_000, 3, acc=(-17, 4, 998), gyr=(120, -5, 0)))
+        self.assertEqual(rec.type, "IMU")
+        self.assertEqual((rec.mcu_us, rec.seq, rec.sensortime), (5_000_000, 3, 768))
+        self.assertEqual(rec.acc_mg, (-17, 4, 998))
+        self.assertEqual(rec.gyr_mdps, (120, -5, 0))
+        self.assertEqual(rec.temp_cc, 2400)
+        self.assertIsNone(tofproto.parse_line(synth.imu(1, 1, t_cc=None)).temp_cc)
+
+    def test_imu_rejects_short_and_non_integer(self):
+        for body in ("TOF,IMU,1,2,3,4,5,6", "TOF,IMU,1,2,3,4,5,x,7,8,9"):
+            with self.assertRaises(tofproto.ProtocolError):
+                tofproto.parse_line(tofproto.make_line(body))
+
+    def test_trigger_is_an_event(self):
+        rec = tofproto.parse_line(synth.trigger(9, "press", 4, "click_latch"))
+        self.assertEqual((rec.type, rec.level, rec.code), ("EVT", "I", "TRIGGER"))
+        self.assertEqual(rec.kv, {"edge": "press", "presses": "4", "src": "click_latch"})
+
+    def test_vendored_bmi270_config_is_boschs(self):
+        import hashlib
+        import re
+
+        hdr = (REPO / "firmware/tof_unoq_vl53l8cx/bmi270_config.h").read_text()
+        body = hdr[hdr.index("kConfigFile[kConfigSize] = {") :]
+        data = bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})\b", body))
+        self.assertEqual(len(data), 8192)
+        digest = hashlib.sha256(data).hexdigest()
+        self.assertEqual(digest, "2d75e68e343a13ff99be98261dfbd99d9e8c6f267da9e3c5aeb883276ad178db")
+        self.assertIn(digest, hdr)  # the header states the hash it carries
+
+
+class PeripheralLoggerTests(unittest.TestCase):
+    def test_imu_csv_trigger_count_and_non_fatal_peripheral_errors(self):
+        with tempfile.TemporaryDirectory() as d:
+            sess = tof_log.TofSession(Path(d) / "s")
+            for ln in (
+                synth.hello(),
+                synth.evt(2, "E", "IMU_FAIL", stage="chip_id", chip_id=0),
+                synth.trigger(3, "press", 1),
+                synth.trigger(4, "release", 1),
+                synth.imu(5, 0),
+                synth.imu(6, 1, t_cc=None),
+                synth.frame(0),
+            ):
+                sess.handle(ln, 0, 0)
+            summary = sess.close("test")
+            self.assertEqual(summary["trigger_presses"], 1)
+            self.assertEqual(summary["imu_samples"], 2)
+            self.assertEqual([e["code"] for e in summary["peripheral_errors"]], ["IMU_FAIL"])
+            self.assertIn("chip_id", summary["peripheral_diagnosis"][0])
+            self.assertIsNone(summary["diagnosis"])  # the ToF session is fine
+            rows = list(csv.reader((Path(d) / "s" / "imu.csv").open()))
+            self.assertEqual(rows[0][5:8], ["ax_mg", "ay_mg", "az_mg"])
+            self.assertEqual(rows[1][5:8], ["0", "0", "1000"])
+            self.assertEqual((rows[1][-1], rows[2][-1]), ("2400", ""))
+
+    def test_imu_console_line_and_send_option(self):
+        rec = tofproto.parse_line(synth.imu(1, 10, acc=(0, 600, 800), gyr=(1500, 0, -250)))
+        line = tof_log.imu_console_line(rec)
+        self.assertIn("|a|=1000 mg", line)
+        self.assertIn("(1.50, 0.00, -0.25)", line)
+        a = tof_log.build_parser().parse_args(
+            ["--out", "x", "--send", "PERIPH", "--send", "I2CHZ 100"]
+        )
+        self.assertEqual(a.send, ["PERIPH", "I2CHZ 100"])
+
+
 class FirmwareHostTests(unittest.TestCase):
     """Compiles the firmware's Arduino-independent headers on the host."""
 
@@ -121,7 +192,17 @@ class FirmwareHostTests(unittest.TestCase):
             [str(self.binary), "emit"], capture_output=True, text=True, check=True
         ).stdout
         recs = [tofproto.parse_line(ln) for ln in out.splitlines()]
-        self.assertEqual([r.type for r in recs], ["HELLO", "EVT", "FRM", "FRM", "FRM"])
+        self.assertEqual(
+            [r.type for r in recs], ["HELLO", "EVT", "FRM", "FRM", "FRM", "EVT", "IMU"]
+        )
+        trig, imu = recs[5], recs[6]
+        self.assertEqual(
+            (trig.code, trig.kv["edge"], trig.kv["presses"]), ("TRIGGER", "press", "1")
+        )
+        self.assertEqual((imu.seq, imu.sensortime), (7, 0x030201))
+        self.assertEqual(imu.acc_mg, (12, -8, 1001))
+        self.assertEqual(imu.gyr_mdps, (-150, 0, 999969))
+        self.assertEqual(imu.temp_cc, -125)
         frm = recs[2]
         self.assertEqual(frm.temp_c, -3)
         self.assertEqual(frm.zones[0].target_status, 255)

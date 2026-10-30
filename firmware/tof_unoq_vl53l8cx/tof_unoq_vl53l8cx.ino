@@ -23,6 +23,16 @@
 //   RES 4|8           resolution 4x4 or 8x8 (only while stopped)
 //   HZ <n>            ranging frequency (only while stopped; ULD enforces limits)
 //   SCAN              rescan the bus (only while stopped)
+//   PERIPH            re-run the trigger and IMU bring-up
+//   I2CHZ 100|400     bus clock in kHz, then a full bring-up (only while not ranging)
+//
+// Trigger and IMU (protocol 2, docs/hardware/tof_unoq/TRIGGER_IMU.md): a
+// SparkFun Qwiic Button breakout (0x6F) and a SparkFun BMI270 (0x68) share the
+// Qwiic bus. They are brought up after the bus scan, independently of the ToF,
+// and polled in every state once a monitor client is connected, so the trigger
+// works even when ranging has failed:
+//   EVT ... TRIGGER  edge=press|release, presses=<count>, src=level|click_latch
+//   IMU              mcu_us, seq, sensortime, ax, ay, az (mg), gx, gy, gz (mdps)
 //
 // Dependencies (pinned in sketch.yaml): Arduino_RouterBridge 0.4.3,
 // STM32duino VL53L8CX 2.1.0 (ST ULD API VL53L8CX_1.3.0). Only the ULD C API is
@@ -31,6 +41,8 @@
 #include <Arduino_RouterBridge.h>
 #include <Wire.h>
 
+#include "bmi270_config.h"
+#include "qwiic_peripherals.h"
 #include "tof_i2c_platform.h"
 #include "tof_proto.h"
 
@@ -38,19 +50,21 @@ extern "C" {
 #include <vl53l8cx_api.h>
 }
 
-#define SKETCH_VERSION "0.1.0"
+#define SKETCH_VERSION "0.2.0"
 
 namespace {
 
 // ---- configuration (defaults; RES/HZ commands can change the last two) -------
 constexpr uint8_t kAddr7 = 0x29;     // VL53L8CX default 0x52 >> 1 (DS14161 section 4)
-constexpr uint32_t kI2cHz = 400000;  // core default for I2C4; Pololu shifter is load-sensitive
+uint32_t g_i2c_hz = 400000;  // core default for I2C4; Pololu shifter is load-sensitive
 constexpr uint32_t kHeartbeatMs = 5000;
 constexpr uint32_t kCommandPollMs = 250;  // each Monitor.available() is an RPC round trip
 constexpr uint32_t kReadyPollMs = 2;
 constexpr uint8_t kStallLimit = 3;  // consecutive data-ready timeouts before giving up
 uint8_t g_resolution = VL53L8CX_RESOLUTION_8X8;
 uint8_t g_hz = 5;  // 8x8 frames are ~0.8 KB of text; Bridge UART is 115200 baud
+constexpr uint32_t kButtonPollMs = 20;  // clicks shorter than a poll are caught by the latch
+constexpr uint32_t kImuEmitMs = 100;    // 10 IMU lines/s next to <= 5 FRM lines/s
 
 TwoWire& tofWire = Wire1;
 
@@ -66,6 +80,12 @@ VL53L8CX_ResultsData g_results;
 char g_buf[1536];  // worst-case 8x8 FRM line is ~1.43 KB
 tofproto::Line L(g_buf, sizeof(g_buf));
 tofproto::Clock64 g_clock;
+
+qwiic::QwiicButton<TwoWire> g_button(tofWire, delayMs);
+qwiic::Bmi270<TwoWire> g_imu(tofWire, delayMs);
+uint32_t g_imu_seq = 0;
+uint64_t g_last_button_us = 0;
+uint64_t g_last_imu_us = 0;
 
 enum class State : uint8_t { WaitMonitor, Error, Idle, Ranging };
 State g_state = State::WaitMonitor;
@@ -144,8 +164,9 @@ void emitHello() {
     L.kvs("board", "UNO_Q_STM32U585");
     L.kvs("bus", "Wire1_I2C4_SDA_PD13_SCL_PD12");
     L.kv("addr7", kAddr7);
-    L.kv("i2c_hz", kI2cHz);
+    L.kv("i2c_hz", g_i2c_hz);
     L.kvs("time", "mcu_micros_extended_64bit");
+    L.kvs("peripherals", "qwiic_button@0x6f bmi270@0x68");
     emit();
 }
 
@@ -158,6 +179,11 @@ void emitHeartbeat() {
     L.kv("timeouts", g_timeouts);
     L.kv("emit_overflow", g_emit_overflow);
     L.kvs("last_error", g_last_error);
+    L.kvs("trigger", g_button.ok() ? "ok" : "off");
+    L.kv("presses", g_button.presses());
+    L.kvs("imu", g_imu.ok() ? "ok" : "off");
+    L.kv("imu_samples", g_imu_seq);
+    L.kv("periph_i2c_failures", g_button.stats().failures + g_imu.stats().failures);
     addI2cStats();
     emit();
 }
@@ -172,9 +198,10 @@ void fail(const char* code, uint8_t uld_status) {
 }
 
 void scanBus() {
-    // One-byte read probe at every 7-bit address. Harmless for the VL53L8CX;
-    // a read can have side effects on some other device types, but the Qwiic
-    // bus should hold nothing else during this bring-up.
+    // One-byte read probe at every 7-bit address. Harmless for the VL53L8CX,
+    // the BMI270 and the Qwiic Button (each returns the register at its
+    // current pointer); a read can have side effects on other device types,
+    // so nothing else belongs on this bus.
     char found[200];
     size_t len = 0;
     found[0] = '\0';
@@ -259,18 +286,129 @@ bool startRanging() {
     return true;
 }
 
+uint32_t millis32() {
+    return static_cast<uint32_t>(millis());
+}
+
+void addPeriphStats(const tofplat::Stats& s) {
+    L.kv("i2c_tx", s.transactions);
+    L.kv("i2c_retries", s.retries);
+    L.kv("i2c_failures", s.failures);
+    L.kv("i2c_last_fail_reg", s.last_fail_reg);
+    L.kv("i2c_last_fail_stage", s.last_fail_stage);
+}
+
+// The trigger and the IMU, each reported on its own; neither blocks the ToF.
+void bringUpPeripherals() {
+    const auto b = g_button.begin();
+    evt(g_button.ok() ? 'I' : 'E', g_button.ok() ? "TRIGGER_OK" : "TRIGGER_FAIL");
+    L.kv("addr7", qwiic::button::kAddr7);
+    L.kv("id", b.id);
+    L.kv("expect_id", qwiic::button::kDevId);
+    L.kv("fw_major", b.fwMajor);
+    L.kv("fw_minor", b.fwMinor);
+    L.kv("debounce_ms", b.debounceMs);
+    L.kv("pressed", g_button.pressed() ? 1 : 0);
+    L.kv("comms_status", b.comms);
+    addPeriphStats(g_button.stats());
+    emit();
+
+    evt('I', "IMU_INIT_START");
+    L.kvs("note", "soft_reset_then_8KB_bosch_config_upload");
+    emit();
+    const auto r = g_imu.begin(qwiic::bmi270::kConfigFile, qwiic::bmi270::kConfigSize, millis32);
+    evt(g_imu.ok() ? 'I' : 'E', g_imu.ok() ? "IMU_OK" : "IMU_FAIL");
+    L.kv("addr7", qwiic::bmi270::kAddr7);
+    L.kvs("stage", qwiic::Bmi270<TwoWire>::stageName(r.stage));
+    L.kv("chip_id", r.chipId);
+    L.kv("expect_chip_id", qwiic::bmi270::kChipId);
+    L.kv("internal_status", r.internalStatus);
+    L.kv("err_reg", r.err);
+    L.kv("upload_ms", r.uploadMs);
+    // Values READ BACK from the sensor, then what this sketch means by them.
+    L.kv("acc_conf", r.accConf);
+    L.kv("acc_range", r.accRange);
+    L.kv("gyr_conf", r.gyrConf);
+    L.kv("gyr_range", r.gyrRange);
+    L.kv("pwr_ctrl", r.pwrCtrl);
+    L.kv("acc_range_g", qwiic::bmi270::kAccRangeG);
+    L.kv("gyr_range_dps", qwiic::bmi270::kGyrRangeDps);
+    L.kv("odr_hz", 100);
+    L.kv("emit_hz", 1000 / kImuEmitMs);
+    L.kvs("units", "acc_mg_gyr_mdps_sensor_axes");
+    L.kvs("compensation", "none_gyro_cross_sensitivity_not_applied");
+    addPeriphStats(g_imu.stats());
+    emit();
+}
+
+void serviceTrigger() {
+    qwiic::TriggerEdge edges[2];
+    const int n = g_button.poll(edges);
+    if (n < 0) {
+        if (!g_button.ok()) {  // this failure took it offline
+            evt('E', "TRIGGER_LOST");
+            addPeriphStats(g_button.stats());
+            emit();
+        }
+        return;
+    }
+    for (int i = 0; i < n; ++i) {
+        evt('I', "TRIGGER");
+        L.kvs("edge", edges[i].press ? "press" : "release");
+        L.kv("presses", g_button.presses());
+        L.kvs("src", edges[i].fromClickFlag ? "click_latch" : "level");
+        emit();
+    }
+}
+
+void serviceImu() {
+    qwiic::ImuSample s;
+    const uint64_t t = nowUs();
+    if (!g_imu.read(s)) {
+        if (!g_imu.ok()) {
+            evt('E', "IMU_LOST");
+            addPeriphStats(g_imu.stats());
+            emit();
+        }
+        return;
+    }
+    L.begin("IMU");
+    L.u64(t);
+    L.u64(g_imu_seq++);
+    L.u64(s.sensortime);
+    for (int i = 0; i < 3; ++i)
+        L.i32(s.acc_mg[i]);
+    for (int i = 0; i < 3; ++i)
+        L.i32(s.gyr_mdps[i]);
+    if (s.tempValid) L.kvi("t_cc", s.temp_cc);
+    emit();
+}
+
+// Every state after the monitor connects: the trigger must work without the ToF.
+void servicePeripherals(uint64_t now) {
+    if (g_button.ok() && now - g_last_button_us >= kButtonPollMs * 1000ULL) {
+        g_last_button_us = now;
+        serviceTrigger();
+    }
+    if (g_imu.ok() && now - g_last_imu_us >= kImuEmitMs * 1000ULL) {
+        g_last_imu_us = now;
+        serviceImu();
+    }
+}
+
 void bringUp() {
     g_last_error = "none";
     g_bus.resetStats();
 
     tofWire.begin();
-    tofWire.setClock(kI2cHz);
+    tofWire.setClock(g_i2c_hz);
     evt('I', "BUS_BEGIN");
     L.kvs("bus", "Wire1_I2C4_SDA_PD13_SCL_PD12");
-    L.kv("hz", kI2cHz);
+    L.kv("hz", g_i2c_hz);
     emit();
 
     scanBus();
+    bringUpPeripherals();
 
     if (!g_bus.probe()) {
         g_last_error = "NO_ACK";
@@ -442,6 +580,22 @@ void handleCommand(String cmd) {
         if (g_state == State::Idle) configure();
     } else if (cmd == "SCAN") {
         if (g_state != State::Ranging) scanBus();
+    } else if (cmd == "PERIPH") {
+        bringUpPeripherals();
+    } else if (cmd.startsWith("I2CHZ ")) {
+        const long khz = cmd.substring(6).toInt();
+        if (g_state == State::Ranging) {
+            evt('W', "BUSY");
+            L.kvs("hint", "send_STOP_first");
+            emit();
+        } else if (khz == 100 || khz == 400) {
+            g_i2c_hz = static_cast<uint32_t>(khz) * 1000;
+            bringUp();
+        } else {
+            evt('W', "BAD_ARG");
+            L.kvs("hint", "I2CHZ_100_or_400");
+            emit();
+        }
     } else {
         evt('W', "UNKNOWN_CMD");
         emit();
@@ -519,6 +673,7 @@ void loop() {
         g_last_hb_us = now;
         emitHeartbeat();
     }
+    servicePeripherals(now);
     if (g_state == State::Ranging) {
         serviceRanging();
     } else {

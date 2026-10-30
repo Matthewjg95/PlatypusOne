@@ -14,7 +14,9 @@ layer against a simulated register file. **It has not run on hardware.**
 |---|---|
 | `tof_unoq_vl53l8cx.ino` | bring-up state machine, ranging loop, commands |
 | `tof_i2c_platform.h` | bounded, chunked register I/O for Zephyr `Wire` (retries capped, errors reported) |
-| `tof_proto.h` | CRC-16 line protocol shared with `tools/tof_unoq/tofproto.py` |
+| `tof_proto.h` | CRC-16 line protocol shared with `tools/tof_unoq/tofproto.py` (protocol 2: adds `IMU` and trigger events) |
+| `qwiic_peripherals.h` | the trigger (SparkFun Qwiic Button, 0x6F) and the IMU (BMI270, 0x68) on the same bus: bounded 8-bit register I/O, edge/click-latch polling, Bosch config upload with read-back ([wiring and gates](../../docs/hardware/tof_unoq/TRIGGER_IMU.md)) |
+| `bmi270_config.h` | Bosch's 8 KB BMI270 config, vendored verbatim (BSD-3-Clause, tag and SHA-256 in the header) |
 | `sketch.yaml` | pinned core + library versions (`arduino-cli --profile unoq`) |
 
 Why not ST's Arduino C++ class: its `IO_Read()` retries forever if the sensor does not

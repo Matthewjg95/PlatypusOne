@@ -6,7 +6,7 @@ MCU sketch: [firmware/tof_unoq_vl53l8cx](../../firmware/tof_unoq_vl53l8cx/README
 
 | Tool | What it does |
 |---|---|
-| `tof_log.py` | connects to the router's monitor port. Writes `raw.log` (every line, OK/BAD, host CLOCK_MONOTONIC + REALTIME), `events.csv`, `frames.csv`, `zones.csv`, `session.json`. Exit codes: 0 frames, 2 no frames (with a diagnosis), 3 connect failed, 4 output exists |
+| `tof_log.py` | connects to the router's monitor port. Writes `raw.log` (every line, OK/BAD, host CLOCK_MONOTONIC + REALTIME), `events.csv` (trigger edges included), `frames.csv`, `zones.csv`, `imu.csv`, `session.json`. `--send CMD` passes extra sketch commands (`PERIPH`, `I2CHZ 100`). Exit codes: 0 frames, 2 no frames (with a diagnosis), 3 connect failed, 4 output exists |
 | `analyze.py` | `analysis.json` + `analysis.md`: frame/arrival intervals, I²C read time, MCU→host latency envelope, per-zone validity and medians, central 2×2 median vs the operator's reference. Raw values only. No correction, no pass/fail |
 | `coacq.py` | independent camera + ToF capture. Per-frame mode (any capture command, host-time bracket) or stream mode (`v4l2-ctl --verbose`, V4L2 `ts-monotonic` buffer timestamps). Writes `pairs.csv` (nearest ToF frame per camera frame, dt) and `coacq.json` |
 | `tofproto.py` | line protocol + CRC; ST UM3109 target-status table and confidence classes |
@@ -45,6 +45,8 @@ python3 -m unittest discover -s tools/tof_unoq/tests -v
 
 All inputs are **synthetic** (generated lines, a fake monitor TCP server, a fake camera
 command, a simulated register file). They test software behaviour, never the sensor. The
-C++ host test compiles the sketch's `tof_i2c_platform.h` and `tof_proto.h` with `g++`. When
+C++ host test compiles the sketch's `tof_i2c_platform.h`, `tof_proto.h` and
+`qwiic_peripherals.h` with `g++` (the trigger and IMU against simulated register files).
+The vendored BMI270 config is checked against Bosch's SHA-256. When
 ST's ULD sources are available (`TOF_ULD_SRC`, or the Arduino library folder) it also runs
 the real `vl53l8cx_is_alive()` through that I/O layer.

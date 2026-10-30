@@ -10,8 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../../../firmware/tof_unoq_vl53l8cx/bmi270_config.h"
+#include "../../../../firmware/tof_unoq_vl53l8cx/qwiic_peripherals.h"
 #include "../../../../firmware/tof_unoq_vl53l8cx/tof_i2c_platform.h"
 #include "../../../../firmware/tof_unoq_vl53l8cx/tof_proto.h"
+#include "fake_qwiic.h"
 #include "fake_wire.h"
 
 #ifdef TOF_WITH_ULD
@@ -146,6 +149,181 @@ static void test_clock64_wrap() {
     CHECK(c.extend(0x00000020u) == 0x100000020ull);
 }
 
+// ---- trigger (Qwiic Button) and IMU (BMI270) ---------------------------------
+
+static uint32_t g_clock_ms = 0;
+static void tickDelay(uint32_t ms) {
+    g_clock_ms += ms;
+}
+static uint32_t tickMillis() {
+    return g_clock_ms;
+}
+
+using Button = qwiic::QwiicButton<FakeQwiicBus>;
+using Imu = qwiic::Bmi270<FakeQwiicBus>;
+
+static void test_button_begin_and_edges() {
+    FakeQwiicButtonDev dev;
+    FakeQwiicBus bus;
+    bus.devices = {&dev};
+    dev.press();
+    dev.release();  // a click latched before the sketch started
+    Button b(bus, tickDelay);
+    const auto id = b.begin();
+    CHECK(b.ok());
+    CHECK(id.id == 0x5D && id.fwMajor == 1 && id.debounceMs == Button::kDebounceMs);
+    CHECK((dev.regs[0x03] & 0x03) == 0);  // stale latches cleared
+    qwiic::TriggerEdge e[2];
+    CHECK(b.poll(e) == 0);  // ...so it is not reported as a press
+
+    dev.press();
+    CHECK(b.poll(e) == 1 && e[0].press && !e[0].fromClickFlag);
+    CHECK(b.poll(e) == 0);  // held
+    dev.release();
+    CHECK(b.poll(e) == 1 && !e[0].press && !e[0].fromClickFlag);
+    CHECK(b.presses() == 1);
+
+    // A whole click between two polls: only the latch saw it.
+    dev.press();
+    dev.release();
+    CHECK(b.poll(e) == 2 && e[0].press && !e[1].press && e[0].fromClickFlag);
+    CHECK(b.presses() == 2);
+    CHECK(b.poll(e) == 0);  // the latch was cleared, not reported twice
+
+    // Held, then released and pressed again between two polls.
+    dev.press();
+    CHECK(b.poll(e) == 1);
+    dev.release();
+    dev.press();
+    CHECK(b.poll(e) == 2 && !e[0].press && e[1].press);
+    CHECK(b.presses() == 4 && b.pressed());
+}
+
+static void test_button_absent_and_lost() {
+    FakeQwiicButtonDev dev;
+    FakeQwiicBus bus;
+    bus.devices = {&dev};
+    dev.present = false;
+    Button b(bus, tickDelay);
+    b.begin();
+    CHECK(!b.ok());
+    qwiic::TriggerEdge e[2];
+    CHECK(b.poll(e) == -1);
+
+    dev.present = true;
+    b.begin();
+    CHECK(b.ok());
+    dev.present = false;
+    for (int i = 0; i < Button::kOfflineAfter; ++i)
+        CHECK(b.poll(e) == -1);
+    CHECK(!b.ok());  // bounded: goes offline instead of retrying forever
+    const uint32_t tx = bus.tx_count;
+    CHECK(b.poll(e) == -1 && bus.tx_count == tx);  // and stops touching the bus
+
+    // A different device at 0x6F (wrong ID) is not accepted as the trigger.
+    dev.present = true;
+    dev.regs[0x00] = 0x5E;
+    b.begin();
+    CHECK(!b.ok());
+}
+
+static void test_bmi270_bring_up() {
+    FakeBmi270Dev dev;
+    FakeQwiicBus bus;
+    bus.devices = {&dev};
+    dev.expected = qwiic::bmi270::kConfigFile;
+    dev.expectedLen = qwiic::bmi270::kConfigSize;
+    dev.clockMs = &g_clock_ms;
+    Imu imu(bus, tickDelay);
+    const auto r = imu.begin(qwiic::bmi270::kConfigFile, qwiic::bmi270::kConfigSize, tickMillis);
+    CHECK(imu.ok());
+    CHECK(r.stage == Imu::Stage::Ok);
+    CHECK(r.chipId == 0x24 && (r.internalStatus & 0x0F) == 1);
+    CHECK(memcmp(dev.configRam.data(), qwiic::bmi270::kConfigFile, 8192) == 0);
+    CHECK(dev.apsViolations == 0);
+    CHECK(dev.initDataBursts == 8192 / 128 && dev.maxInitBurst == 128);
+    CHECK(bus.max_tx_bytes <= 256);
+    CHECK(r.accConf == 0xA8 && r.accRange == 0x01 && r.gyrConf == 0xE8 && r.gyrRange == 0x01);
+    CHECK(r.pwrCtrl == 0x0E && r.err == 0);
+
+    // At rest, flat: +1 g on z; a rotation on x; temperature 23 + 512/512.
+    dev.setRaw(0x0C, 0);
+    dev.setRaw(0x0E, -8192);
+    dev.setRaw(0x10, 8192);
+    dev.setRaw(0x12, 32767);
+    dev.setRaw(0x14, -32768);
+    dev.setRaw(0x16, 0);
+    dev.regs[0x18] = 0x01;
+    dev.regs[0x19] = 0x02;
+    dev.regs[0x1A] = 0x03;
+    dev.setRaw(0x22, 512);
+    qwiic::ImuSample s;
+    CHECK(imu.read(s));
+    CHECK(s.acc_mg[0] == 0 && s.acc_mg[1] == -1000 && s.acc_mg[2] == 1000);
+    CHECK(s.gyr_mdps[0] == 999969 && s.gyr_mdps[1] == -1000000 && s.gyr_mdps[2] == 0);
+    CHECK(s.sensortime == 0x030201);
+    CHECK(s.tempValid && s.temp_cc == 2400);
+    dev.setRaw(0x22, static_cast<int16_t>(0x8000));
+    CHECK(imu.read(s) && !s.tempValid);
+}
+
+static void test_bmi270_failures_are_reported_by_stage() {
+    FakeBmi270Dev dev;
+    FakeQwiicBus bus;
+    bus.devices = {&dev};
+    dev.clockMs = &g_clock_ms;
+    Imu imu(bus, tickDelay);
+
+    dev.present = false;
+    CHECK(imu.begin(qwiic::bmi270::kConfigFile, 8192).stage == Imu::Stage::ChipId);
+    dev.present = true;
+
+    dev.regs[0x00] = 0x26;  // a BMI260/other part at 0x68 is not a BMI270
+    const auto wrong = imu.begin(qwiic::bmi270::kConfigFile, 8192);
+    CHECK(wrong.stage == Imu::Stage::ChipId && wrong.chipId == 0x26 && !imu.ok());
+    dev.regs[0x00] = 0x24;
+
+    // The part rejects the config (here: it expects different bytes).
+    static uint8_t other[8192];
+    memset(other, 0xA5, sizeof(other));
+    dev.expected = other;
+    dev.expectedLen = sizeof(other);
+    const auto bad = imu.begin(qwiic::bmi270::kConfigFile, 8192);
+    CHECK(bad.stage == Imu::Stage::InitStatus && (bad.internalStatus & 0x0F) == 2);
+    CHECK(!imu.ok());
+
+    // Comms lost while running: offline after a bounded number of failures.
+    dev.expected = qwiic::bmi270::kConfigFile;
+    CHECK(imu.begin(qwiic::bmi270::kConfigFile, 8192).stage == Imu::Stage::Ok);
+    dev.present = false;
+    qwiic::ImuSample s;
+    for (int i = 0; i < Imu::kOfflineAfter; ++i)
+        CHECK(!imu.read(s));
+    CHECK(!imu.ok());
+}
+
+static void test_shared_bus_keeps_devices_apart() {
+    FakeQwiicButtonDev btn;
+    FakeBmi270Dev bmi;
+    FakeQwiicBus bus;
+    bus.devices = {&bmi, &btn};
+    bmi.expected = qwiic::bmi270::kConfigFile;
+    bmi.expectedLen = 8192;
+    bmi.clockMs = &g_clock_ms;
+    Button b(bus, tickDelay);
+    Imu imu(bus, tickDelay);
+    b.begin();
+    imu.begin(qwiic::bmi270::kConfigFile, 8192);
+    CHECK(b.ok() && imu.ok());
+    btn.press();
+    qwiic::TriggerEdge e[2];
+    qwiic::ImuSample s;
+    CHECK(imu.read(s));
+    CHECK(b.poll(e) == 1 && e[0].press);
+    // The button's ID register is untouched by the IMU's 8 KB upload.
+    CHECK(btn.regs[0x00] == 0x5D && bmi.regs[0x00] == 0x24);
+}
+
 #ifdef TOF_WITH_ULD
 static FakeVl53* g_dev;
 static FakeWire* g_wire;
@@ -214,6 +392,26 @@ static int emit() {
         }
         if (L.finish()) fputs(buf, stdout);
     }
+    L.begin("EVT");
+    L.u64(700000);
+    L.str("I");
+    L.str("TRIGGER");
+    L.kvs("edge", "press");
+    L.kv("presses", 1);
+    L.kvs("src", "level");
+    if (L.finish()) fputs(buf, stdout);
+    L.begin("IMU");
+    L.u64(710000);
+    L.u64(7);
+    L.u64(0x030201);
+    L.i32(12);
+    L.i32(-8);
+    L.i32(1001);
+    L.i32(-150);
+    L.i32(0);
+    L.i32(999969);
+    L.kvi("t_cc", -125);
+    if (L.finish()) fputs(buf, stdout);
     return 0;
 }
 
@@ -227,6 +425,11 @@ int main(int argc, char** argv) {
     test_short_read_is_an_error();
     test_protocol_crc_and_line();
     test_clock64_wrap();
+    test_button_begin_and_edges();
+    test_button_absent_and_lost();
+    test_bmi270_bring_up();
+    test_bmi270_failures_are_reported_by_stage();
+    test_shared_bus_keeps_devices_apart();
 #ifdef TOF_WITH_ULD
     test_uld_is_alive_through_platform();
     puts("ULD is_alive integration: ran");
