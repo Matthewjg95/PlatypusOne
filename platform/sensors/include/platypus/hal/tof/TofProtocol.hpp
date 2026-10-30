@@ -15,8 +15,12 @@
 // A ToF frame is a grid of zones, each with its own validity, so it is its own
 // type rather than an ISensor float vector: dropping the per-zone status would
 // let an invalid zone pass as a distance.
+//
+// Protocol 2 (PR #58) adds the trigger and the IMU sharing the sensor's Qwiic
+// bus: EVT records with code TRIGGER (edge=press|release) and IMU records.
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -58,16 +62,44 @@ struct Frame {
 /// "central zones"); nullopt when none of them is valid.
 [[nodiscard]] std::optional<double> centralMedianMm(const Frame& frame);
 
-enum class RecordType { Hello, Event, Config, Heartbeat, Frame, Other };
+/// One IMU record: the BMI270's own axes, as read. No mounting transform and
+/// no calibration; tilt against the camera needs the bench mounting table
+/// (docs/hardware/tof_unoq/TRIGGER_IMU.md, T3.5).
+struct ImuSample {
+    std::uint64_t mcuUs = 0;
+    std::uint64_t seq = 0;
+    std::uint32_t sensortime = 0;  ///< BMI270 counter, 39.0625 us per LSB
+    std::array<std::int32_t, 3> accMg{};
+    std::array<std::int32_t, 3> gyrMdps{};
+    std::optional<double> temperatureC;
+};
+
+[[nodiscard]] double accelMagnitudeMg(const ImuSample& s) noexcept;
+
+/// Roll (about x) and pitch (about y) of the BMI270's axes against gravity,
+/// from the acceleration alone. Meaningful only while the device is still
+/// (|a| close to 1 g); nullopt when there is too little acceleration to tell.
+struct GravityTilt {
+    double rollDeg = 0.0;
+    double pitchDeg = 0.0;
+};
+[[nodiscard]] std::optional<GravityTilt> gravityTilt(const ImuSample& s) noexcept;
+
+enum class RecordType { Hello, Event, Config, Heartbeat, Frame, Imu, Other };
 
 struct Record {
     RecordType type = RecordType::Other;
     std::string typeName;
     std::vector<std::string> fields;  ///< after the type, CRC stripped
     std::optional<Frame> frame;       ///< FRM only
+    std::optional<ImuSample> imu;     ///< IMU only
     char level = 0;                   ///< EVT only: 'I', 'W' or 'E'
     std::string code;                 ///< EVT only, e.g. "INIT_OK"
 };
+
+/// Value of a `key=value` field, if the record has one.
+[[nodiscard]] std::optional<std::string_view> fieldValue(const Record& record,
+                                                         std::string_view key) noexcept;
 
 [[nodiscard]] std::uint16_t crc16CcittFalse(std::string_view data) noexcept;
 

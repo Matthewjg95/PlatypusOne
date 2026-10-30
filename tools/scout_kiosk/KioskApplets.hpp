@@ -69,6 +69,7 @@ class ScoutApplet final : public appfw::IApp {
     Screen screen_ = Screen::Preview;
     std::unique_ptr<session::ObjectSession> current_;
     std::vector<std::uint8_t> lastRgb_;
+    TriggerWatch trigger_;
     std::string status_;
     Color statusColour_ = kMuted;
     bool captureRequested_ = false, finishRequested_ = false, dismissRequested_ = false;
@@ -112,6 +113,7 @@ class DepthApplet final : public appfw::IApp {
     DepthLayout layout_;
     std::vector<std::uint8_t> lastRgb_;
     std::optional<CaptureOutcome> last_;
+    TriggerWatch trigger_;
     bool flipRequested_ = false, captureRequested_ = false, dismissRequested_ = false;
     bool reviewing_ = false;
 };

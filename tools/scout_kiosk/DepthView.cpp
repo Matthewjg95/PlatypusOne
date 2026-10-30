@@ -392,7 +392,8 @@ void drawCaptureReview(renderer::Renderer& r, const Rect& area, const CaptureOut
              kMuted);
     }
     if (!out.tofStatus.empty()) line(out.tofStatus, out.tofOk ? kMuted : kWarn);
-    const std::string tap = "TAP TO CONTINUE";
+    if (!out.imuStatus.empty()) line(out.imuStatus, out.imuOk ? kMuted : kWarn);
+    const std::string tap = "TAP OR TRIGGER TO CONTINUE";
     r.drawText(area.x + area.w - m - renderer::Renderer::textWidth(tap, s),
                area.y + area.h - m - renderer::Renderer::textHeight(s), tap, kAccent, s);
 }

@@ -59,6 +59,7 @@ void ScoutApplet::onStart(appfw::AppContext& ctx) {
     screen_ = Screen::Preview;
     if (!current_) newSession();
     if (deps_.tof) deps_.tof->start();
+    trigger_.reset(deps_.tof);
 }
 
 void ScoutApplet::onStop() {
@@ -126,6 +127,9 @@ void ScoutApplet::finish(renderer::Renderer& r) {
 
 void ScoutApplet::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
     auto& r = ctx.renderer;
+    // The hardware trigger is the capture button: it captures from the
+    // preview and continues from the review, like board button A.
+    if (trigger_.fired(deps_.tof)) onButton({deps_.buttonCapture, true});
     if (deps_.camera)
         if (auto f = deps_.camera->capture(std::chrono::milliseconds(30)); f)
             lastRgb_ = frameToRgb(f.value());
@@ -187,6 +191,7 @@ void DepthApplet::onStart(appfw::AppContext& ctx) {
     layout_ = computeDepthLayout(contentOf(ctx), deps_.captures != nullptr);
     reviewing_ = false;
     if (deps_.tof) deps_.tof->start();
+    trigger_.reset(deps_.tof);
 }
 
 void DepthApplet::onStop() {
@@ -204,6 +209,12 @@ void DepthApplet::onTouch(const hal::TouchEvent& e) {
 }
 
 void DepthApplet::onFrame(appfw::AppContext& ctx, std::chrono::milliseconds) {
+    if (trigger_.fired(deps_.tof)) {
+        if (reviewing_)
+            dismissRequested_ = true;
+        else if (deps_.captures)
+            captureRequested_ = true;
+    }
     if (reviewing_) {
         // The review stays on screen (drawn once) until a tap.
         if (!std::exchange(dismissRequested_, false)) return;

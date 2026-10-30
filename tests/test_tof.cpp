@@ -59,6 +59,48 @@ void test_reject_damaged_lines() {
     std::puts("test_tof_reject_damaged_lines: OK");
 }
 
+// Protocol 2. SYNTHETIC: these two lines come from the firmware's host-test
+// emitter (tools/tof_unoq/tests/host/test_host.cpp `emit`), built by the
+// sketch's own line builder; they are not bench output.
+void test_trigger_and_imu_records() {
+    const auto trig =
+        tof::parseLine("$TOF,EVT,700000,I,TRIGGER,edge=press,presses=1,src=level*2CEC");
+    assert(trig && trig->type == tof::RecordType::Event && trig->code == "TRIGGER");
+    assert(tof::fieldValue(*trig, "edge") == "press");
+    assert(tof::fieldValue(*trig, "presses") == "1");
+    assert(!tof::fieldValue(*trig, "edg"));  // whole keys only
+
+    const auto imu =
+        tof::parseLine("$TOF,IMU,710000,7,197121,12,-8,1001,-150,0,999969,t_cc=-125*CA72");
+    assert(imu && imu->type == tof::RecordType::Imu && imu->imu);
+    const auto& s = *imu->imu;
+    assert(s.mcuUs == 710000 && s.seq == 7 && s.sensortime == 197121);
+    assert(s.accMg[0] == 12 && s.accMg[1] == -8 && s.accMg[2] == 1001);
+    assert(s.gyrMdps[0] == -150 && s.gyrMdps[2] == 999969);
+    assert(s.temperatureC && std::abs(*s.temperatureC + 1.25) < 1e-9);
+
+    // A CRC-correct IMU line with a missing axis is still refused.
+    const std::string body = "TOF,IMU,1,2,3,4,5,6,7,8";
+    char crc[8];
+    std::snprintf(crc, sizeof(crc), "*%04X", unsigned{tof::crc16CcittFalse(body)});
+    assert(!tof::parseLine("$" + body + crc));
+
+    // Gravity tilt on the sensor's own axes.
+    tof::ImuSample flat;
+    flat.accMg = {0, 0, 1000};
+    const auto t0 = tof::gravityTilt(flat);
+    assert(t0 && std::abs(t0->rollDeg) < 1e-9 && std::abs(t0->pitchDeg) < 1e-9);
+    tof::ImuSample side = flat;
+    side.accMg = {0, 1000, 0};
+    assert(std::abs(tof::gravityTilt(side)->rollDeg - 90.0) < 1e-9);
+    tof::ImuSample nose = flat;
+    nose.accMg = {-500, 0, 866};
+    assert(std::abs(tof::gravityTilt(nose)->pitchDeg - 30.0) < 0.01);
+    tof::ImuSample none;
+    assert(!tof::gravityTilt(none));
+    std::puts("test_tof_trigger_and_imu_records: OK");
+}
+
 void test_assembler_rejoins_split_lines() {
     tof::LineAssembler a;
     const std::string stream = kFrameLine + "\n$TOF,EVT,471925718,I,CMD,cmd=STATUS*8FE9\n";
@@ -136,6 +178,7 @@ void test_depth_view_helpers() {
 }  // namespace
 
 void test_tof() {
+    test_trigger_and_imu_records();
     test_parse_recorded_lines();
     test_reject_damaged_lines();
     test_assembler_rejoins_split_lines();

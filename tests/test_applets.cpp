@@ -180,9 +180,107 @@ void test_every_capture_carries_the_tof() {
     std::puts("test_applets_tof_in_every_capture: OK");
 }
 
+void test_trigger_captures_and_imu_rides_along() {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / "platypus_test_trigger";
+    std::error_code ec;
+    fs::remove_all(root, ec);
+
+    auto display = std::make_shared<AppletDisplay>();
+    renderer::Renderer r(display);
+    shell::MinimalBoard board(display);
+    filesystem::ProjectStore projects(nullptr);
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    observation::CaptureService captures(root / "observations");
+    session::SessionStore sessions(root / "sessions");
+    hal::tof::FakeTofSource tof;
+    hal::tof::ImuSample still;  // SYNTHETIC: tilted 30 deg nose-down, at rest
+    still.seq = 41;
+    still.accMg = {-500, 0, 866};
+    still.temperatureC = 24.5;
+    tof.setImu(still);
+    appfw::AppContext ctx{board, r, projects, {}};
+    ctx.contentArea = {0, 37, 800, 443};
+
+    // Scout: the trigger captures from the preview...
+    kiosk::ScoutDeps sd;
+    sd.camera = &camera;
+    sd.captures = &captures;
+    sd.sessions = &sessions;
+    sd.tof = &tof;
+    kiosk::ScoutApplet scout(std::move(sd));
+    scout.onStart(ctx);
+    scout.onFrame(ctx, 16ms);
+    assert(!scout.lastCapture());  // nothing without a press
+    tof.pressTrigger();
+    scout.onFrame(ctx, 16ms);
+    assert(scout.screen() == kiosk::ScoutApplet::Screen::Card);
+    const auto& out = *scout.lastCapture();
+    assert(out.imu && out.imu->seq == 41 && out.imuOk);
+    assert(out.imuStatus.find("pitch 30.0") != std::string::npos);
+    assert(hasName(out.record->observed, "imu_accel_z"));
+    assert(hasName(out.record->derived, "imu_pitch_sensor_axes"));
+    assert(unresolvedNamed(*out.record, "imu_mounting"));  // axes not mapped yet
+    assert(!unresolvedNamed(*out.record, "imu_motion"));
+    assert(fs::exists(root / "observations" / out.record->observationId / "imu.json"));
+    const auto first = out.record->observationId;
+
+    // ...continues from the review, and two presses between frames are one request.
+    tof.pressTrigger();
+    scout.onFrame(ctx, 16ms);
+    assert(scout.screen() == kiosk::ScoutApplet::Screen::Preview);
+    tof.pressTrigger();
+    tof.pressTrigger();
+    scout.onFrame(ctx, 16ms);
+    assert(scout.screen() == kiosk::ScoutApplet::Screen::Card);
+    assert(scout.lastCapture()->record->observationId != first);
+    scout.onFrame(ctx, 16ms);
+    assert(scout.screen() == kiosk::ScoutApplet::Screen::Card);  // no second capture queued
+    scout.onStop();
+
+    // Depth: the trigger is its CAPTURE too, and continues from the review.
+    kiosk::DepthDeps dd;
+    dd.camera = &camera;
+    dd.tof = &tof;
+    dd.captures = &captures;
+    kiosk::DepthApplet depth(std::move(dd));
+    depth.onStart(ctx);
+    tof.pressTrigger();
+    depth.onFrame(ctx, 16ms);
+    assert(depth.reviewing() && depth.lastCapture()->imu);
+    tof.pressTrigger();
+    depth.onFrame(ctx, 16ms);
+    assert(!depth.reviewing());
+    depth.onStop();
+
+    // A moving device: recorded, but the tilt is flagged, not trusted.
+    hal::tof::ImuSample moving = still;
+    moving.accMg = {0, 0, 1600};
+    tof.setImu(moving);
+    tof.start();
+    const auto shaken =
+        kiosk::captureOnce(camera, captures, vision::CalibrationSpec{20.0}, "synthetic",
+                           "synthetic", {}, kiosk::TofAtCapture{tof.snapshot(), {}});
+    assert(shaken.imu && !shaken.imuOk && unresolvedNamed(*shaken.record, "imu_motion"));
+    assert(shaken.imuStatus.find("MOVING") != std::string::npos);
+
+    // Connected but no IMU on the stream (boards not fitted yet): said, not skipped.
+    tof.setImu(std::nullopt);
+    const auto noImu =
+        kiosk::captureOnce(camera, captures, vision::CalibrationSpec{20.0}, "synthetic",
+                           "synthetic", {}, kiosk::TofAtCapture{tof.snapshot(), {}});
+    assert(!noImu.imu && unresolvedNamed(*noImu.record, "imu"));
+    tof.stop();
+
+    fs::remove_all(root, ec);
+    std::puts("test_applets_trigger_and_imu: OK");
+}
+
 }  // namespace
 
 void test_applets() {
     test_scout_and_depth_through_the_shell();
     test_every_capture_carries_the_tof();
+    test_trigger_captures_and_imu_rides_along();
 }

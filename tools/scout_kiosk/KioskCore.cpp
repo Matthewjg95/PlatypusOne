@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -377,6 +378,30 @@ std::string tofJson(const hal::tof::Frame& f, hal::tof::Orientation o, double ag
     return j + "]}\n";
 }
 
+/// The IMU sample recorded beside the photo, in the BMI270's own axes.
+std::string imuJson(const hal::tof::ImuSample& s, double ageMs, bool stale) {
+    char j[640];
+    std::snprintf(j, sizeof(j),
+                  "{\"sensor\":\"BMI270\",\"source\":\"UNO Q MCU sketch via arduino-router\","
+                  "\"axes\":\"bmi270_sensor_axes_no_mounting_transform\","
+                  "\"calibration\":\"none\",\"seq\":%llu,\"mcu_us\":%llu,"
+                  "\"sensortime\":%u,\"acc_mg\":[%d,%d,%d],\"gyr_mdps\":[%d,%d,%d],"
+                  "\"temperature_c\":%s,\"age_ms_at_capture\":%.0f,\"stale\":%s,"
+                  "\"pairing\":\"independent acquisition; software timestamps\"}\n",
+                  static_cast<unsigned long long>(s.seq), static_cast<unsigned long long>(s.mcuUs),
+                  static_cast<unsigned>(s.sensortime), s.accMg[0], s.accMg[1], s.accMg[2],
+                  s.gyrMdps[0], s.gyrMdps[1], s.gyrMdps[2],
+                  s.temperatureC ? std::to_string(*s.temperatureC).c_str() : "null", ageMs,
+                  stale ? "true" : "false");
+    return j;
+}
+
+std::vector<std::byte> bytesOf(const std::string& s) {
+    std::vector<std::byte> b(s.size());
+    std::memcpy(b.data(), s.data(), s.size());
+    return b;
+}
+
 }  // namespace
 
 CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& service,
@@ -403,9 +428,10 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
             tofProblem = "ToF connected, no frame yet (sensor starting?)";
         else
             out.tofFrame = snap.frame;
+        out.imu = snap.imu;
     }
-    double tofAgeMs = -1.0;
-    bool tofStale = false;
+    double tofAgeMs = -1.0, imuAgeMs = -1.0;
+    bool tofStale = false, imuStale = false;
     config.attach = [&](const hal::Frame& frame) {
         auto files = attach ? attach(frame) : std::vector<observation::AttachedFile>{};
         if (out.tofFrame) {
@@ -418,6 +444,14 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
             std::vector<std::byte> bytes(j.size());
             std::memcpy(bytes.data(), j.data(), j.size());
             files.push_back({"tof-frame", "application/json", "tof.json", std::move(bytes)});
+        }
+        if (out.imu) {
+            imuAgeMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() -
+                                                                 tof->snapshot.imuArrived)
+                           .count();
+            imuStale = imuAgeMs > static_cast<double>(kImuStaleAfter.count());
+            files.push_back({"imu-sample", "application/json", "imu.json",
+                             bytesOf(imuJson(*out.imu, imuAgeMs, imuStale))});
         }
         return files;
     };
@@ -466,6 +500,70 @@ CaptureOutcome captureOnce(hal::ICamera& camera, observation::CaptureService& se
         } else if (tof) {
             record.unresolved.push_back({"tof", tofProblem});
             out.tofStatus = tofProblem;
+        }
+
+        // The IMU beside the photo: raw axes observed, gravity tilt derived on
+        // the sensor's own axes. Which way those axes face the camera is not
+        // known until the bench mounting table exists, so it stays unresolved.
+        if (out.imu) {
+            const std::string method =
+                "imu.bmi270.uno_q_sketch; sensor axes, no calibration; paired by software time";
+            const auto observed = [&](std::string id, std::string name, double value,
+                                      std::string unit) {
+                record.observed.push_back(observation::Claim{std::move(id),
+                                                             std::move(name),
+                                                             value,
+                                                             std::move(unit),
+                                                             std::nullopt,
+                                                             {"imu-sample"},
+                                                             method});
+            };
+            observed("imu-ax", "imu_accel_x", out.imu->accMg[0], "mg");
+            observed("imu-ay", "imu_accel_y", out.imu->accMg[1], "mg");
+            observed("imu-az", "imu_accel_z", out.imu->accMg[2], "mg");
+            observed("imu-age", "imu_sample_age", imuAgeMs, "ms");
+            const double mag = hal::tof::accelMagnitudeMg(*out.imu);
+            const bool still = std::abs(mag - 1000.0) <= kImuStillToleranceMg;
+            const auto tilt = hal::tof::gravityTilt(*out.imu);
+            const auto derived = [&](std::string id, std::string name, double value,
+                                     std::string unit) {
+                record.derived.push_back(observation::Claim{std::move(id),
+                                                            std::move(name),
+                                                            value,
+                                                            std::move(unit),
+                                                            std::nullopt,
+                                                            {"imu-ax", "imu-ay", "imu-az"},
+                                                            "gravity direction from acceleration "
+                                                            "(still device); BMI270 sensor axes"});
+            };
+            derived("imu-mag", "imu_accel_magnitude", mag, "mg");
+            if (tilt) {
+                derived("imu-roll", "imu_roll_sensor_axes", tilt->rollDeg, "deg");
+                derived("imu-pitch", "imu_pitch_sensor_axes", tilt->pitchDeg, "deg");
+            }
+            record.unresolved.push_back(
+                {"imu_mounting", "BMI270 axes not yet mapped to the camera (bench gate T3.5)"});
+            if (!still)
+                record.unresolved.push_back(
+                    {"imu_motion", "|a| " + std::to_string(static_cast<int>(mag)) +
+                                       " mg: moving at capture, tilt unreliable"});
+            if (imuStale)
+                record.unresolved.push_back(
+                    {"imu_pairing", "IMU sample " + std::to_string(static_cast<int>(imuAgeMs)) +
+                                        " ms old at capture: not the same moment as the photo"});
+            char line[128];
+            if (tilt)
+                std::snprintf(line, sizeof(line),
+                              "IMU roll %.1f pitch %.1f deg (sensor), %.0f mg%s", tilt->rollDeg,
+                              tilt->pitchDeg, mag, imuStale ? " STALE" : (still ? "" : " MOVING"));
+            else
+                std::snprintf(line, sizeof(line), "IMU %.0f mg: no gravity direction", mag);
+            out.imuStatus = line;
+            out.imuOk = tilt.has_value() && still && !imuStale;
+        } else if (tof && tof->snapshot.connected) {
+            record.unresolved.push_back(
+                {"imu", "no IMU sample on the ToF stream (IMU not fitted or IMU_FAIL)"});
+            out.imuStatus = "IMU: no sample";
         }
 
         // Every capture is inspected and keeps what it supports: a poor bench
