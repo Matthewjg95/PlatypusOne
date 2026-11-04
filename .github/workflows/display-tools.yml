@@ -37,6 +37,17 @@ jobs:
       - name: Unit tests
         run: python3 -m unittest -v tools/compact_display/test_compact_display.py
 
+      - name: Four-inch A source preflight unit tests (synthetic; no kernel compile)
+        run: python3 -m unittest -v tools/compact_display/test_preflight_4in.py
+
+      - name: Four-inch A source audit against immutable upstream driver (no kernel compile)
+        run: |
+          curl --fail --location --retry 3 \
+            https://raw.githubusercontent.com/raspberrypi/linux/97b5af2dde50c0acace6d406208dec3fc8dfe888/drivers/gpu/drm/panel/panel-waveshare-dsi-v2.c \
+            -o /tmp/panel-waveshare-dsi-v2.c
+          test "$(git hash-object /tmp/panel-waveshare-dsi-v2.c)" = c6cc003a35337971eef670587b200928ca1c1814
+          python3 tools/compact_display/preflight_4in.py --driver /tmp/panel-waveshare-dsi-v2.c
+
       - name: Dry-run installer (generate + compile both panels)
         run: |
           tools/compact_display/install_panel.sh --dry-run \

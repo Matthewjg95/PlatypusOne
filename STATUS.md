@@ -3,7 +3,22 @@
 Rolling snapshot of where Platypus One actually is. Updated as work lands —
 if this file disagrees with the code, the code wins and this file is stale.
 
-**Last updated: 2026-10-05**
+**Last updated: 2026-10-28 (convergence snapshot; historical sections below retained)**
+
+## 2026-10-28 Autodesk convergence snapshot
+
+This is a **repository state review**, not a physical-gate update.
+
+- **Product display target:** 4-inch portrait Waveshare 4-DSI-TOUCH-A (SKU 34354), per #52; earlier 3.5-inch H preference in #41 is now an alternate, not the leading product envelope. Neither compact panel is proven on our UNO Q. The working five-inch panel remains the development fixture.
+- **Display non-physical gate:** source audit and compile-only probe prepared in [DISPLAY_4IN_GATE.md](docs/hardware/DISPLAY_4IN_GATE.md). Raspberry Pi's 4-inch A source has a 480×800, two-lane descriptor and vendor init; **target UNO Q module compilation, overlay composition, 5 V electrical validation, touch and CSI coexistence remain open**.
+- **Camera:** B0394 CSI camera capture is reported on actual UNO Q in draft stack #48; characterization of B0394/B0393/B0390 as measurement instruments remains open and must use preserved captures. Do not substitute synthetic tests for lens measurements.
+- **Software integration stack (not merged to main):** #29 sessions → #35 evidence-based classification → #48 CSI → #53 depth view → #54 shell → #55 best-effort evidence → #56 capture/ToF review. CI for #53–#56 reported green as of 2026-10-28; these are *stacked draft PRs* and not the main baseline. Direct ToF PR #49 remains separate and physical ranging gates are not closed.
+- **Sketch/CAD:** #47 Sketch Intent Resolver and mesh2cad #16 remain draft; maintain deterministic, evidence-tagged interchange without inventing measurements.
+- **PCB/fabrication:** #33 remains **pre-layout only**. Do not route or order until camera, ToF, power and Fusion mechanical gates are supported by actual evidence.
+
+**Single software dependency to close next:** compile the isolated 4-inch A panel driver against the UNO Q's **actual kernel headers** and archive the result; do not install it or disturb the five-inch fallback. After compilation, validate the DT overlay offline, then only a controlled physical display trial can settle compatibility.
+
+
 
 ## Right now
 
