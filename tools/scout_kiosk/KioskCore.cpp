@@ -91,8 +91,8 @@ void splitFinishRow(Layout& l, std::int32_t margin) {
 /// Portrait panels (taller than wide, e.g. a 480x800 compact display) stack
 /// the preview above the session panel; the buttons sit at the bottom of the
 /// panel, under the thumb.
-Layout computePortraitLayout(std::int32_t w, std::int32_t h, std::int32_t camW,
-                             std::int32_t camH, bool withDepth) {
+Layout computePortraitLayout(std::int32_t w, std::int32_t h, std::int32_t camW, std::int32_t camH,
+                             bool withDepth) {
     const std::int32_t margin = std::max(8, w / 18);
     Layout l;
     l.textScale = std::max(1, w / 240);
