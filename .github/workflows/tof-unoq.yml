@@ -1,0 +1,78 @@
+name: ToF on UNO Q (VL53L8CX)
+
+on:
+  pull_request:
+    paths:
+      - "firmware/tof_unoq_vl53l8cx/**"
+      - "tools/tof_unoq/**"
+      - "docs/hardware/tof_unoq/**"
+      - ".github/workflows/tof-unoq.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "firmware/tof_unoq_vl53l8cx/**"
+      - "tools/tof_unoq/**"
+      - "docs/hardware/tof_unoq/**"
+      - ".github/workflows/tof-unoq.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tof-unoq-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ARDUINO_CLI_VERSION: 1.5.1
+  # stm32duino/VL53L8CX tag 2.1.0 (ST ULD API VL53L8CX_1.3.0), the version pinned in sketch.yaml
+  ULD_COMMIT: a93a9d6796f2a74835a4088f225daec343153c62
+
+jobs:
+  host:
+    # Software behaviour only: every input is synthetic, nothing here is sensor evidence.
+    name: Host tests (protocol, I/O layer, ULD is_alive, logger, co-acquisition) - synthetic
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch ST ULD sources at the pinned commit
+        run: |
+          git init -q "$RUNNER_TEMP/uld" && cd "$RUNNER_TEMP/uld"
+          git fetch -q --depth 1 https://github.com/stm32duino/VL53L8CX "$ULD_COMMIT"
+          git checkout -q FETCH_HEAD
+      - name: Unit tests
+        env:
+          TOF_ULD_SRC: ${{ runner.temp }}/uld/src
+        run: python -W error::DeprecationWarning -m unittest discover -s tools/tof_unoq/tests -v
+      - name: Diagrams are up to date with the generator
+        run: |
+          python tools/tof_unoq/diagrams/gen_diagrams.py
+          git diff --exit-code -- docs/hardware/tof_unoq/diagrams/*.svg
+
+  compile:
+    name: Compile sketch for arduino:zephyr:unoq (pinned profile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/acli.tgz" \
+            "https://downloads.arduino.cc/arduino-cli/arduino-cli_${ARDUINO_CLI_VERSION}_Linux_64bit.tar.gz"
+          tar -xzf "$RUNNER_TEMP/acli.tgz" -C "$RUNNER_TEMP" arduino-cli
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Cache Arduino data
+        uses: actions/cache@v4
+        with:
+          path: ~/.arduino15
+          key: arduino-zephyr-1.0.0-${{ env.ARDUINO_CLI_VERSION }}
+      - name: Install core
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:zephyr@1.0.0
+      - name: Compile (installs the pinned libraries from sketch.yaml)
+        run: arduino-cli compile --profile unoq --warnings all firmware/tof_unoq_vl53l8cx

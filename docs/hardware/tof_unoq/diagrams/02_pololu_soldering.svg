@@ -1,0 +1,140 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1180' height='900' viewBox='0 0 1180 900'><defs><marker id='arr' markerWidth='10' markerHeight='10' refX='8' refY='3' orient='auto'><path d='M0,0 L8,3 L0,6 z' fill='#333'/></marker></defs>
+<title>Pololu 3419 soldering and jumper</title>
+<rect width='1180' height='900' fill='#ffffff'/>
+<text x='20.00' y='30.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='18' fill='#111' text-anchor='start' font-weight='bold'>Pololu #3419 VL53L8CX carrier - header soldering and I2C-mode jumper</text>
+<text x='20.00' y='52.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#555' text-anchor='start' font-weight='normal'>Board to scale from Pololu drawings (P1-P3). Pin numbers J1-n / J2-n follow Pololu&#x27;s schematic connector numbering. Square pads are the two GND pins, not pin 1.</text>
+<rect x='190.00' y='110.00' width='203.20' height='365.76' rx='8.0' fill='#1f7a3a' stroke='#0b3' stroke-width='1.2' opacity='1.0'/>
+<circle cx='353.20' cy='150.00' r='17.48' fill='#fff' stroke='#999' stroke-width='1.0'/>
+<circle cx='353.20' cy='436.40' r='17.48' fill='#fff' stroke='#999' stroke-width='1.0'/>
+<rect x='239.60' y='298.32' width='102.40' height='48.00' rx='0' fill='#111' stroke='#000' stroke-width='1.0' opacity='1.0'/>
+<text x='290.80' y='375.12' font-family='DejaVu Sans, Arial, sans-serif' font-size='9' fill='#fff' text-anchor='middle' font-weight='normal'>VL53L8CX (approx.)</text>
+<circle cx='210.32' cy='130.32' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='130.32' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='134.32' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='end' font-weight='normal'>CORE/IOVDD  (J1-1)</text>
+<circle cx='210.32' cy='170.96' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='170.96' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='174.96' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='end' font-weight='normal'>AVDD  (J1-2)</text>
+<circle cx='210.32' cy='211.60' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='211.60' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='215.60' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='bold'>VIN  (J1-3)</text>
+<rect x='196.72' y='238.64' width='27.20' height='27.20' rx='0' fill='#d9d9d9' stroke='#777' stroke-width='1.0' opacity='1.0'/>
+<circle cx='210.32' cy='252.24' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='256.24' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='bold'>GND  (J1-4)</text>
+<circle cx='210.32' cy='292.88' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='292.88' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='296.88' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='bold'>SDA/MOSI  (J1-5)</text>
+<circle cx='210.32' cy='333.52' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='333.52' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='337.52' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='bold'>SCL/MCLK  (J1-6)</text>
+<circle cx='210.32' cy='374.16' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='374.16' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='378.16' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='normal'>MISO  (J1-7)</text>
+<circle cx='210.32' cy='414.80' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='414.80' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='418.80' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='normal'>CS  (J1-8)</text>
+<circle cx='210.32' cy='455.44' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='210.32' cy='455.44' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='184.00' y='459.44' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='normal'>INT  (J1-9)</text>
+<rect x='359.28' y='238.64' width='27.20' height='27.20' rx='0' fill='#d9d9d9' stroke='#777' stroke-width='1.0' opacity='1.0'/>
+<circle cx='372.88' cy='252.24' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='399.20' y='256.24' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>GND  (J2-1)</text>
+<circle cx='372.88' cy='292.88' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='372.88' cy='292.88' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='399.20' y='296.88' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>SPI/I2C  (J2-2)</text>
+<circle cx='372.88' cy='333.52' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='372.88' cy='333.52' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='399.20' y='337.52' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>LP  (J2-3)</text>
+<circle cx='372.88' cy='374.16' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='372.88' cy='374.16' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='399.20' y='378.16' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>SYNC  (J2-4)</text>
+<rect x='358.48' y='237.84' width='28.80' height='69.44' rx='4.8' fill='#000' stroke='#000' stroke-width='1.0' opacity='0.75'/>
+<text x='291.60' y='100.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='middle' font-weight='bold'>TOP VIEW - sensor side (solder joints here)</text>
+<rect x='720.00' y='110.00' width='203.20' height='365.76' rx='8.0' fill='#14532a' stroke='#0b3' stroke-width='1.2' opacity='1.0'/>
+<circle cx='760.00' cy='150.00' r='17.48' fill='#fff' stroke='#999' stroke-width='1.0'/>
+<circle cx='760.00' cy='436.40' r='17.48' fill='#fff' stroke='#999' stroke-width='1.0'/>
+<circle cx='902.88' cy='130.32' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='130.32' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='134.32' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>CORE/IOVDD  (J1-1)</text>
+<circle cx='902.88' cy='170.96' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='170.96' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='174.96' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>AVDD  (J1-2)</text>
+<circle cx='902.88' cy='211.60' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='211.60' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='215.60' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>VIN  (J1-3)</text>
+<rect x='889.28' y='238.64' width='27.20' height='27.20' rx='0' fill='#d9d9d9' stroke='#777' stroke-width='1.0' opacity='1.0'/>
+<circle cx='902.88' cy='252.24' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='256.24' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>GND  (J1-4)</text>
+<circle cx='902.88' cy='292.88' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='292.88' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='296.88' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>SDA/MOSI  (J1-5)</text>
+<circle cx='902.88' cy='333.52' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='333.52' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='337.52' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>SCL/MCLK  (J1-6)</text>
+<circle cx='902.88' cy='374.16' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='374.16' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='378.16' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>MISO  (J1-7)</text>
+<circle cx='902.88' cy='414.80' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='414.80' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='418.80' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>CS  (J1-8)</text>
+<circle cx='902.88' cy='455.44' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='902.88' cy='455.44' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='929.20' y='459.44' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>INT  (J1-9)</text>
+<rect x='726.72' y='238.64' width='27.20' height='27.20' rx='0' fill='#d9d9d9' stroke='#777' stroke-width='1.0' opacity='1.0'/>
+<circle cx='740.32' cy='252.24' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='714.00' y='256.24' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='bold'>GND  (J2-1)</text>
+<circle cx='740.32' cy='292.88' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='740.32' cy='292.88' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='714.00' y='296.88' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='bold'>SPI/I2C  (J2-2)</text>
+<circle cx='740.32' cy='333.52' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='740.32' cy='333.52' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='714.00' y='337.52' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='normal'>LP  (J2-3)</text>
+<circle cx='740.32' cy='374.16' r='13.60' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='740.32' cy='374.16' r='7.20' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='714.00' y='378.16' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='end' font-weight='normal'>SYNC  (J2-4)</text>
+<rect x='725.92' y='237.84' width='28.80' height='69.44' rx='4.8' fill='#000' stroke='#000' stroke-width='1.0' opacity='0.75'/>
+<text x='821.60' y='100.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='middle' font-weight='bold'>BOTTOM VIEW - header bodies here</text>
+<text x='120.00' y='526.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>SIDE VIEW (as in Pololu&#x27;s breadboard photo 0J12378)</text>
+<rect x='120.00' y='560.00' width='380.00' height='10.00' rx='0' fill='#1f7a3a' stroke='#0b3' stroke-width='1.0' opacity='1.0'/>
+<text x='510.00' y='569.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>carrier PCB (sensor faces UP)</text>
+<rect x='270.00' y='548.00' width='70.00' height='12.00' rx='0' fill='#111' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='305.00' y='544.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='10' fill='#111' text-anchor='middle' font-weight='normal'>sensor</text>
+<line x1='140.00' y1='552.00' x2='140.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='131.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='140.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='180.00' y1='552.00' x2='180.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='171.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='180.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='220.00' y1='552.00' x2='220.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='211.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='220.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='260.00' y1='552.00' x2='260.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='251.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='260.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='300.00' y1='552.00' x2='300.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='291.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='300.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='340.00' y1='552.00' x2='340.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='331.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='340.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='380.00' y1='552.00' x2='380.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='371.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='380.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='420.00' y1='552.00' x2='420.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='411.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='420.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<line x1='460.00' y1='552.00' x2='460.00' y2='630.00' stroke='#c9a227' stroke-width='4' stroke-linecap='round'/>
+<rect x='451.00' y='570.00' width='18.00' height='22.00' rx='0' fill='#222' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<circle cx='460.00' cy='556.00' r='5.00' fill='#ccc' stroke='#999' stroke-width='1.0'/>
+<text x='510.00' y='586.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>black header bodies UNDER the board</text>
+<text x='510.00' y='604.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>solder each pin on TOP (sensor side) - keep joints small</text>
+<text x='510.00' y='622.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>pin tails point DOWN -&gt; female jumper sockets connect underneath</text>
+<rect x='120.00' y='680.00' width='760.00' height='156.00' rx='0' fill='#fafafa' stroke='#bbb' stroke-width='1.0' opacity='1.0'/>
+<text x='130.00' y='702.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>SOLDER: full 1x9 + 1x4 straight 0.1 in male headers (13 joints). Headers are NOT included.</text>
+<text x='130.00' y='720.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>JUMPER: 2-pin 0.1 in shunt across J2-1 GND and J2-2 SPI/I2C -&gt; I2C mode.</text>
+<text x='130.00' y='738.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#555' text-anchor='start' font-weight='normal'>   (default is SPI: the pin is pulled high on the carrier; Pololu suggests this shunt)</text>
+<text x='130.00' y='756.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>NEVER connect power to J1-1 CORE/IOVDD or J1-2 AVDD: regulator OUTPUTS.</text>
+<text x='130.00' y='774.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>   They are adjacent to J1-3 VIN - the most likely off-by-one wiring error.</text>
+<text x='130.00' y='792.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>Leave MISO, CS, INT, LP, SYNC unconnected (LP pulled high = I2C enabled).</text>
+<text x='130.00' y='810.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#555' text-anchor='start' font-weight='normal'>Keep the protective liner on while soldering; remove it before ranging.</text>
+<text x='130.00' y='828.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#c77700' text-anchor='start' font-weight='normal'>Sensor body position is approximate (photo), not a dimension.</text>
+</svg>

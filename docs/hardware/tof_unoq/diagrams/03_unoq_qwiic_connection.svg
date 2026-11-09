@@ -1,0 +1,98 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1240' height='860' viewBox='0 0 1240 860'><defs><marker id='arr' markerWidth='10' markerHeight='10' refX='8' refY='3' orient='auto'><path d='M0,0 L8,3 L0,6 z' fill='#333'/></marker></defs>
+<title>UNO Q Qwiic to Pololu connection</title>
+<rect width='1240' height='860' fill='#ffffff'/>
+<text x='20.00' y='30.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='18' fill='#111' text-anchor='start' font-weight='bold'>Where each wire terminates - UNO Q Qwiic (QWIIC1) -&gt; Pololu #3419</text>
+<text x='20.00' y='52.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#555' text-anchor='start' font-weight='normal'>UNO Q outline is SCHEMATIC (not to scale). Qwiic location and pin order: Arduino ABX00162 full pinout p.1 + datasheet section 9.3 (A1). Pololu board to scale.</text>
+<rect x='40.00' y='90.00' width='520.00' height='400.00' rx='14' fill='#2a7f9e' stroke='#14506a' stroke-width='2' opacity='1.0'/>
+<text x='300.00' y='120.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='14' fill='#fff' text-anchor='middle' font-weight='bold'>Arduino UNO Q (TOP side) - schematic</text>
+<rect x='260.00' y='76.00' width='80.00' height='28.00' rx='4' fill='#bbb' stroke='#666' stroke-width='1.0' opacity='1.0'/>
+<text x='300.00' y='95.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='middle' font-weight='normal'>USB-C</text>
+<rect x='530.00' y='150.00' width='18.00' height='300.00' rx='0' fill='#111' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='520.00' y='300.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#fff' text-anchor='end' font-weight='normal'>JDIGITAL</text>
+<rect x='52.00' y='250.00' width='18.00' height='220.00' rx='0' fill='#111' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='80.00' y='360.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#fff' text-anchor='start' font-weight='normal'>JANALOG / power</text>
+<text x='300.00' y='290.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#dff' text-anchor='middle' font-weight='normal'>Media Carrier plugs into JMEDIA/JMISC</text>
+<text x='300.00' y='306.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#dff' text-anchor='middle' font-weight='normal'>on the BOTTOM side (not drawn)</text>
+<rect x='340.00' y='420.00' width='50.00' height='34.00' rx='0' fill='#111' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='365.00' y='414.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='10' fill='#fff' text-anchor='middle' font-weight='normal'>JSPI</text>
+<rect x='240.00' y='444.00' width='84.00' height='30.00' rx='3' fill='#eee' stroke='#555' stroke-width='1.0' opacity='1.0'/>
+<text x='282.00' y='422.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#fff' text-anchor='middle' font-weight='bold'>QWIIC1</text>
+<rect x='248.00' y='450.00' width='8.00' height='18.00' rx='0' fill='#c9a227' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='252.00' y='440.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#fff' text-anchor='middle' font-weight='bold'>1</text>
+<rect x='268.00' y='450.00' width='8.00' height='18.00' rx='0' fill='#c9a227' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='272.00' y='440.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#fff' text-anchor='middle' font-weight='bold'>2</text>
+<rect x='288.00' y='450.00' width='8.00' height='18.00' rx='0' fill='#c9a227' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='292.00' y='440.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#fff' text-anchor='middle' font-weight='bold'>3</text>
+<rect x='308.00' y='450.00' width='8.00' height='18.00' rx='0' fill='#c9a227' stroke='none' stroke-width='1.0' opacity='1.0'/>
+<text x='312.00' y='440.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#fff' text-anchor='middle' font-weight='bold'>4</text>
+<text x='234.00' y='440.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='10' fill='#fff' text-anchor='end' font-weight='normal'>pin</text>
+<text x='40.00' y='530.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>QWIIC1 pin map (A1)</text>
+<text x='40.00' y='550.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#111' text-anchor='start' font-weight='normal'>1  GND    0 V</text>
+<text x='40.00' y='568.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#111' text-anchor='start' font-weight='normal'>2  +3V3   PWR_3P3V</text>
+<text x='40.00' y='586.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#111' text-anchor='start' font-weight='normal'>3  SDA    PD13 I2C4_SDA</text>
+<text x='40.00' y='604.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#111' text-anchor='start' font-weight='normal'>4  SCL    PD12 I2C4_SCL</text>
+<text x='40.00' y='630.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#555' text-anchor='start' font-weight='normal'>2.2 kOhm pull-ups to PWR_3P3V on SDA/SCL (schematic sheet 20, R2613/R2614)</text>
+<text x='40.00' y='648.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#555' text-anchor='start' font-weight='normal'>Sketch bus: Wire1 = STM32 I2C4 (core variant i2cs[1]). Linux cannot see this bus.</text>
+<text x='40.00' y='666.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>Plug is keyed: it fits one way. Seat it only with the board powered OFF.</text>
+<rect x='760.00' y='130.00' width='190.50' height='342.90' rx='7.5' fill='#14532a' stroke='#0b3' stroke-width='1.2' opacity='1.0'/>
+<circle cx='797.50' cy='167.50' r='16.38' fill='#fff' stroke='#999' stroke-width='1.0'/>
+<circle cx='797.50' cy='436.00' r='16.38' fill='#fff' stroke='#999' stroke-width='1.0'/>
+<circle cx='931.45' cy='149.05' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='149.05' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='153.05' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>CORE/IOVDD  (J1-1)</text>
+<circle cx='931.45' cy='187.15' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='187.15' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='191.15' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>AVDD  (J1-2)</text>
+<circle cx='931.45' cy='225.25' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='225.25' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='229.25' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>VIN  (J1-3)</text>
+<rect x='918.70' y='250.60' width='25.50' height='25.50' rx='0' fill='#d9d9d9' stroke='#777' stroke-width='1.0' opacity='1.0'/>
+<circle cx='931.45' cy='263.35' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='267.35' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>GND  (J1-4)</text>
+<circle cx='931.45' cy='301.45' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='301.45' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='305.45' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>SDA/MOSI  (J1-5)</text>
+<circle cx='931.45' cy='339.55' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='339.55' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='343.55' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='bold'>SCL/MCLK  (J1-6)</text>
+<circle cx='931.45' cy='377.65' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='377.65' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='381.65' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>MISO  (J1-7)</text>
+<circle cx='931.45' cy='415.75' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='415.75' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='419.75' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>CS  (J1-8)</text>
+<circle cx='931.45' cy='453.85' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='931.45' cy='453.85' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<text x='1060.50' y='457.85' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>INT  (J1-9)</text>
+<rect x='766.30' y='250.60' width='25.50' height='25.50' rx='0' fill='#d9d9d9' stroke='#777' stroke-width='1.0' opacity='1.0'/>
+<circle cx='779.05' cy='263.35' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<circle cx='779.05' cy='301.45' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='779.05' cy='301.45' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<circle cx='779.05' cy='339.55' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='779.05' cy='339.55' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<circle cx='779.05' cy='377.65' r='12.75' fill='#d9d9d9' stroke='#777' stroke-width='1.0'/>
+<circle cx='779.05' cy='377.65' r='6.75' fill='#555' stroke='none' stroke-width='1.0'/>
+<rect x='765.55' y='249.85' width='27.00' height='65.10' rx='4.5' fill='#000' stroke='#000' stroke-width='1.0' opacity='0.75'/>
+<text x='855.25' y='120.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='middle' font-weight='bold'>Pololu #3419 BOTTOM view (header tails)</text>
+<text x='752.00' y='267.35' font-family='DejaVu Sans, Arial, sans-serif' font-size='10' fill='#111' text-anchor='end' font-weight='normal'>J2-1 GND</text>
+<text x='752.00' y='305.45' font-family='DejaVu Sans, Arial, sans-serif' font-size='10' fill='#111' text-anchor='end' font-weight='normal'>J2-2 SPI/I2C (shunt)</text>
+<text x='752.00' y='343.55' font-family='DejaVu Sans, Arial, sans-serif' font-size='10' fill='#111' text-anchor='end' font-weight='normal'>J2-3 LP</text>
+<text x='752.00' y='381.65' font-family='DejaVu Sans, Arial, sans-serif' font-size='10' fill='#111' text-anchor='end' font-weight='normal'>J2-4 SYNC</text>
+<path d='M252.0,474.0 L252.0,544.0 L1016.5,544.0 L1016.5,263.4 L931.5,263.4' fill='none' stroke='#111111' stroke-width='3.2' stroke-linecap='round'/>
+<circle cx='931.45' cy='263.35' r='5.00' fill='#111111' stroke='#000' stroke-width='1.0'/>
+<path d='M272.0,474.0 L272.0,528.0 L1000.5,528.0 L1000.5,225.2 L931.5,225.2' fill='none' stroke='#d62728' stroke-width='3.2' stroke-linecap='round'/>
+<circle cx='931.45' cy='225.25' r='5.00' fill='#d62728' stroke='#000' stroke-width='1.0'/>
+<path d='M292.0,474.0 L292.0,512.0 L984.5,512.0 L984.5,301.4 L931.5,301.4' fill='none' stroke='#1f77b4' stroke-width='3.2' stroke-linecap='round'/>
+<circle cx='931.45' cy='301.45' r='5.00' fill='#1f77b4' stroke='#000' stroke-width='1.0'/>
+<path d='M312.0,474.0 L312.0,496.0 L968.5,496.0 L968.5,339.5 L931.5,339.5' fill='none' stroke='#e6b800' stroke-width='3.2' stroke-linecap='round'/>
+<circle cx='931.45' cy='339.55' r='5.00' fill='#e6b800' stroke='#000' stroke-width='1.0'/>
+<rect x='600.00' y='620.00' width='600.00' height='156.00' rx='0' fill='#fafafa' stroke='#bbb' stroke-width='1.0' opacity='1.0'/>
+<text x='610.00' y='642.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>Wire    Qwiic pin        -&gt;  Pololu pin</text>
+<text x='610.00' y='660.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>black   1 GND            -&gt;  J1-4 GND (square pad)</text>
+<text x='610.00' y='678.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#b00020' text-anchor='start' font-weight='normal'>red     2 +3V3 PWR_3P3V  -&gt;  J1-3 VIN   (NOT J1-2 AVDD, NOT J1-1 CORE)</text>
+<text x='610.00' y='696.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>blue    3 SDA  PD13      -&gt;  J1-5 SDA/MOSI</text>
+<text x='610.00' y='714.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>yellow  4 SCL  PD12      -&gt;  J1-6 SCL/MCLK</text>
+<text x='610.00' y='732.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>shunt   J2-1 GND &lt;-&gt; J2-2 SPI/I2C (on the carrier, no wire to the UNO Q)</text>
+<text x='610.00' y='750.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#c77700' text-anchor='start' font-weight='normal'>Colours are the Qwiic convention (SparkFun, Adafruit #4397); VERIFY by</text>
+<text x='610.00' y='768.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#c77700' text-anchor='start' font-weight='normal'>continuity at Gate B - a third-party cable may differ.</text>
+</svg>
