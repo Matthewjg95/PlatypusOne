@@ -1,0 +1,210 @@
+{
+  "criteria_version": "2026-10-06-provisional-r2",
+  "status": "PROVISIONAL. Written 2026-10-06 BEFORE any physical camera frame was analysed. Change only by commit with a stated reason, never after looking at which camera a change would favour. Every report records the sha256 of this file.",
+  "envelope": {
+    "edge_rise_px_max": 3.0,
+    "edge_placement_factor": 1.5,
+    "why": "A working distance counts when the centre-placed reference square's median 10-90% edge rise is <= edge_rise_px_max and the edge/corner-placed one is <= edge_rise_px_max x edge_placement_factor. Pixels of the analysed frame (expected 1640x1232 raw). Starting value only: re-derive once the B0394 at its set focus shows what 'sharp' is on this pipeline."
+  },
+  "roles": {
+    "reference": [
+      {
+        "metric": "calibration_rms_px",
+        "op": "<=",
+        "threshold": 0.5,
+        "why": "commonly achieved ChArUco RMS for a well-behaved lens at this resolution"
+      },
+      {
+        "metric": "calibration_views",
+        "op": ">=",
+        "threshold": 10,
+        "why": "enough poses to constrain 9 intrinsic parameters"
+      },
+      {
+        "metric": "calibration_edge_coverage",
+        "op": ">=",
+        "threshold": 0.8,
+        "why": "corners must reach the outer image so distortion is measured, not extrapolated"
+      },
+      {
+        "metric": "focal_rel_std",
+        "op": "<=",
+        "threshold": 0.005,
+        "why": "fx uncertainty 0.5% -> ~0.5% scale uncertainty"
+      },
+      {
+        "metric": "calibration_independent_sets",
+        "op": ">=",
+        "threshold": 2,
+        "why": "stability needs two calibrations from distinct physical mountings (mount_id); A + A does not count"
+      },
+      {
+        "metric": "calibration_focal_rel_delta",
+        "op": "<=",
+        "threshold": 0.01,
+        "why": "intrinsics must survive remount/refocus discipline within 1%"
+      },
+      {
+        "metric": "corrected_line_rms_edge_px",
+        "op": "<=",
+        "threshold": 0.5,
+        "why": "after undistortion, edge lines straight to sub-pixel"
+      },
+      {
+        "metric": "reprojection_edge_to_center",
+        "op": "<=",
+        "threshold": 2.0,
+        "why": "edge geometry no worse than 2x centre after calibration"
+      },
+      {
+        "metric": "working_envelope_distances",
+        "op": ">=",
+        "threshold": 2,
+        "why": "useful over more than one bench distance"
+      },
+      {
+        "metric": "repeatability_rel_spread",
+        "op": "<=",
+        "threshold": 0.01,
+        "why": "1% relative spread of the Scout length measurement, unmoved scene"
+      },
+      {
+        "metric": "repeatability_accepted_frames",
+        "op": ">=",
+        "threshold": 8,
+        "why": "spread estimated from at least 8 accepted frames"
+      },
+      {
+        "metric": "focus_state_recorded",
+        "op": "==",
+        "threshold": true,
+        "why": "every quantitative frame needs a reproducibly known focus state: fixed, manual_locked, or a recorded motor position. not_exposed is INSUFFICIENT, not a pass"
+      }
+    ],
+    "product": [
+      {
+        "metric": "board_max_side_mm",
+        "op": "<=",
+        "threshold": null,
+        "why": "packaging limit comes from the Fusion head envelope (#41/#33); unset until Fusion provides it"
+      },
+      {
+        "metric": "lens_stack_mm",
+        "op": "<=",
+        "threshold": null,
+        "why": "front height limit comes from Fusion; unset until provided"
+      },
+      {
+        "metric": "calibration_rms_px",
+        "op": "<=",
+        "threshold": 1.0,
+        "why": "adequate geometry, looser than reference"
+      },
+      {
+        "metric": "calibration_independent_sets",
+        "op": ">=",
+        "threshold": 2,
+        "why": "stability needs two calibrations from distinct physical mountings (mount_id); A + A does not count"
+      },
+      {
+        "metric": "calibration_focal_rel_delta",
+        "op": "<=",
+        "threshold": 0.02,
+        "why": "2% between independent sets"
+      },
+      {
+        "metric": "corrected_line_rms_edge_px",
+        "op": "<=",
+        "threshold": 1.0,
+        "why": "adequate edge geometry after calibration"
+      },
+      {
+        "metric": "working_envelope_distances",
+        "op": ">=",
+        "threshold": 2,
+        "why": "handheld use spans distances"
+      },
+      {
+        "metric": "repeatability_rel_spread",
+        "op": "<=",
+        "threshold": 0.02,
+        "why": "2% relative spread"
+      },
+      {
+        "metric": "repeatability_accepted_frames",
+        "op": ">=",
+        "threshold": 8,
+        "why": "as reference"
+      },
+      {
+        "metric": "focus_state_recorded",
+        "op": "==",
+        "threshold": true,
+        "why": "every quantitative frame needs a reproducibly known focus state: fixed, manual_locked, or a recorded motor position. not_exposed is INSUFFICIENT, not a pass"
+      },
+      {
+        "metric": "enumerates",
+        "op": "==",
+        "threshold": true,
+        "why": "works on UNO Q + Media Carrier"
+      },
+      {
+        "metric": "reboot_repeat",
+        "op": "==",
+        "threshold": true,
+        "why": "survives reboot / cold power cycle"
+      },
+      {
+        "metric": "dsi_coexistence",
+        "op": "==",
+        "threshold": true,
+        "why": "display + touch keep working"
+      }
+    ],
+    "fallback": [
+      {
+        "metric": "enumerates",
+        "op": "==",
+        "threshold": true,
+        "why": "known working path"
+      },
+      {
+        "metric": "reboot_repeat",
+        "op": "==",
+        "threshold": true,
+        "why": "predictable across boots"
+      },
+      {
+        "metric": "dsi_coexistence",
+        "op": "==",
+        "threshold": true,
+        "why": "does not break the display"
+      },
+      {
+        "metric": "repeatability_rel_spread",
+        "op": "<=",
+        "threshold": 0.03,
+        "why": "predictable measurements"
+      },
+      {
+        "metric": "repeatability_accepted_frames",
+        "op": ">=",
+        "threshold": 5,
+        "why": "minimum series"
+      },
+      {
+        "metric": "lighting_acceptance_fraction",
+        "op": ">=",
+        "threshold": 0.5,
+        "why": "Scout accepts at least half the lighting-condition frames"
+      }
+    ]
+  },
+  "changes": [
+    {
+      "date": "2026-10-06",
+      "change": "calibration_sets_ok -> calibration_independent_sets (distinct mount_id; fewer than two = INSUFFICIENT, not FAIL); focus_state_recorded no longer passes not_exposed",
+      "reason": "independent review on PR #46, before any physical frame existed; no threshold value changed"
+    }
+  ]
+}

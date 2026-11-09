@@ -58,6 +58,11 @@ panel is undecided, and prototyping runs against a linked external display —
 see [ADR-0001](docs/adr/0001-dynamic-linked-prototype-display.md) and the
 [presentation link protocol](docs/protocols/presentation.md).
 
+The Scout prototype also has a local Linux/KMS kiosk for the UNO Q + Media
+Carrier + Waveshare 800×480 panel. Use the [pinned UNO Q build/launch sequence](docs/hardware/UNO_Q_SCOUT_BASELINE.md)
+for that path. Dream Lab was submitted September 30; [stabilization and evidence status](docs/contest/POST_DREAMLAB_STABILIZATION.md)
+separate the merged single-capture baseline from staged sessions/classifier work.
+
 ## Documentation
 
 - [docs/PRODUCT_REQUIREMENTS_BASELINE.md](docs/PRODUCT_REQUIREMENTS_BASELINE.md) — what Platypus One must be and how each requirement is verified

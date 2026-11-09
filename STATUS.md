@@ -3,19 +3,20 @@
 Rolling snapshot of where Platypus One actually is. Updated as work lands —
 if this file disagrees with the code, the code wins and this file is stale.
 
-**Last updated: 2026-09-25**
+**Last updated: 2026-10-05**
 
 ## Right now
 
 | | |
 |---|---|
 | **Autodesk hardware request** | **SELECTED — 2026-09-25** |
+| **Dream Lab** | **SUBMITTED — 2026-09-30**, confirmed by Matthew on October 1. Final public post/form evidence is not yet archived here. |
 | **Mode** | **EXECUTION MODE** — shortest path to a demonstrable PlatypusOne core prototype |
-| **Critical path** | Minimum viable enclosure/packaging → Rev A architecture lock → early PCB/fab orders → one physical end-to-end measurement workflow |
-| **Hardware in hand** | Arduino UNO Q + UNO Media Carrier + Waveshare 5-DSI-TOUCH-A + USB webcam + printed 20 mm reference sheets. M5Stack Tab5 remains a fallback/dev fixture. |
-| **Software state** | Host architecture, observation contract, Scout analyzer/classifier/UI and validation are substantially ahead of physical bring-up; the priority is now hardware proof, not more host-side feature breadth |
+| **Critical path** | Preserve/replay the Scout baseline (#32) → minimum viable enclosure/packaging → Rev A architecture lock → early PCB/fab orders → physical measurement validation |
+| **Hardware in hand** | Arduino UNO Q + UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 (800×480) + USB webcam + printed 20 mm reference sheets. M5Stack Tab5 remains a fallback/dev fixture. |
+| **Software state** | The single-capture Scout kiosk is the stabilization baseline. Keep host/synthetic checks, reported physical runs, and archived physical evidence distinct; see [post-submission stabilization](docs/contest/POST_DREAMLAB_STABILIZATION.md). |
 | **Shared Autodesk + Dream Lab slice** | camera → capture → useful measurement → observation record → UI → saved artifact |
-| **Display** | Rev A display candidate is physically in hand: UNO Media Carrier + Waveshare 5-DSI-TOUCH-A. Tonight's gate is DSI/touch proof-of-life and Scout UI on this panel. |
+| **Display** | UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 (800×480, 15-pin FPC via 15→22 adapter). Panel/touch detection and the on-glass kiosk run are recorded in the bench notes; #26 and #27 are merged. Final run logs/captures and the exact tested SHA still need archiving. |
 
 ## Execution rules
 
@@ -25,7 +26,7 @@ if this file disagrees with the code, the code wins and this file is stale.
 4. Build one complete physical engineering measurement workflow.
 5. Generate test data, photos/video, and documentation while building.
 6. Keep stretch features out of the critical path.
-7. Prefer work that strengthens both Autodesk and DigiKey Dream Lab.
+7. Carry the submitted Dream Lab proof into Autodesk development through a reproducible, evidence-backed baseline.
 
 **Scope test:** if a task does not move the first physical `Point → Measure → Display → Save` loop closer, it needs a strong reason to enter the critical path.
 
@@ -60,6 +61,8 @@ Rev A core only:
 - simple carrier/interconnect
 - controlled illumination if it earns its place through testing
 
+Rev A PCB workstream (#33): Perception Head Rev A pre-layout schematic in KiCad 9 (ERC 0/0) with ICD, power tree, decision register and bring-up plan in [`hardware/pcb/`](hardware/pcb/README.md). **No layout or fabrication** until the camera (#40), ToF (Platypus Lab #3), power and Fusion-datum gates release.
+
 Deferred from critical path:
 - radar
 - thermal
@@ -70,11 +73,22 @@ Deferred from critical path:
 - energy harvesting
 - production-polish features
 
+## Camera characterization (#40)
+
+Evidence pipeline built: `tools/camera_characterize/` (contract, capture matrix, validation, ChArUco calibration, centre/edge geometry, edge-rise focus, exposure, Scout repeatability/accuracy, three-role decision gate, report) — tested on **synthetic fixtures only**; **no camera has been characterized and no role is chosen**. B0393 autofocus is not exposed on UNO Q (PR #42 bench log: no lens subdev). See [CAMERA_CHARACTERIZATION.md](docs/hardware/CAMERA_CHARACTERIZATION.md) and [CAMERA_CAPTURE_MATRIX.md](docs/hardware/CAMERA_CAPTURE_MATRIX.md).
+
+## Compact display (#41)
+
+Leading candidate **Waveshare 3.5inch DSI LCD (H)** (480×800 portrait, 3V3-only, GT911): reversible install, overlay, and D0–D7 bench procedure prepared in `tools/compact_display/`; **no compact panel has been run on the UNO Q yet**. See [selection](docs/hardware/COMPACT_DISPLAY_SELECTION.md) and [bench acceptance](docs/hardware/COMPACT_DISPLAY_BENCH_ACCEPTANCE.md). The 5" stays the dev fixture/fallback.
+
 ## Immediate next action
 
-**Tonight: prove the complete physical loop on the UNO Q with the Media Carrier + Waveshare display + webcam + printed reference: touch trigger → capture → measure/classify → render result → save evidence.**
+**Preserve the submission-night captures, JSON, conditions, caliper truth, media, and actual tested SHA, then replay the pinned baseline on the UNO Q.**
 
-Do not improve calibration further until that end-to-end physical attempt has produced failure data.
+Use [the evidence index](docs/contest/evidence/dreamlab-2026-09-30/README.md)
+before changing the board checkout, and [the UNO Q sequence](docs/hardware/UNO_Q_SCOUT_BASELINE.md)
+for build, checks, kiosk launch, and desktop recovery. The source pin is a
+post-submission reproduction candidate, not a claim about the final contest-night SHA.
 
 ## Existing software foundation
 
@@ -84,10 +98,12 @@ Do not improve calibration further until that end-to-end physical attempt has pr
 - Engineering Observation contract — merged.
 - Engineering Scout host capture/analyzer/classifier/result UI — merged.
 - 21-case synthetic validation battery — merged and useful as regression coverage.
-- Webcam capture on UNO Q — already proven at 640×480 YUYV; reuse that path tonight.
-- UNO Media Carrier + Waveshare 5-DSI-TOUCH-A — hardware in hand; proof-of-life still required.
-- Touch input is the accepted first-pass trigger; MCU/physical trigger is deferred until after the end-to-end loop works.
+- Webcam capture on UNO Q — already recorded at 640×480 YUYV; preserve the raw frame and JSON when replaying it.
+- UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 — hardware in hand; PR #26 records the successful FFC-orientation fix, ATTINY response at `0x45`, backlight, and touch at `0x38`.
+- Touch input is the accepted first-pass trigger; dedicated MCU/physical trigger remains deferred until the local-display loop is stable.
 - Printed reference sheets — ready for physical testing.
+- Real touch → capture → result/save loop — reported on glass in the September 29 notes. The 1/4-20 UNC test screw over-read at first light; this is workflow evidence, not validated measurement accuracy.
+- Final Dream Lab raw capture archive / tested commit / submitted post URL — missing from accessible repository evidence.
 - Linked-display / Tab5 path — fallback development fixture, not final product dependency.
 
 ## Evidence discipline
@@ -101,3 +117,17 @@ From this point forward, every physical session should leave durable evidence:
 - blocker and next action
 
 The repo should tell the build story as it happens, not reconstruct it at the end.
+
+
+## Merged baseline and staged work (2026-10-01)
+
+Do not mistake open-PR capability for merged baseline:
+
+- Merged: #25 clipped-blob refusal; #26 correct DSI hardware/bring-up; #27 Linux/KMS display; #28 single-capture kiosk; #30 geometry header fix; #31 initial write-up/readiness draft.
+- PR #29 (draft) — sessions, repeat statistics and outline/DXF export. Reconciled with main; fresh Windows/Linux CI and synthetic finish/export pass. A preserved physical finish/export run is still required before merge.
+- PR #35 — positive-evidence fastener classification and associated analyzer changes, stacked on #29; currently conflicts with that updated base and needs separate reconciliation/fresh checks. Keep its 24-case battery and UNC/metric candidate behavior separate from the baseline's 21-case battery and metric classifier.
+- The newer write-up on the already-merged #31 branch was never merged into main. Its exact [branch snapshot](docs/contest/evidence/dreamlab-2026-09-30/WRITEUP_BRANCH_SNAPSHOT.md) is retained as reported evidence, not final submitted copy.
+
+#32 remains open for final evidence and native replay; deadline issues #9 and
+#23 are superseded, with unfinished checks carried into the stabilization plan.
+No new measurement algorithm tuning is part of this package.

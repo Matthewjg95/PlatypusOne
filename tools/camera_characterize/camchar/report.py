@@ -1,0 +1,320 @@
+# ruff: noqa: E501  (Markdown table templates read better unwrapped)
+"""Human-readable Markdown report from analysis.json + decision.json.
+
+Every number printed here is copied from those files; the report computes
+nothing new. Frame references are dataset/frame ids from the manifests.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from . import ANALYSIS_VERSION
+
+
+def _f(v: Any, nd: int = 3) -> str:
+    if v is None:
+        return "—"
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    if isinstance(v, float):
+        return f"{v:.{nd}f}"
+    return str(v)
+
+
+def _refs(ev: Any, limit: int = 6) -> str:
+    if not ev:
+        return "—"
+    if isinstance(ev, str):
+        return ev
+    ev = [e for e in ev if e]
+    shown = ", ".join(f"`{e}`" for e in ev[:limit])
+    return shown + (f" … (+{len(ev) - limit})" if len(ev) > limit else "")
+
+
+def render(analysis: dict[str, Any], decision: dict[str, Any]) -> str:
+    exp = analysis["experiment"]
+    synthetic = analysis.get("evidence_type") != "physical_capture"
+    L: list[str] = []
+    a = L.append
+    a(f"# Camera characterization — {exp.get('experiment_id', '?')}")
+    a("")
+    if synthetic:
+        a("> **SYNTHETIC FIXTURE — NOT CAMERA EVIDENCE.** These numbers exercise the")
+        a("> software only. No camera decision may cite them.")
+        a("")
+    a(
+        f"- Analysis version: `{analysis['analysis_version']}` (OpenCV {analysis['opencv_version']}, numpy {analysis['numpy_version']})"
+    )
+    a(f"- Evidence type: **{analysis.get('evidence_type')}**")
+    a(
+        f"- Decision criteria: `{decision['criteria_version']}` sha256 `{decision['criteria_sha256'][:16]}…`"
+    )
+    a(
+        f"- Source integrity after analysis: **{analysis['source_integrity']}** ({len(analysis['source_hashes'])} source files hashed)"
+    )
+    a(f"- Representative working distance: {exp.get('representative_distance_mm', '—')} mm")
+    a("")
+    v = analysis["validation"]
+    a("## Validation")
+    a("")
+    a("| Dataset | Camera | Usable frames | Failed/discarded | Dataset issues | Excluded frames |")
+    a("|---|---|---|---|---|---|")
+    for d in v["datasets"]:
+        excluded = [f["frame_id"] for f in d["frames"] if not f["usable"]]
+        a(
+            f"| `{d['dataset_id']}` | {d['sku']} | {d['usable_frames']} | {d['failed_or_discarded_frames']} | "
+            f"{len(d['issues'])} | {', '.join(excluded) or '—'} |"
+        )
+    unknown = [
+        (d["dataset_id"], i["where"])
+        for d in v["datasets"]
+        for i in d["issues"]
+        if i["message"] == "UNKNOWN"
+    ]
+    if unknown:
+        a("")
+        a(
+            "UNKNOWN metadata (recorded as unknown, never guessed): "
+            + ", ".join(f"`{ds}:{w}`" for ds, w in unknown)
+        )
+    a("")
+
+    a("## Decision gate")
+    a("")
+    a("| Role | Outcome | Camera(s) | Reason |")
+    a("|---|---|---|---|")
+    for role, d in decision["decision"].items():
+        cams = d.get("camera") or ", ".join(
+            d.get("cameras", []) or d.get("cameras_lacking_evidence", [])
+        )
+        a(f"| {role} | **{d['outcome']}** | {cams or '—'} | {d.get('reason', '')} |")
+    a("")
+    a("A PROPOSED role still needs Matthew's confirmation. No weighted score is used.")
+    a("")
+
+    for sku, cam in decision["cameras"].items():
+        a(f"## {sku}")
+        a("")
+        ds_list = [r for r in analysis["datasets"] if r["sku"] == sku]
+        for r in ds_list:
+            c, p = r["camera"], r["platform"]
+            a(
+                f"**Dataset `{r['dataset_id']}`** — sensor {c.get('sensor')}, silkscreen {c.get('silkscreen')}, "
+                f"focus type {c.get('focus_type')}; host {p.get('host')}, kernel {p.get('kernel')}, "
+                f"repo `{str(p.get('repo_sha'))[:12]}`, CSI {p.get('csi_port')}, stack {p.get('capture_stack')}"
+            )
+            a("")
+            a(
+                "Capture modes seen: "
+                + ", ".join(f"{m[0]} {m[1]}×{m[2]} @ {m[3]}" for m in r["capture_modes"])
+            )
+            a("")
+        a("### Metrics used by the gate")
+        a("")
+        a("| Metric | Value | Evidence | Note |")
+        a("|---|---|---|---|")
+        for name, m in cam["metrics"].items():
+            a(f"| {name} | {_f(m['value'], 4)} | {_refs(m['evidence'])} | {m.get('note', '')} |")
+        a("")
+        a("### Role criteria")
+        a("")
+        for role, rr in cam["roles"].items():
+            a(f"**{role}: {rr['verdict']}**")
+            a("")
+            a("| Metric | Op | Threshold | Value | Status |")
+            a("|---|---|---|---|---|")
+            for c in rr["criteria"]:
+                a(
+                    f"| {c['metric']} | {c['op']} | {_f(c['threshold'])} | {_f(c['value'], 4)} | {c['status']} |"
+                )
+            a("")
+        _handoff(a, ds_list, cam["metrics"])
+        for r in ds_list:
+            _dataset_sections(a, r)
+    a("---")
+    a(
+        f"Generated by `camchar` {ANALYSIS_VERSION}. Regenerate: `camera_characterize.py analyze <experiment>`."
+    )
+    return "\n".join(L) + "\n"
+
+
+def _dataset_sections(a, r: dict[str, Any]) -> None:
+    a(f"### Calibration — `{r['dataset_id']}`")
+    a("")
+    if not r["calibrations"]:
+        a("No calibration frames.")
+        a("")
+    for c in r["calibrations"]:
+        a(
+            f"- Set `{c['calibration_set']}` {c['size'][0]}×{c['size'][1]} {c['format']}: **{c['status']}**"
+            + (f" — {c.get('reason')}" if c.get("reason") else "")
+        )
+        if c["status"] == "ok":
+            K = c["camera_matrix"]
+            d = c["distortion"]
+            s = c["std_dev"]
+            a(
+                f"  - RMS {c['rms_reprojection_px']:.3f} px over {c['views']} views; fx {K[0][0]:.2f}±{s['fx']:.2f}, "
+                f"fy {K[1][1]:.2f}±{s['fy']:.2f}, cx {K[0][2]:.2f}±{s['cx']:.2f}, cy {K[1][2]:.2f}±{s['cy']:.2f}"
+            )
+            a(
+                f"  - k1 {d['k1']:.5f}, k2 {d['k2']:.5f}, p1 {d['p1']:.6f}, p2 {d['p2']:.6f}, k3 {d['k3']:.5f} ({c['model']})"
+            )
+            a(
+                f"  - coverage: {c['coverage']['grid_cells_hit_fraction']:.2f} of 8×6 cells, corners to radius "
+                f"{c['coverage']['max_corner_radius_norm']:.2f}; model displacement at image corner "
+                f"{c['distortion_at_image_points']['max_corner_displacement_pct']:.2f}%"
+            )
+            worst = sorted(c["per_view"], key=lambda x: -x["rms_px"])[:3]
+            a(
+                "  - worst views: "
+                + ", ".join(f"`{w['frame']}` {w['rms_px']:.3f} px" for w in worst)
+            )
+            a(
+                f"  - undistortion preview: `{c.get('undistort_preview')}` (from `{c.get('undistort_preview_source')}`)"
+            )
+        if c.get("frames_rejected"):
+            a("  - rejected: " + ", ".join(f"`{k}` ({v})" for k, v in c["frames_rejected"].items()))
+    a("")
+    geo = [
+        (fr["frame"], fr["placement"], fr["geometry"])
+        for fr in r["frames"].values()
+        if "geometry" in fr
+    ]
+    if geo:
+        a(f"### Centre / edge geometry — `{r['dataset_id']}`")
+        a("")
+        a(
+            "| Frame | Placement | Corners | Line RMS edge as captured (px) | Line RMS edge undistorted (px) | Reproj centre / edge (px) | Planar residual edge (mm, board-scaled) |"
+        )
+        a("|---|---|---|---|---|---|---|")
+        for f, pl, g in geo:
+            rp = g.get("reprojection_px") or {}
+            pr = g.get("planar_residual_mm") or {}
+            a(
+                f"| `{f}` | {pl} | {g['corners']} | {_f(g['line_residual_as_captured'].get('edge_mean_px'))} | "
+                f"{_f((g.get('line_residual_undistorted') or {}).get('edge_mean_px'))} | "
+                f"{_f(rp.get('center_rms'))} / {_f(rp.get('edge_rms'))} | {_f(pr.get('edge_rms'), 4)} |"
+            )
+        a("")
+    if r["focus_envelope"]:
+        a(f"### Focus envelope (dark-square edge rise, px) — `{r['dataset_id']}`")
+        a("")
+        a("| Distance (mm) | Placement | Median 10–90% rise (px) | Frames |")
+        a("|---|---|---|---|")
+        for e in r["focus_envelope"]:
+            a(
+                f"| {e['working_distance_mm']} | {e['placement']} | {e['edge_rise_px_median']:.2f} | {_refs(e['frames'], 3)} |"
+            )
+        a("")
+        a(
+            "Relative blur metric, not optical resolution; comparable only at the same resolution/format."
+        )
+        a("")
+    if r["series"]:
+        a(f"### Repeatability and accuracy — `{r['dataset_id']}`")
+        a("")
+        for name, s in r["series"].items():
+            a(
+                f"**Series `{name}`** (distance {', '.join(s['working_distance_mm'])} mm; listed {s['frames_listed']}, unusable {len(s['frames_unusable'])})"
+            )
+            a("")
+            for variant in ("as_captured", "undistorted"):
+                if variant not in s:
+                    continue
+                v = s[variant]
+                L_ = v["repeatability"]["subject_length_mm"]
+                W_ = v["repeatability"]["subject_width_mm"]
+                a(
+                    f"- {variant}: accepted {v['n_accepted']}/{v['n_frames']}"
+                    + (f", refusals {v['refusals']}" if v["refusals"] else "")
+                )
+                a(
+                    f"  - REPEATABILITY length mean {_f(L_.get('mean'))} mm, std {_f(L_.get('std'), 4)}, range {_f(L_.get('range'), 4)}, rel. spread {_f(L_.get('relative_spread'), 5)}"
+                )
+                a(
+                    f"  - REPEATABILITY width mean {_f(W_.get('mean'))} mm, std {_f(W_.get('std'), 4)}, range {_f(W_.get('range'), 4)}"
+                )
+                acc = v["accuracy"]
+                if acc["status"] == "computed":
+                    for k in ("subject_length_mm", "subject_width_mm"):
+                        if k in acc:
+                            x = acc[k]
+                            a(
+                                f"  - ACCURACY {k}: mean error {x['mean_error_mm']:+.4f} mm, mean |error| {x['mean_abs_error_mm']:.4f}, max |error| {x['max_abs_error_mm']:.4f} (truth {acc['truth']})"
+                            )
+                else:
+                    a(f"  - ACCURACY: not computed — {acc['reason']}")
+            tn = s.get("temporal_noise")
+            if tn:
+                a(
+                    f"- temporal noise (unmoved series): median pixel std {tn['median_pixel_std_dn']:.3f} DN"
+                )
+            a("")
+    if r["lighting"]:
+        a(f"### Lighting / exposure — `{r['dataset_id']}`")
+        a("")
+        a("| Lighting | Scout accepted | Scout refused | Clipped % (per frame) |")
+        a("|---|---|---|---|")
+        for cond, e in sorted(r["lighting"].items()):
+            a(
+                f"| {cond} | {e['accepted']} | {e['refused']} | {', '.join(f'{x:.2f}' for x in e['clipped_pct'])} |"
+            )
+        a("")
+    if r["excluded_frames"]:
+        a(f"### Excluded frames — `{r['dataset_id']}`")
+        a("")
+        for e in r["excluded_frames"]:
+            msgs = "; ".join(i["message"] for i in e["issues"]) or "—"
+            a(f"- `{e['frame']}` outcome {e['outcome']}: {msgs}")
+        a("")
+
+
+FOCUS_ACCESS = {
+    "manual": "focus ring must stay reachable for service, or be locked and sealed; any refocus invalidates the calibration",
+    "fixed": "no focus adjustment access needed",
+    "motorized": "no mechanical access; focus state must be software-controlled and recorded per capture",
+}
+
+
+def _handoff(a, ds_list: list[dict[str, Any]], metrics_: dict[str, Any]) -> None:
+    """Compact block for the Perception Head PCB (#33/#44) and Fusion."""
+    phys: dict[str, Any] = {}
+    for r in ds_list:
+        phys.update(r.get("physical") or {})
+    focus_type = next((r["camera"].get("focus_type") for r in ds_list), "UNKNOWN")
+    focus_ctl = next(((r.get("bringup") or {}).get("focus_control") for r in ds_list), None)
+    a("### PCB / Fusion handoff")
+    a("")
+    a("| Item | Value | Status / source |")
+    a("|---|---|---|")
+    for key in (
+        "board_w_mm",
+        "board_h_mm",
+        "lens_stack_mm",
+        "mounting_holes",
+        "optical_center_offset_mm",
+        "connector_side",
+        "cable",
+    ):
+        e = phys.get(key)
+        if isinstance(e, dict):
+            a(
+                f"| {key} | {_f(e.get('value'))} | {e.get('status', 'UNKNOWN')} — {e.get('source', 'UNKNOWN')} |"
+            )
+        else:
+            a(f"| {key} | — | UNKNOWN |")
+    env = metrics_.get("working_envelope_distances", {})
+    a(f"| working-distance envelope | {_f(env.get('value'))} distance(s) | {env.get('note', '')} |")
+    a(
+        f"| focus access | {FOCUS_ACCESS.get(focus_type, 'UNKNOWN')} | focus_type {focus_type}; platform focus control {focus_ctl or 'UNKNOWN'} |"
+    )
+    st = metrics_.get("calibration_focal_rel_delta", {})
+    a(
+        f"| calibration after remove/reinstall | focal Δ {_f(st.get('value'), 4)} (relative) | {st.get('note') or 'from calibration sets A/B'} |"
+    )
+    a(
+        "| keep-out | lens FOV cone + focus access (if any) + FFC bend volume | derive in Fusion from the measured values above; not invented here |"
+    )
+    a("")

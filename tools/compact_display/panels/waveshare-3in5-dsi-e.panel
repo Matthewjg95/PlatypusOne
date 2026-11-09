@@ -1,0 +1,47 @@
+# Waveshare 3.5inch DSI LCD (E)  -  SKU 33086  -  640x480 landscape, IPS, GT911
+#
+# Same electrical family as the (H): same Waveshare_35DSI.dtbo, same 15-pin
+# FFC, same 3V3-only power, same polled GT911, no controller, no init sequence.
+# Only the timings and the glass differ. NOT YET RUN ON AN UNO Q.
+#
+# Source (DOCUMENTED, Waveshare): Waveshare_35DSI.dtbo "35E" override:
+#   clock-frequency 24000000, hactive 640, hfront-porch 48, hsync-len 32,
+#   hback-porch 80, vactive 480, vfront-porch 3, vsync-len 4, vback-porch 13,
+#   RGB888, MODE_VIDEO, data-lanes <1>.
+# Single-lane bit rate: 24 MHz x 24 bpp = 576 Mbit/s.
+#
+# I2C cannot tell (E) from (H): both answer as GT911 at 0x14. Install by name.
+
+PANEL_ID="waveshare-3in5-dsi-e"
+PANEL_DESC="Waveshare 3.5inch DSI LCD (E), 640x480"
+PANEL_COMPATIBLE="platypus,waveshare-3in5-dsi-e"
+PANEL_C_NAME="waveshare_3in5_dsi_e"
+
+CLOCK_KHZ=24000
+HACTIVE=640
+HFRONT=48
+HSYNC=32
+HBACK=80
+VACTIVE=480
+VFRONT=3
+VSYNC=4
+VBACK=13
+
+# Active area from Waveshare 2D drawing "3.5_inch_DSI_LCD_E-2D_PDF": 70.67 x 53.27 mm.
+WIDTH_MM=71
+HEIGHT_MM=53
+
+DSI_LANES=1
+DSI_FORMAT="MIPI_DSI_FMT_RGB888"
+DSI_MODE_FLAGS="MIPI_DSI_MODE_VIDEO"
+BPC=8
+
+PANEL_CTRL_COMPATIBLE=""
+PANEL_CTRL_ADDR=""
+TOUCH_ADDR=""
+
+GOODIX_COMPATIBLE="goodix,gt911"
+GOODIX_ADDR="0x14"
+GOODIX_ALT_ADDR="0x5d"
+GOODIX_SIZE_X=640
+GOODIX_SIZE_Y=480

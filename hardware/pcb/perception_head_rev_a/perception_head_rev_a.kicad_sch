@@ -1,0 +1,481 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "563f76f1-aa92-5d9c-990e-567a413e9fb7")
+	(paper "A3")
+	(title_block
+		(title "Platypus One — Perception Head Rev A")
+		(date "2026-10-05")
+		(rev "A0-prelim")
+		(company "Platypus One")
+		(comment 1 "Root: sheet index and design intent")
+		(comment 2 "PRE-LAYOUT: not for fabrication. Provisional nets/values are labelled.")
+	)
+	(lib_symbols)
+	(text "PLATYPUS ONE — PERCEPTION HEAD PCB, REV A (PRE-LAYOUT SCHEMATIC)"
+		(exclude_from_sim no)
+		(at 15 15 0)
+		(effects
+			(font
+				(size 2 2)
+			)
+			(justify left top)
+		)
+		(uuid "302917bc-8bc7-50b8-997a-c215867e6f81")
+	)
+	(text "Status/gates: hardware/pcb/README.md   ICD: hardware/pcb/ICD_PERCEPTION_HEAD.md   Power: hardware/pcb/POWER_TREE_REV_A.md"
+		(exclude_from_sim no)
+		(at 15 20 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "a1872037-7764-5041-803a-15a0ad63fb7c")
+	)
+	(text "Purpose: rigid sensing head = camera module datum + VL53L8CX ToF (Pololu #3419) + BMI270 IMU + controlled illumination"
+		(exclude_from_sim no)
+		(at 15 23.5 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "67e6af2a-d7b4-56d6-9ca4-b2f2cff15829")
+	)
+	(text "  + identity/calibration EEPROM + test access, on ONE low-speed cable to the UNO Q host. No MIPI on this board."
+		(exclude_from_sim no)
+		(at 15 27 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "33623773-acd4-5f5c-8f90-d7edef2d3f1d")
+	)
+	(text "The IMX219 camera stays a replaceable module on the Media Carrier CSI path; this board only holds it mechanically."
+		(exclude_from_sim no)
+		(at 15 30.5 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "21e980d9-d980-5351-b2d6-d49d673e4c56")
+	)
+	(text "Failure isolation: ToF, IMU and illumination are all optional to the RGB CSI path; the head draws only host 5 V/3V3."
+		(exclude_from_sim no)
+		(at 15 34 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "85722167-d9ad-597e-8bf3-e58c0e0c8b21")
+	)
+	(text "Label convention: TBD_* = host pin not frozen; DNP_OPTION = footprint fitted but unpopulated; BENCH_VERIFY = needs measurement."
+		(exclude_from_sim no)
+		(at 15 37.5 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "ef84a155-f4c2-5941-b0f9-760df4f20232")
+	)
+	(text "Do NOT route, generate Gerbers or order until the gates in hardware/pcb/README.md are released."
+		(exclude_from_sim no)
+		(at 15 41 0)
+		(effects
+			(font
+				(size 1.5 1.5)
+			)
+			(justify left top)
+		)
+		(uuid "64741e0d-0223-5a35-8cf8-9f73c66ed4e6")
+	)
+	(text "Host interface + control expander"
+		(exclude_from_sim no)
+		(at 22 74 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "be9d9ace-7881-5715-a56d-4a19299e17bc")
+	)
+	(text "Power entry, measurement shunts, switchable ToF rail"
+		(exclude_from_sim no)
+		(at 117 74 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "37a11a7e-a4c9-52de-b889-1c2de52e5d43")
+	)
+	(text "VL53L8CX ToF — Rev A hosts the Pololu #3419 carrier"
+		(exclude_from_sim no)
+		(at 212 74 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "488b79e4-df0a-5da7-ab35-1937914a2ee7")
+	)
+	(text "BMI270 IMU"
+		(exclude_from_sim no)
+		(at 307 74 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "0656ff7e-aae0-5de9-b86c-7b54d59530c5")
+	)
+	(text "Controlled white illumination — 2-channel linear constant-current sink"
+		(exclude_from_sim no)
+		(at 22 119 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "85e32003-fe77-558b-a633-e860d09458c5")
+	)
+	(text "Board identity + calibration storage"
+		(exclude_from_sim no)
+		(at 117 119 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "94c3716f-f841-5fce-a374-a0f4e3e31143")
+	)
+	(text "Test points, status LED, mechanical datums"
+		(exclude_from_sim no)
+		(at 212 119 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "307fcd0e-ad23-5542-9e99-538a15168935")
+	)
+	(sheet
+		(at 20 70)
+		(size 80 30)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "e7a44f72-b726-5b7d-8cc4-8fe3e179532a")
+		(property "Sheetname" "HOST_INTERFACE"
+			(at 20 69.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "host_interface.kicad_sch"
+			(at 20 100.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "perception_head_rev_a"
+				(path "/563f76f1-aa92-5d9c-990e-567a413e9fb7"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 115 70)
+		(size 80 30)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "0e71bc94-0f75-5b12-8323-347d74bdded2")
+		(property "Sheetname" "POWER"
+			(at 115 69.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 115 100.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "perception_head_rev_a"
+				(path "/563f76f1-aa92-5d9c-990e-567a413e9fb7"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 210 70)
+		(size 80 30)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "2c34e941-06f1-547e-bd34-7acc55081655")
+		(property "Sheetname" "TOF"
+			(at 210 69.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "tof.kicad_sch"
+			(at 210 100.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "perception_head_rev_a"
+				(path "/563f76f1-aa92-5d9c-990e-567a413e9fb7"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 305 70)
+		(size 80 30)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "640bea88-c041-59a6-94b1-11543ffd2b62")
+		(property "Sheetname" "IMU"
+			(at 305 69.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "imu.kicad_sch"
+			(at 305 100.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "perception_head_rev_a"
+				(path "/563f76f1-aa92-5d9c-990e-567a413e9fb7"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 20 115)
+		(size 80 30)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "40303318-b2da-547b-964f-813d5ed5faf6")
+		(property "Sheetname" "ILLUMINATION"
+			(at 20 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "illumination.kicad_sch"
+			(at 20 145.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "perception_head_rev_a"
+				(path "/563f76f1-aa92-5d9c-990e-567a413e9fb7"
+					(page "6")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 115 115)
+		(size 80 30)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "d3031f8a-6783-5e10-9d8f-adfd7f467ae0")
+		(property "Sheetname" "ID_CALIBRATION"
+			(at 115 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "id_calibration.kicad_sch"
+			(at 115 145.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "perception_head_rev_a"
+				(path "/563f76f1-aa92-5d9c-990e-567a413e9fb7"
+					(page "7")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 210 115)
+		(size 80 30)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "fccb6c56-e107-51b0-a018-0cc960b2a71c")
+		(property "Sheetname" "DEBUG_TEST"
+			(at 210 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "debug_test.kicad_sch"
+			(at 210 145.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "perception_head_rev_a"
+				(path "/563f76f1-aa92-5d9c-990e-567a413e9fb7"
+					(page "8")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

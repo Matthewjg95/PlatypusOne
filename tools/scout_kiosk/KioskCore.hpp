@@ -43,7 +43,9 @@ inline constexpr Color kWarn{255, 110, 90};
 [[nodiscard]] std::vector<std::uint8_t> frameToRgb(const hal::Frame& frame);
 
 /// Laid out against the display's real geometry (ADR-0001): the 800x480 panel
-/// and a 1080p bench monitor both come out right.
+/// and a 1080p bench monitor both come out right. A portrait panel (taller than
+/// wide, e.g. a 480x800 compact display) stacks the preview above the panel;
+/// landscape geometry takes the side-by-side path unchanged.
 struct Layout {
     Rect preview;
     Rect panel;

@@ -6,7 +6,8 @@
 //   exported -> summary -> tap for a new session.
 //
 //   scout_kiosk [--device /dev/videoN] [--out DIR] [--sessions DIR]
-//               [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR] [--fake]
+//               [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR]
+//               [--offscreen-size WxH] [--fake]
 //               [--tof auto|off] [--tof-port N] [--camera-fov HxV]
 //               [--tof-orientation raw|fliph|flipv|rot180] [--shell]
 //
@@ -25,7 +26,9 @@
 // same screens on any host); sessions live in services/session.
 //
 // --offscreen renders into memory instead of DRM and writes preview.ppm,
-// card.ppm and summary.ppm after one capture and a finish. --fake swaps the
+// card.ppm and summary.ppm after one capture and a finish. --offscreen-size
+// (default 800x480) renders at another panel geometry, e.g. 480x800 for a
+// portrait compact display. --fake swaps the
 // webcam for the validation battery's M8 scene (records name the camera
 // "synthetic", so they never pass for bench evidence).
 //
@@ -142,8 +145,8 @@ int usage() {
     std::fprintf(stderr,
                  "usage: scout_kiosk [--camera auto|usb|csi] [--device /dev/videoN] [--out DIR]\n"
                  "                   [--sessions DIR]\n"
-                 "                   [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR]"
-                 " [--fake]\n"
+                 "                   [--reference-mm MM] [--prefer dp|dsi] [--offscreen DIR]\n"
+                 "                   [--offscreen-size WxH] [--fake]\n"
                  "                   [--tof auto|off] [--tof-port N] [--camera-fov HxV]\n"
                  "                   [--tof-orientation raw|fliph|flipv|rot180] [--shell]\n");
     return 2;
@@ -157,6 +160,7 @@ int main(int argc, char** argv) {
     std::string outDir = "observations";
     std::string sessionsDir = "sessions";
     std::string offscreen;
+    std::uint16_t offscreenW = 800, offscreenH = 480;
     bool fake = false;
     double referenceMm = vision::CalibrationSpec{}.referenceSideMm;
     drm::DrmDisplayConfig displayConfig;
@@ -182,7 +186,14 @@ int main(int argc, char** argv) {
             offscreen = next();
         else if (arg == "--shell")
             shellMode = true;
-        else if (arg == "--fake")
+        else if (arg == "--offscreen-size") {
+            unsigned w = 0, h = 0;
+            if (std::sscanf(next().c_str(), "%ux%u", &w, &h) != 2 || w < 64 || h < 64 || w > 4096 ||
+                h > 4096)
+                return usage();
+            offscreenW = static_cast<std::uint16_t>(w);
+            offscreenH = static_cast<std::uint16_t>(h);
+        } else if (arg == "--fake")
             fake = true;
         else if (arg == "--reference-mm")
             referenceMm = std::atof(next().c_str());
@@ -234,9 +245,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<SnapshotDisplay> snapshot;
     std::shared_ptr<drm::DrmDisplay> drmDisplay;
     if (!offscreen.empty()) {
-        snapshot = std::make_shared<SnapshotDisplay>(hal::DisplayInfo{800, 480, 16});
+        snapshot = std::make_shared<SnapshotDisplay>(hal::DisplayInfo{offscreenW, offscreenH, 16});
         display = snapshot;
-        std::printf("display: offscreen 800x480 -> %s\n", offscreen.c_str());
+        std::printf("display: offscreen %ux%u -> %s\n", offscreenW, offscreenH, offscreen.c_str());
     } else {
         drmDisplay = std::make_shared<drm::DrmDisplay>(displayConfig);
         if (const auto s = drmDisplay->open(); !s) {

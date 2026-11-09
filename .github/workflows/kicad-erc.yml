@@ -1,0 +1,58 @@
+name: KiCad ERC
+
+on:
+  pull_request:
+    paths:
+      - "hardware/pcb/**"
+      - ".github/workflows/kicad-erc.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "hardware/pcb/**"
+      - ".github/workflows/kicad-erc.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kicad-erc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perception-head-rev-a:
+    name: Perception Head Rev A — ERC + netlist intent
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: kicad/kicad:9.0
+      options: --user root
+
+    defaults:
+      run:
+        working-directory: hardware/pcb/perception_head_rev_a
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install default KiCad library tables
+        run: |
+          kicad-cli version
+          mkdir -p "$HOME/.config/kicad/9.0"
+          cp /usr/share/kicad/template/sym-lib-table "$HOME/.config/kicad/9.0/"
+          cp /usr/share/kicad/template/fp-lib-table "$HOME/.config/kicad/9.0/"
+
+      - name: Electrical rules check (errors fail the job)
+        run: |
+          kicad-cli sch erc --severity-all -o /tmp/erc_all.txt perception_head_rev_a.kicad_sch
+          cat /tmp/erc_all.txt
+          kicad-cli sch erc --severity-error --exit-code-violations -o /tmp/erc_errors.txt \
+            perception_head_rev_a.kicad_sch
+
+      # Remove this step once the schematic is edited in the KiCad GUI
+      # (see perception_head_rev_a/README.md, "How the schematic was authored").
+      - name: Netlist matches generator intent
+        run: |
+          kicad-cli sch export netlist --format kicadsexpr -o /tmp/net.net perception_head_rev_a.kicad_sch
+          cd tools && python3 check_netlist.py /tmp/net.net

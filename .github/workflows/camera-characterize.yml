@@ -1,0 +1,88 @@
+name: Camera characterization
+
+on:
+  pull_request:
+    paths:
+      - "tools/camera_characterize/**"
+      - "tools/scout_measure/**"
+      - "services/vision/**"
+      - ".github/workflows/camera-characterize.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/camera_characterize/**"
+      - "tools/scout_measure/**"
+      - "services/vision/**"
+      - ".github/workflows/camera-characterize.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: camera-characterize-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pipeline:
+    # Software behaviour only: synthetic fixtures are never camera evidence.
+    name: Camera characterization - contract, analysis, gate (synthetic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install analysis dependencies
+        run: python -m pip install --disable-pip-version-check -r tools/camera_characterize/requirements.txt
+
+      - name: Build scout_measure (Scout analyzer bridge)
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DPLATYPUS_TARGET_HOST=ON \
+            -DPLATYPUS_BUILD_APPS=OFF -DPLATYPUS_BUILD_TESTS=OFF
+          cmake --build build --target scout_measure --parallel
+
+      - name: Unit + pipeline tests
+        env:
+          CAMCHAR_REQUIRE_SCOUT: "1"
+        run: python -m unittest discover -s tools/camera_characterize/tests -v
+
+      - name: CLI end to end on a synthetic experiment
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path[:0] = ["tools/camera_characterize", "tools/camera_characterize/tests"]
+          import synth
+          synth.make_experiment(Path("build/camchar-synth"), {
+              "SYN-A": synth.Camera(650, -0.12, 0.04, blur_per_m=3.0),
+              "SYN-B": synth.Camera(600, -0.30, 0.10, blur_per_m=20.0, focus_m=0.6),
+          })
+          PY
+          cc=tools/camera_characterize/camera_characterize.py
+          python $cc validate build/camchar-synth
+          python $cc all build/camchar-synth
+          grep -q "SYNTHETIC FIXTURE" build/camchar-synth/derived/*/report.md
+          python $cc plan > /dev/null
+
+      - name: Printable target is reproducible
+        run: |
+          python tools/camera_characterize/camera_characterize.py target /tmp/charuco.svg
+          cmp /tmp/charuco.svg tools/camera_characterize/targets/charuco_7x10_20mm.svg
+
+      - name: Shellcheck capture script
+        run: shellcheck -s sh tools/camera_characterize/capture_raw.sh
+
+      - name: Keep the synthetic report as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: camchar-synthetic-report
+          path: build/camchar-synth/derived/
+          if-no-files-found: ignore

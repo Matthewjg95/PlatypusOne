@@ -1,6 +1,6 @@
 # Platypus One — Bill of Materials (rev B, planning — merged)
 
-Status date: **2026-09-01**. This is the **master planning and inventory superset**, not the frozen hardware-request BOM or the bounded Contest Core build (scope layers are governed in the private planning overlay). It merges the original planning BOM with the
+Status date: **2026-09-30**. This is the **master planning and inventory superset**, not the frozen hardware-request BOM or the bounded Contest Core build (scope layers are governed in the private planning overlay). It merges the original planning BOM with the
 envelope BOM from `industrial_design/bounding_boxes/BOM_v0_1.md` (which stays
 as the packaging-envelope tracker). **Alternates are kept deliberately** —
 selection analysis is pending; do not delete an option without a decision
@@ -27,6 +27,7 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 | 4a | **Waveshare 5-DSI-TOUCH-A + UNO Media Carrier** ◐ CONDITIONAL | Panel $34.95–36.99 + carrier €19.89 | Panel CAD TBD; carrier 68.58×53.34 | Only 4.3–5″ panel with a shipped UNO Q profile; 720×1280 native portrait. Carrier was Coming Soon / sold out on 2026-08-25. Proof plan: [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md) | PLANNED |
 | 4b | 4.3" parallel-RGB 800×480 cap. (SUB3-class, ST7262E43 + GT1151) + ESP32-S3 bridge | ~$35+bridge | ~121×76×7 | FALLBACK ONLY (activated if 4a sourcing fails by Sep 30) | HOLD |
 | 4c | 3.2" ILI9341 320×240 SPI, resistive (XPT2046) | $16 | ~90×55×10 | DESCOPE NET only; matches current renderer/sim as built | HOLD |
+| 4e | **Waveshare 3.5inch DSI LCD (H), SKU 33087** + Media Carrier + existing 15→22 cable | (check on order day) | 56×88.9×~10.7 (vendor drawing/STEP) | Compact-display LEADING candidate (#41). 480×800 portrait, GT911, 3V3 180 mA. Software prepared, **not yet bench-tested**: [COMPACT_DISPLAY_SELECTION.md](COMPACT_DISPLAY_SELECTION.md) | RECOMMENDED (1 bench unit) |
 | 4d | USB-C/HDMI portable monitor or Waveshare 5" HDMI (H) | $40 | dev only | Prototyping fixture, never the product (consumes USB-C) | PLANNED |
 
 ## Input
@@ -38,14 +39,17 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 
 ## Sensing (alternates kept — analysis pending)
 
+> Perception Head Rev A part selections with rationale (ToF carrier, IMU, illumination driver, ID EEPROM):
+> [`hardware/pcb/BOM_PERCEPTION_HEAD_REV_A.md`](../../hardware/pcb/BOM_PERCEPTION_HEAD_REV_A.md).
+
 | # | Item | Qty | Est. | Envelope (mm) | Source | Notes | ACQ |
 |---|---|---|---|---|---|---|---|
 | 7a | Camera: USB UVC OV5640-class autofocus ✦ | 1 | $25 | 25×25×10 | Amazon | Simplest Linux path (V4L2) | PLANNED |
 | 7b | Camera: 13 MP autofocus module | 1 | $40 | 25×25×10 | TBD | Higher fidelity for ShadowScan; confirm UVC or MIPI-CSI availability on UNO Q before choosing | PLANNED |
 | 8a | ToF: VL53L1X (single-zone, 4 m) | 1 | $12 | 13×18×2 (breakout) | Pololu/Adafruit | FALLBACK — proven, cheap single distance channel if multizone integration threatens schedule | HOLD |
 | 8b | **ToF: VL53L8CX (8×8 multizone)** ✦ | 1 | $20 | 6×6×3 IC; breakout envelope TBD | ST/SparkFun | PREFERRED — 64-zone coarse depth, target/background separation, multiple-target handling, and camera-geometry cross-check; not a precision CAD scanner | PLANNED |
-| 9a | IMU: BNO055 (fused orientation on-chip) ✦ | 1 | $25 | 20×27×4 (breakout) | Adafruit | No sensor-fusion code needed — fastest to a working level/angle app | PLANNED |
-| 9b | IMU: BMI270 | 1 | $8 | 10×10×3 | DigiKey | Cheaper/smaller; fusion runs on our side | PLANNED |
+| 9a | **IMU: BMI270** ✦ | 1 | $8 | 2.5×3.0×0.8 IC; breakout TBD | DigiKey/Bosch | Rev A primary candidate: current device, I²C/SPI, 3.3 V-compatible VDD/VDDIO range; fusion runs on our side | PLANNED |
+| 9b | BNO055 fused IMU | 1 | $25 | 20×27×4 (breakout) | Adafruit/Bosch | DEV/FALLBACK ONLY — Bosch marks BNO055 not recommended for new designs; do not anchor custom carrier to it | HOLD |
 | 10 | Color: TCS34725 | 1 | $8 | 20×20×3 | Adafruit | Multi-measure lineage feature | PLANNED |
 | 11 | Radar: Grove BGT24LTR11 Doppler | 1 | $30 | 40×20×12 | Seeed | **V2 candidate** (machine-health app per utilities roadmap) — envelope reserved, not in Rev A build | DEFERRED |
 | 12 | White LED high-CRI + driver | 2 | $2 | — | DigiKey | Controlled shadow casting + illumination | PLANNED |
@@ -106,4 +110,4 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 3. **ToF architecture selected: 8b preferred.** VL53L8CX multizone depth now supports
    the contest capture-to-Fusion workflow; VL53L1X remains the schedule fallback.
    Final breakout, interface choice, optical window, calibration, and bench proof remain open.
-4. IMU 9a vs 9b — selection pending; both candidates remain carrier-compatible.
+4. **IMU direction updated:** BMI270 is the Rev A primary candidate. BNO055 is retained only as a development fallback because Bosch marks it not recommended for new designs. Bench/software validation of BMI270 remains required before schematic freeze.

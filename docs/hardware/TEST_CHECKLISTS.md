@@ -5,12 +5,20 @@ current one passes. Record date/initials/notes inline (copy this file per unit
 if building more than one). Contest tie-in: photograph each stage — bring-up
 photos feed the 20-point documentation score.
 
+**Post-submission update, 2026-10-01:** Dream Lab was submitted September 30.
+Session A/B are historical checklists; unchecked items are not silently
+promoted to PASS. Use [UNO_Q_SCOUT_BASELINE.md](UNO_Q_SCOUT_BASELINE.md) for the
+single pinned build/launch sequence and [the evidence index](../contest/evidence/dreamlab-2026-09-30/README.md)
+for final records. The fitted display is the **Waveshare 5inch DSI LCD
+Rev2.2, 800×480**, not the 720×1280 5-DSI-TOUCH-A.
+
 ## First UNO Q session — status board
 
-The bring-up-brief sequence for the current physical session. The primary path is now the UNO Q + UNO Media Carrier + Waveshare 5-DSI-TOUCH-A; the M5Stack Tab5 remains a fallback/dev display fixture. Update the
+The bring-up-brief sequence for the current physical session. The primary path is now the UNO Q + UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 (800×480); the M5Stack Tab5 remains a fallback/dev display fixture. Update the
 Status column as physical testing occurs: `UNTESTED`, `PASS`, `FAIL`, or
 `BLOCKED (reason)`. Nothing is claimed compiled or run on the UNO Q until it
-actually has.
+actually has. `REPORTED` identifies a result in bench notes whose raw run
+evidence and exact tested SHA have not yet been archived.
 
 | # | Step | Detail | Status |
 |---|---|---|---|
@@ -18,13 +26,13 @@ actually has.
 | 2 | Hello-world | Any trivial program compiles + runs on the Linux side | UNTESTED |
 | 3 | Linux-side Platypus executable | On-device native build: cmake + full `platypus_tests` + launcher headless (§2) | PASS 2026-09-19 — GCC 14.2 aarch64, Ninja, 2m44s on 4 cores; `platypus_tests` 14/14; `--fake` harness writes a valid record. Launcher headless soak not yet run |
 | 4 | MCU ↔ Linux communication | Flash `firmware/mcu_bridge`; Ping/Pong + GPIO loopback over `/dev/ttyRPMSG0` (§2) | UNTESTED |
-| 5 | Waveshare DSI proof-of-life | Media Carrier + 5-DSI-TOUCH-A boots, renders, touch enumerates, rotation usable | UNTESTED |
-| 6 | Touch → app response | Touch press reaches the app and can act as the first-pass Scout trigger | UNTESTED |
-| 7 | Camera capture | `engineering_scout_capture --device /dev/videoN` produces a real observation (§4). **Not `/dev/video0`** — see Session A | PASS 2026-09-21 — UGREEN hub + Adesso CyberTrack H4 on `/dev/video2`, 640x480 YUYV, valid record written (`scan-0001`); YUYV also at 1280x720/1920x1080. Measurement pending the printed sheet |
-| 8 | Scout pipeline on a real image | Analyzer + classifier over a physical fastener beside the 20 mm reference | UNTESTED |
-| 9 | Result on Waveshare | Scout result card renders on the 5-DSI-TOUCH-A and remains touch-usable | UNTESTED |
+| 5 | Waveshare DSI proof-of-life | Media Carrier + 5inch DSI LCD Rev2.2 (800×480), backlight/touch | REPORTED 2026-09-29 — ATTINY `0x45`, touch `0x38`, correct FFC orientation; working cable photos retained in DSI_BRINGUP.md |
+| 6 | Touch → app response | Touch press reaches the app and can act as the first-pass Scout trigger | REPORTED 2026-09-29 — on-glass kiosk loop in DEMO_READINESS.md; final run archive pending |
+| 7 | Camera capture | `engineering_scout_capture --device /dev/videoN` produces a real observation (§4). Select by capability; device numbers change between boots | PASS 2026-09-21 — UGREEN hub + Adesso CyberTrack H4 on `/dev/video2`, 640x480 YUYV, valid record written (`scan-0001`); YUYV also at 1280x720/1920x1080. Measurement was pending the printed sheet at that session |
+| 8 | Scout pipeline on a real image | Analyzer + classifier over a physical fastener beside the 20 mm reference | REPORTED first light — 49.6 × 12.1 mm vs 44.45 mm overall length / 9.48 mm head; actual screw 1/4-20 UNC. Workflow ran; accuracy not accepted. Later focused/tilted comparisons are preserved as narrative/offline results |
+| 9 | Result on Waveshare | Scout result card renders on the 800×480 panel and remains touch-usable | REPORTED on glass in DEMO_READINESS.md; physical result media/raw record and tested SHA pending archive |
 
-Session prerequisites: UNO Media Carrier + Waveshare 5-DSI-TOUCH-A installed with power removed; webcam available on USB; printed 20 mm reference sheet verified at 100% scale. MCU bridge/arduino-cli work is not a blocker for tonight because touch is the accepted first-pass trigger.
+Session prerequisites: UNO Media Carrier + Waveshare 5inch DSI LCD Rev2.2 installed with power removed; webcam available on USB; printed 20 mm reference sheet verified at 100% scale. Touch remains the accepted trigger; MCU bridge/arduino-cli work is not a blocker for baseline replay.
 
 ## Session A — first camera-on-board run (Dream Lab MVP step 6)
 
@@ -93,7 +101,7 @@ fall back to the USB-C link, fix networking, and retry.
       `yuyv` entry
 - [ ] Step 6 writes `observations/scan-NNNN/` containing `observation.json`
       plus the frame artifact; `ok "wrote ..."` in the summary
-- [ ] `observation.json` has an OBSERVED width claim in mm for the fastener and
+- [ ] `observation.json` has a DERIVED width claim in mm for the fastener and
       an INFERRED classification with confidence. Compare the width to
       calipers: measured ______ mm vs caliper ______ mm (target ≤ 0.5 mm)
 - [ ] If the analyzer rejects the scene (no reference / ambiguous / no
@@ -235,23 +243,29 @@ This session is allowed to be ugly. It is not allowed to expand in scope.
 
 - [ ] UNO Q powered down before attaching/removing the Media Carrier or DSI FFC.
 - [ ] Verify FFC orientation against the carrier/display markings; photograph both ends before assembly.
-- [ ] Media Carrier seated; Waveshare 5-DSI-TOUCH-A connected.
+- [ ] Media Carrier seated; Waveshare 5inch DSI LCD Rev2.2 (800×480) connected.
 - [x] Printed 20 mm reference is ready and scale-checked.
 - [ ] One bolt and one nut are ready; calipers available for truth measurements.
 - [ ] Webcam + powered/PD-capable USB path ready.
 
 ### B1. Display proof-of-life
 
-Run on the UNO Q:
+The successful panel installation is recorded in [DSI_BRINGUP.md](DSI_BRINGUP.md).
+The former `display=5-dsi-touch-a` command in this checklist configured the
+wrong 720×1280 panel and has been removed. The fitted panel uses the
+`waveshare-800x480` definition from the recorded driver/overlay project.
+Do not reinstall the panel or upgrade its OS merely to replay the working rig.
+
+Record the current configuration on the UNO Q:
 
 ```bash
-sudo arduino-linux-config carrier list
-sudo arduino-linux-config carrier enable media-carrier display=5-dsi-touch-a
-sudo arduino-linux-config carrier show media-carrier
-sudo reboot
+uname -a
+ls /sys/class/drm
+cat /sys/class/drm/card*-DSI-*/status
+cat /sys/class/drm/card*-DSI-*/modes
 ```
 
-After reboot:
+After inspecting the current configuration:
 
 - [ ] Display shows a full frame with no persistent flicker/clipping.
 - [ ] Touch enumerates and responds.
@@ -263,14 +277,10 @@ After reboot:
 
 ### B2. Sync and build
 
-```bash
-cd ~/PlatypusOne
-git checkout main
-git pull --ff-only
-cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release
-cmake --build build-bench -j4
-./build-bench/tests/platypus_tests
-```
+Follow [the pinned UNO Q build/launch sequence](UNO_Q_SCOUT_BASELINE.md).
+It records the SHA, builds Linux tools, runs asserts and the synthetic battery,
+then installs/launches the kiosk. It also keeps synthetic records out of the
+physical observation directory.
 
 - [ ] Build passes on the UNO Q.
 - [ ] Tests pass.

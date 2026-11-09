@@ -78,9 +78,50 @@ std::vector<std::uint8_t> frameToRgb(const hal::Frame& frame) {
     }
 }
 
+namespace {
+
+/// Splits the finish row to make room for the DEPTH button.
+void splitFinishRow(Layout& l, std::int32_t margin) {
+    const std::int32_t gap = margin / 2;
+    const std::int32_t fw = (l.finish.w - gap) * 55 / 100;
+    l.depth = {l.finish.x + fw + gap, l.finish.y, l.finish.w - fw - gap, l.finish.h};
+    l.finish.w = fw;
+}
+
+/// Portrait panels (taller than wide, e.g. a 480x800 compact display) stack
+/// the preview above the session panel; the buttons sit at the bottom of the
+/// panel, under the thumb.
+Layout computePortraitLayout(std::int32_t w, std::int32_t h, std::int32_t camW,
+                             std::int32_t camH, bool withDepth) {
+    const std::int32_t margin = std::max(8, w / 18);
+    Layout l;
+    l.textScale = std::max(1, w / 240);
+    std::int32_t pw = w - 2 * margin;
+    std::int32_t ph = pw * camH / std::max(1, camW);
+    const std::int32_t maxPh = h / 2;
+    if (ph > maxPh) {
+        ph = maxPh;
+        pw = ph * camW / std::max(1, camH);
+    }
+    l.preview = {(w - pw) / 2, margin, pw, ph};
+    const std::int32_t py = margin + ph + margin;
+    l.panel = {margin, py, w - 2 * margin, h - py - margin};
+    const std::int32_t finishH = h / 14;
+    const std::int32_t captureH = std::min(h / 8, l.panel.h / 4);
+    l.finish = {l.panel.x + margin / 2, l.panel.y + l.panel.h - finishH - margin / 2,
+                l.panel.w - margin, finishH};
+    l.capture = {l.panel.x + margin / 2, l.finish.y - margin / 2 - captureH, l.panel.w - margin,
+                 captureH};
+    if (withDepth) splitFinishRow(l, margin);
+    return l;
+}
+
+}  // namespace
+
 Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32_t camH,
                      bool withDepth) {
     const std::int32_t w = info.width, h = info.height;
+    if (h > w) return computePortraitLayout(w, h, camW, camH, withDepth);
     const std::int32_t margin = std::max(8, h / 30);
     Layout l;
     l.textScale = std::max(1, h / 240);
@@ -102,12 +143,7 @@ Layout computeLayout(const hal::DisplayInfo& info, std::int32_t camW, std::int32
                 l.panel.w - margin, finishH};
     l.capture = {l.panel.x + margin / 2, l.finish.y - margin / 2 - captureH, l.panel.w - margin,
                  captureH};
-    if (withDepth) {
-        const std::int32_t gap = margin / 2;
-        const std::int32_t fw = (l.finish.w - gap) * 55 / 100;
-        l.depth = {l.finish.x + fw + gap, l.finish.y, l.finish.w - fw - gap, l.finish.h};
-        l.finish.w = fw;
-    }
+    if (withDepth) splitFinishRow(l, margin);
     return l;
 }
 
