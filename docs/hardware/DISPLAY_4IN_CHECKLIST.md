@@ -37,3 +37,12 @@ A source audit, synthetic test, CI success or successful module compile is **not
 ### Physical acceptance still requires operator evidence
 
 The actual 4-inch A panel, verified 5 V power polarity and capacity, screen and touch response, repeatable boots, concurrent CSI capture, and Fusion envelope measurements. Do not promote the 4-inch candidate from target to proven until these are archived. No BENCH/MECH/PCB gate is closed by this document.
+
+
+## 2026-11-11 convergence audit — CI verified; target compatibility still blocked
+
+**GitHub evidence inspected 2026-11-11:** draft [PR #57](https://github.com/Matthewjg95/PlatypusOne/pull/57) is open and mergeable, but its head `747ff198c5d884350b2e7f12332cd75f9a47fcdf` remains a stacked branch rather than a clean display-only change. The commit's GitHub Actions **Host CI** and **Display tools** runs both completed successfully. These are host/source/synthetic checks, **not** a module compilation against matching UNO Q kernel headers or DTB validation. No board kernel release, matching build tree, base DTB or Media Carrier overlay was found in the inspected gate records. Do not mark COMPILE_PASS or release panel/enclosure.
+
+**New integration context:** draft [#58](https://github.com/Matthewjg95/PlatypusOne/pull/58) (trigger + BMI270 + VL53L8CX firmware, based on #49) and [#59](https://github.com/Matthewjg95/PlatypusOne/pull/59) (Linux trigger/IMU capture, based on #56) are **not on main**. Their simulated I²C/protocol tests cannot establish shared Qwiic bus current, electrical compatibility, camera/DSI coexistence or physical capture. Their presence also increases the cost of merging a broad stacked display branch without review. Keep DSI panel 5 V sourcing separate from the 3.3 V Qwiic sensor budget; neither power path is validated by host CI.
+
+**Release rule:** advance the next display subgate only with immutable evidence bundle containing (a) board kernel/image identification and matching build-tree provenance, (b) real compile log/result, and (c) separately, offline DTB/overlay composition against the actual UNO Q/Media Carrier assets. If prerequisites are absent, record BLOCKED_MISSING_BOARD_ARTIFACTS rather than COMPATIBLE or INCOMPATIBLE. Maintain working five-inch fallback. No physical BENCH/MECH gates or PCB release were changed by this audit.
