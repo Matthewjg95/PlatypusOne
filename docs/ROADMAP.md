@@ -122,14 +122,12 @@ experiment and assembly review justify integration.
 
 ## M3 — Flagship apps
 
-- [ ] `apps/shadowscan` — structured-shadow 3D capture pipeline
-      (camera → services/vision silhouette extraction → geometry → mesh)
 - [ ] `services/vision` — C++ image ops core; Python prototyping sandbox
-- [ ] `apps/viewer` — mesh/point-cloud viewer on the renderer
 - [ ] `apps/measurement` — sensor-driven measurement with unit management
-- [ ] `apps/inspection` — generic live-sensor dashboard (auto-renders any
-      SensorDescriptor — the sensor-expansion proof point)
-- [ ] `apps/documentation` — photo + note capture into ProjectStore
+- Parked until after Dec 20 (placeholder READMEs removed 2026-11-22, see
+  [ARCHIVE.md](../ARCHIVE.md)): ShadowScan structured-shadow 3D capture, a
+  mesh/point-cloud viewer, a generic live-sensor inspection dashboard, and
+  photo + note documentation capture.
 
 ## M4 — Platform opening
 

@@ -105,9 +105,8 @@ bill orange would be on-brand).
 
 ## Open questions
 
-- [ ] Final display: options + recommendation consolidated in
-      [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md) (2026-08-24). Decide
-      before the Fusion model firms up — it drives aperture, depth, battery.
+- [x] Final display: **Waveshare 5inch DSI LCD (800×480)**, frozen 2026-11-22.
+      The option comparison is archived ([ARCHIVE.md](../../ARCHIVE.md)).
 - [ ] Trigger: mechanical microswitch (via MCU GPIO) vs capacitive.
 - [ ] Expansion port connector selection (24-pin high-density is drawn).
 - [ ] Kickstand: magnetic folding (drawn) vs simple flip — PCBWay printability.

@@ -20,14 +20,18 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 > are tracked in the private planning overlay, not in the public repository.
 > Research intake never creates a Contest Core requirement.
 
-## Display — **DECIDED: 4a (DSI)** per [ADR-0002](../adr/0002-dsi-production-display.md); analysis in [DISPLAY_COMPARISON.md](DISPLAY_COMPARISON.md)
+## Display — **FROZEN 2026-11-22: Waveshare 5inch DSI LCD (SKU 18396, 800×480, Rev 2.2) + UNO Media Carrier** per [ADR-0002](../adr/0002-dsi-production-display.md)
+
+The frozen panel is the one running on the bench ([DSI_BRINGUP.md](DSI_BRINGUP.md)). The rows below are the
+earlier option set, kept for the record; the compact-display and comparison documents are archived
+([ARCHIVE.md](../../ARCHIVE.md)).
 
 | # | Option | Est. | Envelope (mm) | Notes | ACQ |
 |---|---|---|---|---|---|
-| 4a | **Waveshare 5-DSI-TOUCH-A + UNO Media Carrier** ◐ CONDITIONAL | Panel $34.95–36.99 + carrier €19.89 | Panel CAD TBD; carrier 68.58×53.34 | Only 4.3–5″ panel with a shipped UNO Q profile; 720×1280 native portrait. Carrier was Coming Soon / sold out on 2026-08-25. Proof plan: [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md) | PLANNED |
+| 4a | **Waveshare 5-DSI-TOUCH-A + UNO Media Carrier** ◐ CONDITIONAL | Panel $34.95–36.99 + carrier €19.89 | Panel CAD TBD; carrier 68.58×53.34 | Only 4.3–5″ panel with a shipped UNO Q profile; 720×1280 native portrait. Carrier was Coming Soon / sold out on 2026-08-25. Proof plan: DSI_PANEL_CANDIDATES.md (archived) | PLANNED |
 | 4b | 4.3" parallel-RGB 800×480 cap. (SUB3-class, ST7262E43 + GT1151) + ESP32-S3 bridge | ~$35+bridge | ~121×76×7 | FALLBACK ONLY (activated if 4a sourcing fails by Sep 30) | HOLD |
 | 4c | 3.2" ILI9341 320×240 SPI, resistive (XPT2046) | $16 | ~90×55×10 | DESCOPE NET only; matches current renderer/sim as built | HOLD |
-| 4e | **Waveshare 3.5inch DSI LCD (H), SKU 33087** + Media Carrier + existing 15→22 cable | (check on order day) | 56×88.9×~10.7 (vendor drawing/STEP) | Compact-display LEADING candidate (#41). 480×800 portrait, GT911, 3V3 180 mA. Software prepared, **not yet bench-tested**: [COMPACT_DISPLAY_SELECTION.md](COMPACT_DISPLAY_SELECTION.md) | RECOMMENDED (1 bench unit) |
+| 4e | **Waveshare 3.5inch DSI LCD (H), SKU 33087** + Media Carrier + existing 15→22 cable | (check on order day) | 56×88.9×~10.7 (vendor drawing/STEP) | Compact-display LEADING candidate (#41). 480×800 portrait, GT911, 3V3 180 mA. Software prepared, **not yet bench-tested**: COMPACT_DISPLAY_SELECTION.md (archived) | RECOMMENDED (1 bench unit) |
 | 4d | USB-C/HDMI portable monitor or Waveshare 5" HDMI (H) | $40 | dev only | Prototyping fixture, never the product (consumes USB-C) | PLANNED |
 
 ## Input
@@ -104,8 +108,8 @@ Legend: ACQ = PLANNED → ORDERED → RECEIVED → TESTED. ✦ = primary candida
 
 1. **Display proof (4a)** — architecture is decided, but final selection awaits
    the UNO Media Carrier + 5-DSI-TOUCH-A bench test in
-   [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md). Blocks battery sizing
-   and enclosure freeze; renderer geometry remains runtime-dynamic.
+   DSI_PANEL_CANDIDATES.md (archived). **Resolved 2026-11-22:** frozen at the
+   Waveshare 5inch DSI LCD (800×480) that runs on the bench.
 2. Camera 7a vs 7b — blocked on confirming UNO Q camera input paths.
 3. **ToF architecture selected: 8b preferred.** VL53L8CX multizone depth now supports
    the contest capture-to-Fusion workflow; VL53L1X remains the schedule fallback.

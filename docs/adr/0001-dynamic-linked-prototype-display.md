@@ -1,6 +1,8 @@
 # ADR-0001 — Dynamic display target via a linked external prototype display
 
-- **Status:** Accepted
+- **Status:** Superseded 2026-11-22. The product display is frozen at the Waveshare 5inch
+  DSI LCD (800×480) on the UNO Media Carrier, running on the bench. The linked-display
+  path and the documents linked below are archived; see [ARCHIVE.md](../../ARCHIVE.md).
 - **Date:** 2026-08-24
 - **Deciders:** Matthew (owner)
 
@@ -13,8 +15,8 @@ between them:
 |---|---|
 | [BOM.md](../hardware/BOM.md) rev A | 3.2" ILI9341 320×240 SPI, resistive touch |
 | `industrial_design/bounding_boxes/BOM_v0_1.md` | 5–7" LCD, 165×100×8 mm envelope |
-| [ESP32-S3-LCD-EV-BOARD-SUB3](../hardware/ESP32-S3-LCD-EV-BOARD-SUB3_V1.3.md) | 4.3" 800×480 parallel RGB, capacitive |
-| [TAB5_DISPLAY_PROTOTYPE.md](../roadmap/TAB5_DISPLAY_PROTOTYPE.md) | M5Stack Tab5 driven over a link |
+| ESP32-S3-LCD-EV-BOARD-SUB3 (archived) | 4.3" 800×480 parallel RGB, capacitive |
+| TAB5_DISPLAY_PROTOTYPE.md (archived) | M5Stack Tab5 driven over a link |
 
 Meanwhile the software hardcoded 320×240 in the host simulator, so the one
 resolution the code could actually run was the one least likely to ship.
@@ -116,7 +118,7 @@ Concretely:
 
 - [ ] Confirm the exact Espressif carrier: ESP32-S3-Korvo family vs
       ESP32-S3-LCD-EV-Board-SUB3 v1.3. Record the answer in
-      [ESP32-S3-LCD-EV-BOARD-SUB3_V1.3.md](../hardware/ESP32-S3-LCD-EV-BOARD-SUB3_V1.3.md).
+      ESP32-S3-LCD-EV-BOARD-SUB3_V1.3.md (archived).
 - [ ] Measure achievable link throughput on real hardware and record it in
       [presentation.md](../protocols/presentation.md) (bandwidth table).
 - [ ] Decide whether the encoder becomes a `hal` input event or stays an

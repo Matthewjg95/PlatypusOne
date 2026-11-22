@@ -1,12 +1,14 @@
 # ADR-0002 — MIPI-DSI panel is the production display path
 
-- **Status:** Accepted
+- **Status:** Accepted; panel frozen 2026-11-22 at the Waveshare 5inch DSI LCD
+  (SKU 18396, 800×480, Rev 2.2) on the UNO Media Carrier. The comparison and
+  candidate documents are archived; see [ARCHIVE.md](../../ARCHIVE.md).
 - **Date:** 2026-08-24
 - **Deciders:** Matthew (owner)
 
 ## Context
 
-[DISPLAY_COMPARISON.md](../hardware/DISPLAY_COMPARISON.md) laid out four
+DISPLAY_COMPARISON.md (archived) laid out four
 options. The UNO Q routes the QRB2210's MIPI-DSI through an on-board ANX7625
 to USB-C DP Alt-Mode, multiplexed with a MIPI-DSI connector — so a DSI panel
 is the only path that is simultaneously product-grade (800×480-class,
@@ -42,7 +44,8 @@ touch, per the SUB3 evaluation.
      plausible Linux support (existing panel driver or simple-panel timing),
      with price, lead time, FPC/connector details, and active-area drawings;
   3. confirm how the Debian image applies device-tree overlays;
-  4. record findings in `docs/hardware/DSI_PANEL_CANDIDATES.md`.
+  4. record findings in `docs/hardware/DSI_PANEL_CANDIDATES.md` (since archived; the
+     bench record is [DSI_BRINGUP.md](../hardware/DSI_BRINGUP.md)).
 - **Decision gate:** if no viable panel is identified by **Sep 30, 2026**,
   fall back to the ESP32-S3 bridge (Option C) so the Nov 10 carrier-PCB
   freeze holds.
