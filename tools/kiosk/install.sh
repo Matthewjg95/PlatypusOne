@@ -22,6 +22,10 @@ sed -e "s|@REPO@|$REPO|g" -e "s|@USER@|$KIOSK_USER|g" \
     "$HERE/platypus-kiosk.service.in" > /etc/systemd/system/platypus-kiosk.service
 install -m 0755 "$HERE/platypus-mode" /usr/local/bin/platypus-mode
 systemctl daemon-reload
+# Flush before reporting success: a bench board that loses power seconds
+# after an install otherwise keeps zero-length files (seen 2026-10-04: an
+# empty platypus-mode and a corrupted checkout after an unplug).
+sync
 
 echo "installed platypus-kiosk.service (runs as $KIOSK_USER from $REPO)"
 echo "installed /usr/local/bin/platypus-mode"

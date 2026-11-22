@@ -1,0 +1,71 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1340' height='840' viewBox='0 0 1340 840'><defs><marker id='arr' markerWidth='10' markerHeight='10' refX='8' refY='3' orient='auto'><path d='M0,0 L8,3 L0,6 z' fill='#333'/></marker></defs>
+<title>System wiring UNO Q Media Carrier camera display ToF</title>
+<rect width='1340' height='840' fill='#ffffff'/>
+<text x='20.00' y='30.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='18' fill='#111' text-anchor='start' font-weight='bold'>Full system - UNO Q + UNO Media Carrier + IMX219 camera + DSI display + Pololu ToF</text>
+<text x='20.00' y='52.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='12' fill='#555' text-anchor='start' font-weight='normal'>Block diagram, not to scale. Lines are electrical connections; software paths are listed in the UNO Q block.</text>
+<rect x='40.00' y='90.00' width='250.00' height='90.00' rx='8' fill='#f3f3f3' stroke='#333' stroke-width='1.5' opacity='1.0'/>
+<text x='50.00' y='112.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>Power: USB-C 5 V / 3 A</text>
+<text x='50.00' y='132.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>UNO Q requests 5 V/3 A PD only (DS)</text>
+<text x='50.00' y='148.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>or DC_IN 7-24 V (DS)</text>
+<rect x='380.00' y='80.00' width='470.00' height='300.00' rx='8' fill='#dceef5' stroke='#333' stroke-width='1.5' opacity='1.0'/>
+<text x='390.00' y='102.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>Arduino UNO Q (ABX00162)</text>
+<text x='390.00' y='122.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>QRB2210 MPU - Debian Linux (1.8 V SoC I/O)</text>
+<text x='390.00' y='138.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>   arduino-router: MCU UART &lt;-&gt; /var/run/arduino-router.sock</text>
+<text x='390.00' y='154.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>   monitor proxy TCP 127.0.0.1:7500  &lt;- tof_log.py / coacq.py</text>
+<text x='390.00' y='170.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>   camss: CSI -&gt; /dev/video* (IMX219, PR #48 path)</text>
+<text x='390.00' y='186.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>STM32U585 MCU - Zephyr core (3.3 V I/O)</text>
+<text x='390.00' y='202.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>   sketch tof_unoq_vl53l8cx: Wire1 = I2C4 PD13/PD12</text>
+<text x='390.00' y='218.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>   ST ULD VL53L8CX 1.3.0 (via STM32duino VL53L8CX 2.1.0)</text>
+<text x='390.00' y='234.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>   Bridge/Monitor over UART 115200 baud (library default)</text>
+<text x='390.00' y='250.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>PWR_3P3V: TPS62A02A 2 A buck; also feeds MCU, ANX7625, Wi-Fi</text>
+<text x='390.00' y='266.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>   3.3 V domain - NO documented allowance for external loads</text>
+<text x='390.00' y='282.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>TOP: Qwiic QWIIC1   |   BOTTOM: JMEDIA + JMISC</text>
+<rect x='380.00' y='470.00' width='470.00' height='150.00' rx='8' fill='#efe6f7' stroke='#333' stroke-width='1.5' opacity='1.0'/>
+<text x='390.00' y='492.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>UNO Media Carrier (ASX00083)</text>
+<text x='390.00' y='512.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>plugs onto JMEDIA + JMISC (bottom of UNO Q), passthrough</text>
+<text x='390.00' y='528.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>CSI0 / CSI1 22-pin 4-lane (1.8 V MPU domain, CCI I2C)</text>
+<text x='390.00' y='544.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>DSI0 22-pin 4-lane display</text>
+<text x='390.00' y='560.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>JMISC also carries MCU I2C4 on PF14/PF15 - SAME peripheral as</text>
+<text x='390.00' y='576.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>Qwiic; the sketch uses the PD12/PD13 pin pair, PF14/15 unused</text>
+<rect x='40.00' y='680.00' width='300.00' height='100.00' rx='8' fill='#fff3d6' stroke='#333' stroke-width='1.5' opacity='1.0'/>
+<text x='50.00' y='702.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>IMX219 camera (e.g. B0394)</text>
+<text x='50.00' y='722.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>22-pin FFC to CAMERA1 (PR #48 bench,</text>
+<text x='50.00' y='738.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>2026-10-09)</text>
+<text x='50.00' y='754.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>connector/orientation per CSI_CAMERA_BENCH.md</text>
+<rect x='420.00' y='680.00' width='390.00' height='100.00' rx='8' fill='#fff3d6' stroke='#333' stroke-width='1.5' opacity='1.0'/>
+<text x='430.00' y='702.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>Waveshare 5in DSI (dev fixture)</text>
+<text x='430.00' y='722.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>22 -&gt; 15-pin FFC adapter to DSI0</text>
+<text x='430.00' y='738.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>(compact 3.5in candidate not yet run)</text>
+<text x='430.00' y='754.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>touch on the MPU I2C, not the Qwiic bus</text>
+<rect x='990.00' y='120.00' width='330.00' height='200.00' rx='8' fill='#e3f5e1' stroke='#333' stroke-width='1.5' opacity='1.0'/>
+<text x='1000.00' y='142.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='13' fill='#111' text-anchor='start' font-weight='bold'>Pololu #3419 VL53L8CX</text>
+<text x='1000.00' y='162.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>VIN 3.2-5.5 V (here 3.3 V from Qwiic)</text>
+<text x='1000.00' y='178.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>on-board LDOs: AVDD 3.3 V, CORE/IOVDD 1.8 V</text>
+<text x='1000.00' y='194.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>NXS0108 shifter: I/O at VIN level</text>
+<text x='1000.00' y='210.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>I2C addr 0x29 (7-bit), &lt;= 1 MHz (run 400 kHz)</text>
+<text x='1000.00' y='226.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>SPI/I2C shunt to GND -&gt; I2C mode</text>
+<text x='1000.00' y='242.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>typ 100 mA, peak 150 mA (Pololu)</text>
+<text x='1000.00' y='258.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>MISO/CS/INT/LP/SYNC unconnected</text>
+<line x1='290.00' y1='135.00' x2='380.00' y2='135.00' stroke='#333' stroke-width='3' stroke-linecap='round' marker-end='url(#arr)'/>
+<text x='300.00' y='125.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>5 V</text>
+<line x1='850.00' y1='200.00' x2='990.00' y2='200.00' stroke='#111111' stroke-width='3.2' stroke-linecap='round'/>
+<line x1='850.00' y1='214.00' x2='990.00' y2='214.00' stroke='#d62728' stroke-width='3.2' stroke-linecap='round'/>
+<line x1='850.00' y1='228.00' x2='990.00' y2='228.00' stroke='#1f77b4' stroke-width='3.2' stroke-linecap='round'/>
+<line x1='850.00' y1='242.00' x2='990.00' y2='242.00' stroke='#e6b800' stroke-width='3.2' stroke-linecap='round'/>
+<text x='856.00' y='186.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>Qwiic 4-wire</text>
+<text x='856.00' y='270.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>GND/3V3/SDA/SCL</text>
+<text x='856.00' y='286.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>short: Pololu &lt;8 cm ideal</text>
+<line x1='615.00' y1='380.00' x2='615.00' y2='470.00' stroke='#333' stroke-width='4' stroke-linecap='round'/>
+<text x='625.00' y='430.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>JMEDIA + JMISC (stacked)</text>
+<line x1='450.00' y1='620.00' x2='190.00' y2='680.00' stroke='#333' stroke-width='3' stroke-linecap='round'/>
+<text x='250.00' y='650.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>CSI FFC</text>
+<line x1='615.00' y1='620.00' x2='615.00' y2='680.00' stroke='#333' stroke-width='3' stroke-linecap='round'/>
+<text x='625.00' y='660.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>DSI FFC</text>
+<rect x='900.00' y='440.00' width='340.00' height='120.00' rx='0' fill='#fafafa' stroke='#bbb' stroke-width='1.0' opacity='1.0'/>
+<text x='910.00' y='462.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>Domains</text>
+<text x='910.00' y='480.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>ToF: MCU 3.3 V domain only (Qwiic).</text>
+<text x='910.00' y='498.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>Camera/display: MPU 1.8 V domain via the carrier.</text>
+<text x='910.00' y='516.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>No signal is shared between them; shared = 5 V,</text>
+<text x='910.00' y='534.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#111' text-anchor='start' font-weight='normal'>3.3 V rail capacity, ground, mechanics, CPU time.</text>
+<text x='910.00' y='552.00' font-family='DejaVu Sans, Arial, sans-serif' font-size='11' fill='#c77700' text-anchor='start' font-weight='normal'>Coexistence is UNVERIFIED until Gate F.</text>
+</svg>

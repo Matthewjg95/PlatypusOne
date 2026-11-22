@@ -79,20 +79,20 @@ const Claim* findClaim(const std::vector<Claim>& claims, std::string_view name) 
 
 /// Section header: colored tag + rule line across the card.
 std::int32_t sectionHeader(Renderer& r, std::int32_t x, std::int32_t y, std::int32_t width,
-                           std::string_view tag, Color color) {
-    r.drawText(x, y, tag, color);
-    const auto tagWidth = Renderer::textWidth(tag) + 6;
-    r.drawLine(x + tagWidth, y + 3, x + width, y + 3, kCardEdge);
-    return y + Renderer::textHeight() + 4;
+                           std::string_view tag, Color color, std::int32_t s) {
+    r.drawText(x, y, tag, color, s);
+    const auto tagWidth = Renderer::textWidth(tag, s) + 6 * s;
+    r.drawLine(x + tagWidth, y + 3 * s, x + width, y + 3 * s, kCardEdge);
+    return y + Renderer::textHeight(s) + 4 * s;
 }
 
 /// 0..1 confidence as a labeled horizontal bar.
 void confidenceBar(Renderer& r, std::int32_t x, std::int32_t y, std::int32_t width,
-                   double confidence, Color color) {
+                   double confidence, Color color, std::int32_t s) {
     const auto clamped = std::clamp(confidence, 0.0, 1.0);
-    r.drawRect({x, y, width, 5}, kCardEdge);
+    r.drawRect({x, y, width, 5 * s}, kCardEdge);
     const auto fill = static_cast<std::int32_t>(clamped * (width - 2));
-    if (fill > 0) r.fillRect({x + 1, y + 1, fill, 3}, color);
+    if (fill > 0) r.fillRect({x + 1, y + 1, fill, 5 * s - 2}, color);
 }
 
 }  // namespace
@@ -100,38 +100,43 @@ void confidenceBar(Renderer& r, std::int32_t x, std::int32_t y, std::int32_t wid
 void drawObservationCard(Renderer& r, const observation::EngineeringObservation& record,
                          const std::optional<CardImage>& thumbnail) {
     const auto info = r.displayInfo();
-    const std::int32_t margin = 10;
+    // Laid out for 480x320 at scale 1; taller panels (the 800x480 DSI) scale
+    // text and spacing together so the card stays legible at arm's length.
+    const std::int32_t s = std::max(1, info.height / 240);
+    const std::int32_t margin = 10 * s;
     const std::int32_t x = margin;
     const std::int32_t fullWidth = info.width - 2 * margin;
     // A valid thumbnail reserves a right column; every section then lays out
     // against the narrower content width so nothing collides with it.
     const bool haveThumbnail = thumbnail && thumbnail->channels > 0 && thumbnail->width > 0 &&
-                               thumbnail->height > 0 && fullWidth > 220;
-    const std::int32_t kThumbColumn = 140;
+                               thumbnail->height > 0 && fullWidth > 220 * s;
+    const std::int32_t kThumbColumn = 140 * s;
     const std::int32_t width = haveThumbnail ? fullWidth - kThumbColumn : fullWidth;
-    const auto charsPerLine = static_cast<std::size_t>(width / 6);
+    const auto charsPerLine = static_cast<std::size_t>(width / (6 * s));
     std::int32_t y = margin;
 
     r.clear(kBackground);
-    r.drawRect({margin - 4, margin - 4, fullWidth + 8, info.height - 2 * margin + 8}, kCardEdge);
+    r.drawRect(
+        {margin - 4 * s, margin - 4 * s, fullWidth + 8 * s, info.height - 2 * margin + 8 * s},
+        kCardEdge);
 
     // Header: app identity + record identity (spanning the full card).
-    r.drawText(x, y, "ENGINEERING SCOUT", kAccent);
+    r.drawText(x, y, "ENGINEERING SCOUT", kAccent, s);
     const std::string stamp = record.observationId + "  " + record.timestampUtc;
-    r.drawText(x + fullWidth - Renderer::textWidth(stamp), y, stamp, kDim);
-    y += Renderer::textHeight() + 8;
+    r.drawText(x + fullWidth - Renderer::textWidth(stamp, s), y, stamp, kDim, s);
+    y += Renderer::textHeight(s) + 8 * s;
 
     if (haveThumbnail) {
-        const std::int32_t boxW = kThumbColumn - 8;
-        const std::int32_t boxH = 99;
-        const std::int32_t boxX = x + width + 8;
-        const std::int32_t boxY = y + Renderer::textHeight() + 2;
+        const std::int32_t boxW = kThumbColumn - 8 * s;
+        const std::int32_t boxH = 99 * s;
+        const std::int32_t boxX = x + width + 8 * s;
+        const std::int32_t boxY = y + Renderer::textHeight(s) + 2 * s;
         const double scale = std::min(static_cast<double>(boxW) / thumbnail->width,
                                       static_cast<double>(boxH) / thumbnail->height);
         const auto drawW = static_cast<std::int32_t>(thumbnail->width * scale);
         const auto drawH = static_cast<std::int32_t>(thumbnail->height * scale);
         const renderer::Rect imageRect{boxX + (boxW - drawW) / 2, boxY, drawW, drawH};
-        r.drawText(boxX + (boxW - Renderer::textWidth("SOURCE")) / 2, y, "SOURCE", kDim);
+        r.drawText(boxX + (boxW - Renderer::textWidth("SOURCE", s)) / 2, y, "SOURCE", kDim, s);
         r.drawImage(imageRect, thumbnail->pixels, thumbnail->width, thumbnail->height,
                     thumbnail->channels);
         r.drawRect({imageRect.x - 1, imageRect.y - 1, imageRect.w + 2, imageRect.h + 2}, kCardEdge);
@@ -144,8 +149,8 @@ void drawObservationCard(Renderer& r, const observation::EngineeringObservation&
         char headline[64];
         std::snprintf(headline, sizeof(headline), "%.1f x %.1f mm",
                       std::get<double>(lengthMm->value), std::get<double>(widthMm->value));
-        r.drawText(x, y, headline, kInk, 2);
-        y += Renderer::textHeight(2) + 4;
+        r.drawText(x, y, headline, kInk, 2 * s);
+        y += Renderer::textHeight(2 * s) + 4 * s;
     }
 
     // Inferred identity line under the headline, when present.
@@ -154,56 +159,56 @@ void drawObservationCard(Renderer& r, const observation::EngineeringObservation&
     if (classClaim) {
         std::string identity = std::get<std::string>(classClaim->value);
         if (nominalClaim) identity += "  ~" + std::get<std::string>(nominalClaim->value);
-        r.drawText(x, y, identity, kInferred);
-        const auto barX = x + Renderer::textWidth(identity) + 8;
-        confidenceBar(r, barX, y + 1, 50, classClaim->confidence.value_or(0.0), kInferred);
-        y += Renderer::textHeight() + 8;
+        r.drawText(x, y, identity, kInferred, s);
+        const auto barX = x + Renderer::textWidth(identity, s) + 8 * s;
+        confidenceBar(r, barX, y + s, 50 * s, classClaim->confidence.value_or(0.0), kInferred, s);
+        y += Renderer::textHeight(s) + 8 * s;
     } else {
-        y += 4;
+        y += 4 * s;
     }
 
     // OBSERVED — pixel facts.
-    y = sectionHeader(r, x, y, width, "OBSERVED", kObserved);
+    y = sectionHeader(r, x, y, width, "OBSERVED", kObserved, s);
     char observedLine[64];
     std::snprintf(observedLine, sizeof(observedLine), "%zu pixel facts from the source frame",
                   record.observed.size());
-    r.drawText(x, y, observedLine, kDim);
-    y += Renderer::textHeight() + 6;
+    r.drawText(x, y, observedLine, kDim, s);
+    y += Renderer::textHeight(s) + 6 * s;
 
     // DERIVED — every derived claim, name = value.
-    y = sectionHeader(r, x, y, width, "DERIVED", kDerived);
+    y = sectionHeader(r, x, y, width, "DERIVED", kDerived, s);
     for (const auto& claim : record.derived) {
-        r.drawText(x, y, claim.name, kInk);
+        r.drawText(x, y, claim.name, kInk, s);
         const auto value = formatValue(claim);
-        r.drawText(x + width - Renderer::textWidth(value), y, value, kDerived);
-        y += Renderer::textHeight() + 2;
+        r.drawText(x + width - Renderer::textWidth(value, s), y, value, kDerived, s);
+        y += Renderer::textHeight(s) + 2 * s;
     }
-    y += 4;
+    y += 4 * s;
 
     // INFERRED — claims with confidence bars; the section exists even when
     // empty so its absence is legible.
-    y = sectionHeader(r, x, y, width, "INFERRED", kInferred);
+    y = sectionHeader(r, x, y, width, "INFERRED", kInferred, s);
     if (record.inferred.empty()) {
-        r.drawText(x, y, "none", kDim);
-        y += Renderer::textHeight() + 2;
+        r.drawText(x, y, "none", kDim, s);
+        y += Renderer::textHeight(s) + 2 * s;
     }
     for (const auto& claim : record.inferred) {
-        r.drawText(x, y, claim.name, kInk);
+        r.drawText(x, y, claim.name, kInk, s);
         const auto value = formatValue(claim);
-        const auto barWidth = 40;
-        const auto valueX = x + width - Renderer::textWidth(value) - barWidth - 8;
-        r.drawText(valueX, y, value, kInferred);
-        confidenceBar(r, x + width - barWidth, y + 1, barWidth, claim.confidence.value_or(0.0),
-                      kInferred);
-        y += Renderer::textHeight() + 2;
+        const auto barWidth = 40 * s;
+        const auto valueX = x + width - Renderer::textWidth(value, s) - barWidth - 8 * s;
+        r.drawText(valueX, y, value, kInferred, s);
+        confidenceBar(r, x + width - barWidth, y + s, barWidth, claim.confidence.value_or(0.0),
+                      kInferred, s);
+        y += Renderer::textHeight(s) + 2 * s;
     }
-    y += 4;
+    y += 4 * s;
 
     // UNRESOLVED — names only; reasons live in the record.
-    y = sectionHeader(r, x, y, width, "UNRESOLVED", kUnresolved);
+    y = sectionHeader(r, x, y, width, "UNRESOLVED", kUnresolved, s);
     if (record.unresolved.empty()) {
-        r.drawText(x, y, "none", kDim);
-        y += Renderer::textHeight() + 2;
+        r.drawText(x, y, "none", kDim, s);
+        y += Renderer::textHeight(s) + 2 * s;
     } else {
         std::string names;
         for (const auto& item : record.unresolved) {
@@ -211,19 +216,19 @@ void drawObservationCard(Renderer& r, const observation::EngineeringObservation&
             names += item.name;
         }
         for (const auto& line : wrap(names, charsPerLine, 2)) {
-            r.drawText(x, y, line, kUnresolved);
-            y += Renderer::textHeight() + 2;
+            r.drawText(x, y, line, kUnresolved, s);
+            y += Renderer::textHeight(s) + 2 * s;
         }
     }
-    y += 4;
+    y += 4 * s;
 
     // NEXT — the first active recommendation, if any.
     if (!record.recommendedNextObservations.empty()) {
-        y = sectionHeader(r, x, y, width, "NEXT", kAccent);
+        y = sectionHeader(r, x, y, width, "NEXT", kAccent, s);
         for (const auto& line :
              wrap(record.recommendedNextObservations.front().action, charsPerLine, 2)) {
-            r.drawText(x, y, line, kInk);
-            y += Renderer::textHeight() + 2;
+            r.drawText(x, y, line, kInk, s);
+            y += Renderer::textHeight(s) + 2 * s;
         }
     }
 }

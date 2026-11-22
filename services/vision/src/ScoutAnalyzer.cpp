@@ -1,5 +1,7 @@
 #include "platypus/vision/ScoutAnalyzer.hpp"
 
+#include "platypus/vision/Outline.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -47,6 +49,14 @@ constexpr double kAmbiguityAreaRatio = 0.5;
 /// confidence (bench, 2026-09-29: 2.1 x 1.8 mm reported for a square-only
 /// frame). Scaled through the reference so it holds at any camera height.
 constexpr double kMinSubjectAreaMm2 = 10.0;
+/// Smallest enclosed region kept as a bore in the exported outline. An M3
+/// nut's bore is ~7 mm^2; glints on bright steel read as holes of 1-2 mm^2
+/// (bench, 2026-09-29) and must not reach a CAD sketch as features.
+constexpr double kMinBoreAreaMm2 = 4.0;
+/// Enclosed background regions smaller than this are glints, not holes. It is
+/// in pixels because holes are counted before the scale is known: ~1 mm² at
+/// the bench's 0.13 mm/px, far below the smallest in-scope bore (M3, ~7 mm²).
+constexpr std::size_t kMinHoleCountPx = 40;
 
 /// Luma extraction. Gray8 passes through; YUYV keeps the luma byte that leads
 /// every pixel; RGB888 uses integer Rec.601-style weights.
@@ -318,9 +328,11 @@ std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std
         stack.push_back(index);
     };
     const auto drain = [&](std::int32_t* owner) {
+        std::size_t drained = 0;
         while (!stack.empty()) {
             const std::size_t index = stack.back();
             stack.pop_back();
+            ++drained;
             const auto x = static_cast<std::int32_t>(index % static_cast<std::size_t>(width));
             const auto y = static_cast<std::int32_t>(index / static_cast<std::size_t>(width));
             const std::array<std::pair<std::int32_t, std::int32_t>, 4> neighbours{
@@ -340,6 +352,7 @@ std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std
                 }
             }
         }
+        return drained;
     };
 
     for (std::int32_t x = 0; x < width; ++x) {
@@ -358,8 +371,10 @@ std::vector<std::size_t> countHoles(const std::vector<std::int32_t>& labels, std
         std::int32_t owner = -1;
         visited[seed] = 1;
         stack.push_back(seed);
-        drain(&owner);
-        if (owner >= 0 && static_cast<std::size_t>(owner) < blobCount)
+        // Specular glints on polished metal punch tiny background-coloured
+        // pockets into a part (a shiny screw showed 42); they are not bores.
+        const auto area = drain(&owner);
+        if (area >= kMinHoleCountPx && owner >= 0 && static_cast<std::size_t>(owner) < blobCount)
             ++holes[static_cast<std::size_t>(owner)];
     }
     return holes;
@@ -423,7 +438,10 @@ bool isSquareCandidate(const BlobStats& stats) {
     const auto boxW = static_cast<double>(stats.maxX - stats.minX + 1);
     const auto boxH = static_cast<double>(stats.maxY - stats.minY + 1);
     const double aspect = boxW < boxH ? boxW / boxH : boxH / boxW;
-    return aspect >= kMinReferenceAspect && stats.fillRatio >= kMinReferenceFill;
+    // The printed reference is solid: a square-ish part with a hole (a plate,
+    // a PCB) must never be mistaken for it and silently rescale the scene.
+    return aspect >= kMinReferenceAspect && stats.fillRatio >= kMinReferenceFill &&
+           stats.holeCount == 0;
 }
 
 std::string decimalClaim(double value) {
@@ -432,6 +450,93 @@ std::string decimalClaim(double value) {
     char buffer[32];
     std::snprintf(buffer, sizeof(buffer), "%g", value);
     return buffer;
+}
+
+/// The reference square's four corners (extremes along its own diagonals)
+/// and from them the camera tilt and keystone. A tilted view squashes the
+/// square into a parallelogram/trapezoid; the singular values of its mean
+/// edge vectors give the foreshortening whatever the card's rotation.
+void measureTilt(const std::vector<std::int32_t>& labels, std::int32_t width, const BlobStats& ref,
+                 std::int32_t label, ScoutAnalysis& out) {
+    constexpr double kPi = 3.14159265358979;
+    const double theta = ref.majorAxisAngleRad;
+    std::array<double, 4> best{};
+    std::array<std::array<double, 2>, 4> corner{};
+    std::array<bool, 4> seen{};
+    for (std::int32_t y = ref.minY; y <= ref.maxY; ++y)
+        for (std::int32_t x = ref.minX; x <= ref.maxX; ++x) {
+            if (labels[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) +
+                       static_cast<std::size_t>(x)] != label)
+                continue;
+            for (int k = 0; k < 4; ++k) {
+                const double a = theta + kPi / 4.0 + k * kPi / 2.0;
+                const double d = x * std::cos(a) + y * std::sin(a);
+                if (!seen[k] || d > best[k]) {
+                    best[k] = d;
+                    corner[k] = {static_cast<double>(x), static_cast<double>(y)};
+                    seen[k] = true;
+                }
+            }
+        }
+    const auto sub = [](const std::array<double, 2>& p, const std::array<double, 2>& q) {
+        return std::array<double, 2>{p[0] - q[0], p[1] - q[1]};
+    };
+    const auto len = [](const std::array<double, 2>& v) { return std::hypot(v[0], v[1]); };
+    // c0..c3 go round the square; c0->c1 and c3->c2 are one pair of opposite
+    // sides, c0->c3 and c1->c2 the other.
+    const auto s01 = sub(corner[1], corner[0]), s32 = sub(corner[2], corner[3]);
+    const auto s03 = sub(corner[3], corner[0]), s12 = sub(corner[2], corner[1]);
+    const std::array<double, 2> e1{(s01[0] + s32[0]) / 2.0, (s01[1] + s32[1]) / 2.0};
+    const std::array<double, 2> e2{(s03[0] + s12[0]) / 2.0, (s03[1] + s12[1]) / 2.0};
+    const double sum = e1[0] * e1[0] + e1[1] * e1[1] + e2[0] * e2[0] + e2[1] * e2[1];
+    const double det = std::abs(e1[0] * e2[1] - e1[1] * e2[0]);
+    const double disc = std::sqrt(std::max(0.0, sum * sum - 4.0 * det * det));
+    const double s1 = std::sqrt((sum + disc) / 2.0),
+                 s2 = std::sqrt(std::max(0.0, (sum - disc) / 2.0));
+    if (s1 <= 0.0) return;
+    out.cameraTiltDeg = std::acos(std::clamp(s2 / s1, 0.0, 1.0)) * 180.0 / kPi;
+    const auto ratio = [](double a, double b) { return a > b ? a / b : b / a; };
+    const double k1 = len(s32) > 0.0 ? ratio(len(s01), len(s32)) : 1.0;
+    const double k2 = len(s12) > 0.0 ? ratio(len(s03), len(s12)) : 1.0;
+    out.referenceKeystone = std::max(k1, k2) - 1.0;
+}
+
+/// Six-fold harmonic of a closed loop's radius about its area centroid,
+/// sampled every half pixel along the perimeter (simplified loops have long
+/// vertex-free edges), as a fraction of the mean radius.
+double sixFoldHarmonic(const std::vector<geometry::Vec2>& loop) {
+    if (loop.size() < 3) return 0.0;
+    std::vector<std::array<double, 2>> pts;
+    for (std::size_t i = 0; i < loop.size(); ++i) {
+        const auto& p = loop[i];
+        const auto& q = loop[(i + 1) % loop.size()];
+        const double len = std::hypot(q.x - p.x, q.y - p.y);
+        const int steps = std::max(1, static_cast<int>(std::ceil(len / 0.5)));
+        for (int k = 0; k < steps; ++k) {
+            const double f = static_cast<double>(k) / steps;
+            pts.push_back({p.x + (q.x - p.x) * f, p.y + (q.y - p.y) * f});
+        }
+    }
+    double cx = 0.0, cy = 0.0;
+    for (const auto& p : pts) {
+        cx += p[0];
+        cy += p[1];
+    }
+    cx /= static_cast<double>(pts.size());
+    cy /= static_cast<double>(pts.size());
+    double meanR = 0.0;
+    for (const auto& p : pts)
+        meanR += std::hypot(p[0] - cx, p[1] - cy);
+    meanR /= static_cast<double>(pts.size());
+    if (meanR <= 0.0) return 0.0;
+    double re = 0.0, im = 0.0;
+    for (const auto& p : pts) {
+        const double dev = std::hypot(p[0] - cx, p[1] - cy) / meanR - 1.0;
+        const double th = 6.0 * std::atan2(p[1] - cy, p[0] - cx);
+        re += dev * std::cos(th);
+        im += dev * std::sin(th);
+    }
+    return 2.0 * std::hypot(re, im) / static_cast<double>(pts.size());
 }
 
 }  // namespace
@@ -509,6 +614,15 @@ AnalyzeOutcome analyzeFrame(const hal::Frame& frame, const CalibrationSpec& spec
         spec.referenceSideMm / std::sqrt(static_cast<double>(reference->stats.areaPx));
     analysis.subjectLengthMm = analysis.subject.lengthPx * analysis.mmPerPixel;
     analysis.subjectWidthMm = analysis.subject.widthPx * analysis.mmPerPixel;
+    measureTilt(labels, mode.width, analysis.reference, reference->label, analysis);
+    analysis.subjectOutlinePx = outlineOf(
+        labels, mode.width, mode.height, subject->label, subject->stats.minX, subject->stats.minY,
+        subject->stats.maxX, subject->stats.maxY, kMinBoreAreaMm2 / mm2PerPx);
+    // Outline loops are in pixels, so hole areas scale by mm^2 per px^2.
+    for (const auto& hole : analysis.subjectOutlinePx.holes)
+        analysis.holeDiametersMm.push_back(
+            2.0 * std::sqrt(std::abs(signedArea(hole)) * mm2PerPx / 3.14159265358979));
+    analysis.outlineSixFold = sixFoldHarmonic(analysis.subjectOutlinePx.outer);
     return {analysis, AnalyzeError::None};
 }
 
@@ -531,6 +645,7 @@ void appendEvidence(observation::EngineeringObservation& record, const ScoutAnal
              static_cast<double>(analysis.binarizationThreshold), std::nullopt);
     observed("sa-ref-area-px", "reference_area", static_cast<double>(analysis.reference.areaPx),
              "px^2");
+    observed("sa-ref-keystone", "reference_keystone", analysis.referenceKeystone, std::nullopt);
     observed("sa-subj-area-px", "subject_area", static_cast<double>(analysis.subject.areaPx),
              "px^2");
     observed("sa-subj-length-px", "subject_length", analysis.subject.lengthPx, "px");
@@ -564,15 +679,332 @@ void appendEvidence(observation::EngineeringObservation& record, const ScoutAnal
                                                 {"sa-mm-per-px", "sa-subj-width-px"},
                                                 method + "; width_px * mm_per_pixel"});
 
+    record.derived.push_back(observation::Claim{
+        "sa-camera-tilt-deg",
+        "camera_tilt",
+        analysis.cameraTiltDeg,
+        "deg",
+        std::nullopt,
+        {"sa-ref-area-px", "sa-ref-keystone"},
+        method + "; acos of the singular-value ratio of the reference square's mean edge "
+                 "vectors; a lower bound, ~10 deg resolution at bench scale"});
+    if (analysis.cameraTiltDeg >= kTiltWarningDeg) {
+        char tilt[160];
+        std::snprintf(tilt, sizeof(tilt),
+                      "camera tilted ~%.0f deg: sizes read high; aim straight down at the card",
+                      analysis.cameraTiltDeg);
+        record.recommendedNextObservations.insert(record.recommendedNextObservations.begin(),
+                                                  {tilt, {"camera_tilt"}});
+    }
+
+    // Geometry the reasoner needs to tell part families apart. Holes are
+    // reported as holes; calling one a bore is an inference.
+    observed("sa-six-fold", "outline_six_fold", analysis.outlineSixFold, std::nullopt);
+    for (std::size_t i = 0; i < analysis.holeDiametersMm.size() && i < 4; ++i) {
+        const auto n = std::to_string(i + 1);
+        record.derived.push_back(observation::Claim{
+            "sa-hole-" + n + "-dia-mm",
+            "hole_" + n + "_diameter",
+            analysis.holeDiametersMm[i],
+            "mm",
+            std::nullopt,
+            {"sa-mm-per-px"},
+            method + "; equal-area diameter of outline hole " + n + " (holes >= 4 mm^2)"});
+    }
+}
+
+namespace {
+
+/// Relaxed square gates for the best-effort scale: loose enough to catch a
+/// tilted, shadowed or partly washed-out card, tight enough to skip parts.
+constexpr double kNearReferenceAspect = 0.60;
+constexpr double kNearReferenceFill = 0.55;
+
+FrameQuality measureQuality(const std::vector<std::uint8_t>& gray, std::int32_t width,
+                            std::int32_t height) {
+    FrameQuality q;
+    std::array<std::size_t, 256> hist{};
+    for (const auto v : gray)
+        ++hist[v];
+    const double n = static_cast<double>(gray.size());
+    const auto pct = [&](double p) {
+        const auto want = static_cast<std::size_t>(p * n);
+        std::size_t acc = 0;
+        for (std::size_t v = 0; v < hist.size(); ++v) {
+            acc += hist[v];
+            if (acc > want) return static_cast<double>(v);
+        }
+        return 255.0;
+    };
+    q.lumaP01 = pct(0.01);
+    q.lumaP50 = pct(0.50);
+    q.lumaP99 = pct(0.99);
+    q.contrast = (q.lumaP99 - q.lumaP01) / 255.0;
+    std::size_t clipped = 0, dark = 0;
+    for (std::size_t v = 250; v < 256; ++v)
+        clipped += hist[v];
+    for (std::size_t v = 0; v <= 5; ++v)
+        dark += hist[v];
+    q.clippedFraction = static_cast<double>(clipped) / n;
+    q.darkFraction = static_cast<double>(dark) / n;
+
+    // |gx| + |gy| of a 3x3 Sobel, histogrammed; its 99th percentile.
+    std::vector<std::size_t> grad(1024 * 2 + 1, 0);
+    std::size_t count = 0;
+    const auto at = [&](std::int32_t x, std::int32_t y) {
+        return static_cast<int>(gray[static_cast<std::size_t>(y) * static_cast<std::size_t>(width) +
+                                     static_cast<std::size_t>(x)]);
+    };
+    for (std::int32_t y = 1; y + 1 < height; ++y)
+        for (std::int32_t x = 1; x + 1 < width; ++x) {
+            const int gx = at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1) -
+                           at(x - 1, y - 1) - 2 * at(x - 1, y) - at(x - 1, y + 1);
+            const int gy = at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1) -
+                           at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1);
+            ++grad[static_cast<std::size_t>(std::min(2048, std::abs(gx) + std::abs(gy)))];
+            ++count;
+        }
+    // Edges are well under 1 % of a bench frame, so a plain percentile lands
+    // on flat paper: average the strongest 0.2 % of gradients instead.
+    const auto top = std::max<std::size_t>(1, count / 500);
+    std::size_t taken = 0;
+    double sum = 0.0;
+    for (std::size_t g = grad.size(); g-- > 0 && taken < top;) {
+        const std::size_t use = std::min(grad[g], top - taken);
+        sum += static_cast<double>(g) * static_cast<double>(use);
+        taken += use;
+    }
+    if (taken > 0) q.sharpnessIndex = sum / static_cast<double>(taken) / 8.0;  // Sobel gain 4/axis
+    return q;
+}
+
+bool touchesEdge(const BlobStats& s, std::int32_t width, std::int32_t height) {
+    return s.minX <= 0 || s.minY <= 0 || s.maxX >= width - 1 || s.maxY >= height - 1;
+}
+
+double squareAspect(const BlobStats& s) {
+    const auto w = static_cast<double>(s.maxX - s.minX + 1);
+    const auto h = static_cast<double>(s.maxY - s.minY + 1);
+    return w < h ? w / h : h / w;
+}
+
+std::string fixed2(double v) {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%.2f", v);
+    return buffer;
+}
+
+}  // namespace
+
+Inspection inspectFrame(const hal::Frame& frame, const CalibrationSpec& spec) {
+    Inspection out;
+    out.strict = analyzeFrame(frame, spec);
+    if (out.strict.error == AnalyzeError::InvalidFrame ||
+        out.strict.error == AnalyzeError::UnsupportedFormat)
+        return out;  // nothing decodable: no quality either
+
+    const auto& mode = frame.mode();
+    auto gray = toGray(frame);
+    out.quality = measureQuality(gray, mode.width, mode.height);
+    if (out.strict.ok()) {
+        out.binarizationThreshold = out.strict.analysis->binarizationThreshold;
+        return out;
+    }
+
+    // The strict pipeline's front half, kept this time.
+    flattenIllumination(gray, mode.width, mode.height);
+    out.binarizationThreshold = otsuThreshold(gray);
+    std::vector<std::int32_t> labels;
+    auto blobs = labelComponents(gray, out.binarizationThreshold, mode.width, mode.height, labels);
+    const auto holes = countHoles(labels, mode.width, mode.height, blobs.size());
+    for (auto& blob : blobs)
+        blob.stats.holeCount = holes[static_cast<std::size_t>(blob.label)];
+    std::erase_if(blobs,
+                  [](const LabeledBlob& blob) { return blob.stats.areaPx < kMinBlobAreaPx; });
+    out.blobCount = blobs.size();
+    if (blobs.empty()) {
+        out.failedChecks.push_back("no blob darker than the background");
+        return out;
+    }
+
+    // Near-reference: the largest hole-free, fully visible blob passing the
+    // relaxed gates. Record every strict gate it misses.
+    const LabeledBlob* nearRef = nullptr;
+    for (const auto& b : blobs) {
+        if (b.stats.holeCount != 0 || touchesEdge(b.stats, mode.width, mode.height)) continue;
+        if (squareAspect(b.stats) < kNearReferenceAspect || b.stats.fillRatio < kNearReferenceFill)
+            continue;
+        if (!nearRef || b.stats.areaPx > nearRef->stats.areaPx) nearRef = &b;
+    }
+    if (nearRef) {
+        out.nearReference = nearRef->stats;
+        measureSupportExtents(labels, mode.width, nearRef->label, *out.nearReference);
+        const double aspect = squareAspect(nearRef->stats);
+        if (aspect < kMinReferenceAspect)
+            out.failedChecks.push_back("reference_aspect " + fixed2(aspect) + " < " +
+                                       fixed2(kMinReferenceAspect));
+        if (nearRef->stats.fillRatio < kMinReferenceFill)
+            out.failedChecks.push_back("reference_fill " + fixed2(nearRef->stats.fillRatio) +
+                                       " < " + fixed2(kMinReferenceFill));
+        std::size_t rivals = 0;
+        for (const auto& b : blobs)
+            if (&b != nearRef && isSquareCandidate(b.stats) &&
+                static_cast<double>(b.stats.areaPx) >=
+                    kAmbiguityAreaRatio * static_cast<double>(nearRef->stats.areaPx))
+                ++rivals;
+        if (rivals > 0)
+            out.failedChecks.push_back("reference_ambiguous: comparable square(s) present");
+        out.bestEffortMmPerPixel =
+            spec.referenceSideMm / std::sqrt(static_cast<double>(nearRef->stats.areaPx));
+        // Every gate passed means the reference is sound and only the subject
+        // was missing; each failed gate costs confidence.
+        out.bestEffortConfidence = out.failedChecks.empty()       ? 0.9
+                                   : out.failedChecks.size() == 1 ? 0.4
+                                                                  : 0.25;
+    } else {
+        out.failedChecks.push_back(
+            "no square-like blob (aspect >= " + fixed2(kNearReferenceAspect) +
+            ", fill >= " + fixed2(kNearReferenceFill) + ", no holes)");
+    }
+
+    // Subject: the largest other blob, preferring one fully in frame.
+    const LabeledBlob* subject = nullptr;
+    for (const auto& b : blobs) {
+        if (nearRef && b.label == nearRef->label) continue;
+        const bool bEdge = touchesEdge(b.stats, mode.width, mode.height);
+        const bool sEdge = subject && touchesEdge(subject->stats, mode.width, mode.height);
+        const bool better = !subject || (sEdge && !bEdge) ||
+                            (sEdge == bEdge && b.stats.areaPx > subject->stats.areaPx);
+        if (better) subject = &b;
+    }
+    if (subject) {
+        out.subject = subject->stats;
+        measureSupportExtents(labels, mode.width, subject->label, *out.subject);
+        if (touchesEdge(subject->stats, mode.width, mode.height))
+            out.failedChecks.push_back("subject runs off the frame");
+        if (out.bestEffortMmPerPixel > 0.0) {
+            const double mm2 = static_cast<double>(subject->stats.areaPx) *
+                               out.bestEffortMmPerPixel * out.bestEffortMmPerPixel;
+            if (mm2 < kMinSubjectAreaMm2)
+                out.failedChecks.push_back("subject_area " + fixed2(mm2) + " mm^2 < " +
+                                           fixed2(kMinSubjectAreaMm2));
+        }
+    }
+    return out;
+}
+
+void appendInspection(observation::EngineeringObservation& record, const Inspection& insp,
+                      const CalibrationSpec& spec, std::string_view sourceArtifactId) {
+    const std::string source(sourceArtifactId);
+    const std::string method = "vision.scout_inspect.v1";
+    const auto observed = [&](std::string id, std::string name, double value,
+                              std::optional<std::string> unit) {
+        record.observed.push_back(observation::Claim{std::move(id),
+                                                     std::move(name),
+                                                     value,
+                                                     std::move(unit),
+                                                     std::nullopt,
+                                                     {source},
+                                                     method});
+    };
+    const auto& q = insp.quality;
+    observed("qa-luma-p01", "capture_luma_p01", q.lumaP01, std::nullopt);
+    observed("qa-luma-p50", "capture_luma_p50", q.lumaP50, std::nullopt);
+    observed("qa-luma-p99", "capture_luma_p99", q.lumaP99, std::nullopt);
+    observed("qa-contrast", "capture_contrast", q.contrast, std::nullopt);
+    observed("qa-clipped", "capture_clipped_fraction", q.clippedFraction, std::nullopt);
+    observed("qa-dark", "capture_dark_fraction", q.darkFraction, std::nullopt);
+    observed("qa-sharpness", "capture_sharpness_index", q.sharpnessIndex, std::nullopt);
+
+    // Plain-language advice from the frame itself; most useful on a refusal.
+    std::vector<std::string> advice;
+    if (q.contrast < 0.25)
+        advice.push_back("low contrast (" + fixed2(q.contrast) +
+                         "): add light from the side, or use a darker part on lighter paper");
+    if (q.clippedFraction > 0.02)
+        advice.push_back("highlights clipped (" + fixed2(100.0 * q.clippedFraction) +
+                         " %): reduce direct light or glare on the card");
+    if (q.lumaP50 < 60.0)
+        advice.push_back("dark frame (median luma " + fixed2(q.lumaP50) + "): add light");
+
+    if (insp.strict.ok()) {
+        appendEvidence(record, *insp.strict.analysis, spec, sourceArtifactId);
+        for (const auto& a : advice)
+            record.recommendedNextObservations.push_back({a, {"capture_quality"}});
+        return;
+    }
+
+    observed("be-threshold", "best_effort_binarization_threshold",
+             static_cast<double>(insp.binarizationThreshold), std::nullopt);
+    observed("be-blobs", "best_effort_blob_count", static_cast<double>(insp.blobCount),
+             std::nullopt);
+    std::string checks;
+    for (const auto& c : insp.failedChecks)
+        checks += (checks.empty() ? "" : "; ") + c;
+
+    if (insp.nearReference) {
+        const auto& r = *insp.nearReference;
+        observed("be-ref-area-px", "best_effort_reference_area", static_cast<double>(r.areaPx),
+                 "px^2");
+        observed("be-ref-fill", "best_effort_reference_fill", r.fillRatio, std::nullopt);
+        observed("be-ref-aspect", "best_effort_reference_aspect", squareAspect(r), std::nullopt);
+        record.derived.push_back(observation::Claim{
+            "be-mm-per-px",
+            "best_effort_mm_per_pixel",
+            insp.bestEffortMmPerPixel,
+            "mm/px",
+            insp.bestEffortConfidence,
+            {"be-ref-area-px"},
+            method + "; scale through the nearest square-like blob; reference_side_mm = " +
+                decimalClaim(spec.referenceSideMm) +
+                (checks.empty() ? std::string("; all reference gates passed")
+                                : "; failed: " + checks)});
+    }
+    if (insp.subject) {
+        const auto& s = *insp.subject;
+        observed("be-subj-area-px", "best_effort_subject_area", static_cast<double>(s.areaPx),
+                 "px^2");
+        observed("be-subj-length-px", "best_effort_subject_length", s.lengthPx, "px");
+        observed("be-subj-width-px", "best_effort_subject_width", s.widthPx, "px");
+        observed("be-subj-holes", "best_effort_subject_hole_count",
+                 static_cast<double>(s.holeCount), std::nullopt);
+        if (insp.bestEffortMmPerPixel > 0.0) {
+            record.derived.push_back(
+                observation::Claim{"be-subj-length-mm",
+                                   "best_effort_subject_length",
+                                   s.lengthPx * insp.bestEffortMmPerPixel,
+                                   "mm",
+                                   insp.bestEffortConfidence,
+                                   {"be-mm-per-px", "be-subj-length-px"},
+                                   method + "; length_px * best-effort scale"});
+            record.derived.push_back(observation::Claim{"be-subj-width-mm",
+                                                        "best_effort_subject_width",
+                                                        s.widthPx * insp.bestEffortMmPerPixel,
+                                                        "mm",
+                                                        insp.bestEffortConfidence,
+                                                        {"be-mm-per-px", "be-subj-width-px"},
+                                                        method + "; width_px * best-effort scale"});
+        }
+    }
     record.unresolved.push_back(
-        {"fastener_class", "classification is a later Scout chunk; not attempted"});
-    record.unresolved.push_back(
-        {"nominal_size", "requires fastener_class and thread evidence; not attempted"});
-    record.unresolved.push_back(
-        {"thread_pitch", "a single top-down silhouette cannot resolve the thread profile"});
-    record.recommendedNextObservations.push_back(
-        {"capture a side-on view so the thread profile is visible against the background",
-         {"thread_pitch"}});
+        {"measurement", "strict analysis refused (" + std::string(to_string(insp.strict.error)) +
+                            ")" + (checks.empty() ? std::string{} : ": " + checks) +
+                            ". best_effort_* claims are for development, not measurements."});
+    for (const auto& a : advice)
+        record.recommendedNextObservations.push_back({a, {"measurement"}});
+}
+
+std::string summarize(const Inspection& insp) {
+    if (insp.strict.ok()) return "measured";
+    if (insp.strict.error == AnalyzeError::InvalidFrame ||
+        insp.strict.error == AnalyzeError::UnsupportedFormat)
+        return "frame could not be decoded";
+    if (insp.subject && insp.bestEffortMmPerPixel > 0.0)
+        return insp.bestEffortConfidence >= 0.9 ? "best effort: part too small to measure"
+                                                : "best effort: low-confidence scale";
+    if (insp.subject) return "best effort: pixels only (no 20 mm square)";
+    if (insp.nearReference) return "best effort: square only (no part)";
+    return "frame kept (nothing found)";
 }
 
 }  // namespace platypus::vision

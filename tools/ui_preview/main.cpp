@@ -3,23 +3,43 @@
 //   ui_preview --font-specimen OUT.ppm
 //   ui_preview --scout-card RECORD.json OUT.ppm
 //   ui_preview --scout-card-demo OUT.ppm
+//   ui_preview --kiosk-session-demo OUTDIR
+//   ui_preview --kiosk-depth-demo OUTDIR
+//   ui_preview --shell-demo OUTDIR
+//   ui_preview --analyze CAPTURE_DIR | source.ppm | raw.json
+//   ui_preview --analyze-yuyv SOURCE.yuyv   (re-run a board capture on the host)
 //
 // Draws through the real Renderer into an in-memory display and writes the
 // frame as a P6 PPM. A bring-up tool (like engineering_scout_capture): UI
 // changes get eyeballed from a file without opening the interactive sim.
 // --scout-card-demo runs the real analyzer + classifier over a synthetic
 // bolt scene so the card shows a genuine end-to-end record.
+// --kiosk-session-demo scripts a whole Scout session through the kiosk's own
+// screens and the real capture, analyzer, session and export code, writing
+// one PPM per screen plus the session folder with its CAD artifacts.
+#include "KioskApplets.hpp"
+#include "KioskCore.hpp"
+
 #include <platypus/ai/FastenerClassifier.hpp>
 #include <platypus/apps/EngineeringScoutApp.hpp>
+#include <platypus/filesystem/ProjectStore.hpp>
+#include <platypus/hal/Bayer.hpp>
 #include <platypus/hal/testing/SyntheticScene.hpp>
+#include <platypus/hal/tof/ITofSource.hpp>
 #include <platypus/renderer/Renderer.hpp>
+#include <platypus/shell/Applets.hpp>
+#include <platypus/shell/Shell.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
 
+#include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -164,7 +184,7 @@ int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
         scene.addHexagon(400.0, 280.0, 20.0, 15.0 * 3.14159265358979 / 180.0);
         scene.addBore(400.0, 280.0, 5.0);
     } else {
-        scene.addRect(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0);
+        scene.addBolt(400.0, 280.0, 240.0, 24.0, 30.0 * 3.14159265358979 / 180.0, 36.0, 16.0);
     }
 
     const vision::CalibrationSpec spec{20.0};
@@ -196,6 +216,386 @@ int renderScoutCardDemo(const std::string& outPath, const std::string& kind) {
     return renderCard(record, outPath, thumbnail);
 }
 
+int renderKioskSessionDemo(const std::string& outDir) {
+    namespace fs = std::filesystem;
+    const fs::path root(outDir);
+    std::error_code ec;
+    fs::remove_all(root / "observations", ec);
+    fs::remove_all(root / "sessions", ec);
+    fs::create_directories(root, ec);
+
+    auto display = std::make_shared<MemoryDisplay>(std::uint16_t{800}, std::uint16_t{480});
+    renderer::Renderer r(display);
+    const auto layout = kiosk::computeLayout(r.displayInfo(), 640, 480);
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    observation::CaptureService service(root / "observations");
+    session::SessionStore store(root / "sessions");
+    session::ObjectSession current(store.nextSessionId(), session::fastenerProfile(),
+                                   "2026-09-30T02:00:00Z");
+    const vision::CalibrationSpec spec{20.0};
+    std::string status;
+    renderer::Color statusColour = kiosk::kMuted;
+    int shot = 0;
+
+    const auto snap = [&](const std::string& name) {
+        (void)r.present();
+        char file[64];
+        std::snprintf(file, sizeof(file), "%02d-%s.ppm", ++shot, name.c_str());
+        return writePpm((root / file).string(), *display);
+    };
+    const auto preview = [&](const std::string& name) {
+        std::vector<std::uint8_t> rgb;
+        if (auto f = camera.capture(std::chrono::milliseconds(0)); f)
+            rgb = kiosk::yuyvToRgb(f.value());
+        kiosk::PanelState p;
+        p.sessionId = current.id();
+        p.guidance = current.guidance();
+        p.status = status;
+        p.statusColour = statusColour;
+        kiosk::drawPreviewScreen(r, layout, rgb, 640, 480, p);
+        return snap(name);
+    };
+    const auto capture = [&](int pose, const std::string& cardName) {
+        camera.setPose(pose);
+        const auto outcome = kiosk::captureOnce(camera, service, spec, "synthetic", "synthetic");
+        if (!outcome.record) return false;
+        current.add(kiosk::sessionCapture(outcome, current.profile()));
+        (void)store.save(current);
+        status = outcome.status;
+        statusColour = outcome.statusColour;
+        if (outcome.measured && !cardName.empty()) {
+            apps::drawObservationCard(r, *outcome.record, outcome.thumbnail);
+            if (!snap(cardName)) return false;
+        }
+        return true;
+    };
+
+    // Before any camera exists: what the kiosk shows while it waits for one.
+    {
+        kiosk::PanelState waiting;
+        waiting.status = "No camera found. Scout starts as soon as one is plugged in.";
+        waiting.statusColour = kiosk::kWarn;
+        waiting.noCamera = true;
+        kiosk::drawPreviewScreen(r, layout, {}, 640, 480, waiting);
+        if (!snap("no-camera")) return 1;
+    }
+    bool ok = preview("new-session");
+    ok = ok && capture(0, "card") && preview("after-1");
+    ok = ok && capture(-1, "") && preview("refused-no-part");  // part removed
+    ok = ok && capture(1, "") && capture(2, "") && preview("stable");
+    const auto g = current.guidance();
+    const auto reason = g.modelSatisfied ? session::CloseReason::ModelSatisfied
+                                         : session::CloseReason::ClosedByOperator;
+    const auto result = store.finish(current, reason, "2026-09-30T02:05:00Z");
+    kiosk::drawSessionSummary(r, current, result, reason);
+    ok = ok && snap("summary");
+    if (!ok || !result.ok()) {
+        std::fprintf(stderr, "error: demo failed %s\n", result.error.c_str());
+        return 1;
+    }
+    std::printf("wrote %d screens and %s\n", shot, result.directory.string().c_str());
+    return 0;
+}
+
+/// The kiosk's depth view with the synthetic camera and a synthetic ToF
+/// frame: a wall tilted 214..233 mm (as on the bench), a block 150 mm away,
+/// and a corner of invalid zones. Also the not-connected and preview states.
+int renderKioskDepthDemo(const std::string& outDir) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::create_directories(outDir, ec);
+    auto display = std::make_shared<MemoryDisplay>(std::uint16_t{800}, std::uint16_t{480});
+    renderer::Renderer r(display);
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    std::vector<std::uint8_t> rgb;
+    if (auto f = camera.capture(std::chrono::milliseconds(0)); f)
+        rgb = kiosk::frameToRgb(f.value());
+    const auto camW = kiosk::SceneCamera::kMode.width, camH = kiosk::SceneCamera::kMode.height;
+
+    hal::tof::Frame frame;
+    frame.side = 8;
+    frame.seq = 1898;
+    frame.temperatureC = 55;
+    for (int row = 0; row < 8; ++row)
+        for (int col = 0; col < 8; ++col) {
+            hal::tof::Zone z;
+            z.distanceMm = 214 + 2 * row + col;
+            z.status = 5;
+            z.targets = 1;
+            if (row >= 2 && row <= 4 && col >= 4 && col <= 6) z.distanceMm = 150 + row;
+            if (row == 7 && col >= 6) z.status = col == 7 ? 255 : 4;
+            frame.zones.push_back(z);
+        }
+
+    kiosk::DepthState st;
+    st.connected = true;
+    st.frame = frame;
+    st.hz = 5.0;
+    st.frames = 120;
+    st.endpoint = "127.0.0.1:7500";
+    const auto layout = kiosk::computeDepthLayout(r.displayInfo());
+    const auto shot = [&](const std::string& name) {
+        (void)r.present();
+        return writePpm((fs::path(outDir) / name).string(), *display);
+    };
+    kiosk::drawDepthScreen(r, layout, rgb, camW, camH, st);
+    bool ok = shot("depth-live.ppm");
+    kiosk::DepthState down;
+    down.endpoint = st.endpoint;
+    down.lastError = "connect 127.0.0.1:7500: Connection refused";
+    kiosk::drawDepthScreen(r, layout, rgb, camW, camH, down);
+    ok = ok && shot("depth-not-connected.ppm");
+    kiosk::PanelState p;
+    p.depthAvailable = true;
+    p.status = "DEPTH opens the camera + ToF view.";
+    kiosk::drawPreviewScreen(r, kiosk::computeLayout(r.displayInfo(), camW, camH, true), rgb, camW,
+                             camH, p);
+    ok = ok && shot("preview-with-depth-button.ppm");
+    if (!ok) return 1;
+    std::printf("wrote depth view screens to %s\n", outDir.c_str());
+    return 0;
+}
+
+/// The device shell on the 800x480 panel geometry: splash, home, a swipe in
+/// progress, a preview applet under the shell bar, and the System applet.
+int renderShellDemo(const std::string& outDir) {
+    namespace fs = std::filesystem;
+    using namespace std::chrono_literals;
+    std::error_code ec;
+    fs::create_directories(outDir, ec);
+    auto display = std::make_shared<MemoryDisplay>(std::uint16_t{800}, std::uint16_t{480});
+    renderer::Renderer r(display);
+    shell::MinimalBoard board(display);
+    filesystem::ProjectStore projects(nullptr);
+    // Scout and Depth run for real on the synthetic camera and a fake ToF,
+    // writing captures and sessions under OUTDIR.
+    kiosk::SceneCamera camera;
+    (void)camera.open(kiosk::SceneCamera::kMode);
+    fs::remove_all(fs::path(outDir) / "observations", ec);
+    fs::remove_all(fs::path(outDir) / "sessions", ec);
+    observation::CaptureService captures(fs::path(outDir) / "observations");
+    session::SessionStore sessions(fs::path(outDir) / "sessions");
+    hal::tof::FakeTofSource tof;
+    const auto camW = kiosk::SceneCamera::kMode.width, camH = kiosk::SceneCamera::kMode.height;
+    appfw::AppRegistry registry;
+    shell::registerStandardApplets(registry,
+                                   {{shell::ids::kScout,
+                                     [&]() -> std::unique_ptr<appfw::IApp> {
+                                         kiosk::ScoutDeps d;
+                                         d.camera = &camera;
+                                         d.camW = camW;
+                                         d.camH = camH;
+                                         d.captures = &captures;
+                                         d.sessions = &sessions;
+                                         d.spec = vision::CalibrationSpec{20.0};
+                                         d.device = "synthetic";
+                                         d.tof = &tof;
+                                         return std::make_unique<kiosk::ScoutApplet>(std::move(d));
+                                     }},
+                                    {shell::ids::kDepth, [&]() -> std::unique_ptr<appfw::IApp> {
+                                         kiosk::DepthDeps d;
+                                         d.camera = &camera;
+                                         d.camW = camW;
+                                         d.camH = camH;
+                                         d.tof = &tof;
+                                         d.captures = &captures;
+                                         d.spec = vision::CalibrationSpec{20.0};
+                                         d.device = "synthetic";
+                                         return std::make_unique<kiosk::DepthApplet>(std::move(d));
+                                     }}});
+    shell::Shell sh(registry, appfw::AppContext{board, r, projects, {}});
+    const auto shot = [&](const std::string& name) {
+        return writePpm((fs::path(outDir) / name).string(), *display);
+    };
+    using T = hal::TouchEvent::Type;
+    bool ok = true;
+    sh.frame(1000ms);  // splash, part way
+    ok = ok && shot("01-splash.ppm");
+    sh.frame(1000ms);
+    sh.frame(16ms);
+    ok = ok && shot("02-home.ppm");
+    sh.onTouch({T::Down, 600, 240});  // finger halfway through a swipe
+    sh.onTouch({T::Move, 400, 240});
+    sh.frame(16ms);
+    ok = ok && shot("03-swiping.ppm");
+    sh.onTouch({T::Up, 380, 240});
+    for (int i = 0; i < 60; ++i)
+        sh.frame(16ms);
+    ok = ok && shot("04-home-depth.ppm");
+    sh.open(shell::ids::kRoomScan);
+    sh.frame(16ms);
+    ok = ok && shot("05-preview-applet.ppm");
+    sh.open(shell::ids::kSystem);
+    sh.frame(16ms);
+    ok = ok && shot("06-system.ppm");
+    sh.open(shell::ids::kScout);
+    sh.frame(16ms);
+    ok = ok && shot("07-scout.ppm");
+    sh.onButton({1, true});  // board button A: capture
+    sh.frame(16ms);
+    sh.frame(16ms);
+    ok = ok && shot("08-scout-card.ppm");
+    sh.onButton({1, true});  // dismiss the card
+    sh.frame(16ms);
+    ok = ok && shot("09-scout-after.ppm");
+    camera.setPose(-1);  // part removed: a refused, best-effort capture
+    sh.onButton({1, true});
+    sh.frame(16ms);
+    sh.frame(16ms);
+    ok = ok && shot("09b-scout-review-refused.ppm");
+    sh.onButton({1, true});
+    sh.frame(16ms);
+    camera.setPose(1);
+    sh.open(shell::ids::kDepth);
+    sh.frame(16ms);
+    ok = ok && shot("10-depth.ppm");
+    sh.onTouch({T::Down, 700, 440});  // the depth view's CAPTURE (bottom right)
+    sh.frame(16ms);
+    sh.frame(16ms);
+    ok = ok && shot("10b-depth-review.ppm");
+    sh.onTouch({T::Down, 400, 300});  // tap to continue
+    sh.frame(16ms);
+    sh.home();
+    sh.frame(16ms);
+    ok = ok && shot("11-home-ready.ppm");
+    if (!ok) return 1;
+    std::printf("wrote shell screens to %s\n", outDir.c_str());
+    return 0;
+}
+
+/// Re-analyze a frame the board saved (640x480 YUYV source.yuyv) with this
+/// build's analyzer + classifier and print the record: lets a change be
+/// checked against real bench captures without the board.
+int analyzeYuyv(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    auto bytes = std::make_shared<std::vector<std::byte>>(640u * 480u * 2u);
+    if (!in.read(reinterpret_cast<char*>(bytes->data()),
+                 static_cast<std::streamsize>(bytes->size()))) {
+        std::fprintf(stderr, "error: %s is not a 640x480 YUYV frame\n", path.c_str());
+        return 1;
+    }
+    const hal::Frame frame({640, 480, hal::PixelFormat::YUYV, 30.0f}, bytes,
+                           std::chrono::steady_clock::time_point{});
+    const vision::CalibrationSpec spec{20.0};
+    const auto analyzed = vision::analyzeFrame(frame, spec);
+    if (!analyzed.ok()) {
+        const auto why = vision::to_string(analyzed.error);
+        std::printf("refused: %.*s\n", static_cast<int>(why.size()), why.data());
+        return 0;
+    }
+    observation::EngineeringObservation record;
+    record.observationId = "reanalysis";
+    record.timestampUtc = "1970-01-01T00:00:00Z";
+    record.source = {{"app", "ui_preview"}};
+    record.artifacts.push_back({"source-image", "image/x-yuyv", path});
+    vision::appendEvidence(record, *analyzed.analysis, spec, "source-image");
+    ai::appendClassification(record, ai::classify(*analyzed.analysis));
+    std::printf("%s\n", observation::toJson(record).c_str());
+    return 0;
+}
+
+/// A binary PPM (P6, maxval 255) as an RGB888 frame; nullopt if unreadable.
+std::optional<hal::Frame> loadPpm(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    std::string magic;
+    in >> magic;
+    if (magic != "P6") return std::nullopt;
+    const auto token = [&]() -> long {
+        while (in >> std::ws && in.peek() == '#')
+            in.ignore(1 << 16, '\n');
+        long v = -1;
+        in >> v;
+        return v;
+    };
+    const long w = token(), h = token(), maxval = token();
+    if (w <= 0 || h <= 0 || maxval != 255) return std::nullopt;
+    in.get();  // the single whitespace before the pixels
+    auto bytes = std::make_shared<std::vector<std::byte>>(static_cast<std::size_t>(w * h * 3));
+    if (!in.read(reinterpret_cast<char*>(bytes->data()),
+                 static_cast<std::streamsize>(bytes->size())))
+        return std::nullopt;
+    return hal::Frame({static_cast<std::uint16_t>(w), static_cast<std::uint16_t>(h),
+                       hal::PixelFormat::RGB888, 0.0f},
+                      bytes, std::chrono::steady_clock::time_point{});
+}
+
+/// Number after "key": in a flat JSON object (raw.json is written by the
+/// kiosk with a fixed shape); NaN when absent.
+double jsonNumber(const std::string& json, const std::string& key, std::size_t index = 0) {
+    auto at = json.find("\"" + key + "\":");
+    if (at == std::string::npos) return std::nan("");
+    at += key.size() + 3;
+    if (json[at] == '[') {
+        ++at;
+        for (std::size_t i = 0; i < index; ++i)
+            at = json.find(',', at) + 1;
+    }
+    return std::strtod(json.c_str() + at, nullptr);
+}
+
+/// The raw frame a CSI capture kept, decoded the way the kiosk does (2x2
+/// binning, the white balance recorded with it, gamma).
+std::optional<hal::Frame> loadRaw(const std::filesystem::path& metaPath) {
+    std::ifstream metaIn(metaPath);
+    const std::string meta((std::istreambuf_iterator<char>(metaIn)), {});
+    const auto w = static_cast<std::uint32_t>(jsonNumber(meta, "width"));
+    const auto h = static_cast<std::uint32_t>(jsonNumber(meta, "height"));
+    const auto bpl = static_cast<std::uint32_t>(jsonNumber(meta, "bytes_per_line"));
+    std::ifstream rawIn(metaPath.parent_path() / "raw.raw10", std::ios::binary);
+    std::vector<std::byte> packed(static_cast<std::size_t>(bpl) * h);
+    if (w == 0 || h == 0 ||
+        !rawIn.read(reinterpret_cast<char*>(packed.data()),
+                    static_cast<std::streamsize>(packed.size())))
+        return std::nullopt;
+    const auto raw = hal::bayer::unpackRaw10(packed, {w, h, bpl});
+    if (raw.empty()) return std::nullopt;
+    hal::bayer::RgbParams p;
+    p.blackLevel = static_cast<std::uint16_t>(jsonNumber(meta, "black_level"));
+    for (std::size_t c = 0; c < 3; ++c) {
+        const double g = jsonNumber(meta, "white_balance_gains", c);
+        p.gains[c] = std::isnan(g) ? 1.0f : static_cast<float>(g);
+    }
+    auto rgb = std::make_shared<std::vector<std::byte>>();
+    for (const auto v : hal::bayer::binnedRgb(raw, w, h, p, nullptr))
+        rgb->push_back(static_cast<std::byte>(v));
+    return hal::Frame({static_cast<std::uint16_t>(w / 2), static_cast<std::uint16_t>(h / 2),
+                       hal::PixelFormat::RGB888, 0.0f},
+                      rgb, std::chrono::steady_clock::time_point{});
+}
+
+/// Re-runs a saved capture through this build's inspection: a capture
+/// directory (prefers raw.json, else source.ppm), a source.ppm, or a raw.json.
+int analyzeCapture(const std::string& pathArg) {
+    namespace fs = std::filesystem;
+    fs::path path(pathArg);
+    if (fs::is_directory(path))
+        path = fs::exists(path / "raw.json") ? path / "raw.json" : path / "source.ppm";
+    const bool isRaw = path.extension() == ".json";
+    const auto frame = isRaw ? loadRaw(path) : loadPpm(path);
+    if (!frame) {
+        std::fprintf(stderr, "error: cannot read %s as a PPM or a raw capture\n",
+                     path.string().c_str());
+        return 1;
+    }
+    const vision::CalibrationSpec spec{20.0};
+    const auto inspection = vision::inspectFrame(*frame, spec);
+    observation::EngineeringObservation record;
+    record.observationId = "reanalysis";
+    record.timestampUtc = "1970-01-01T00:00:00Z";
+    record.source = {{"app", "ui_preview"}, {"input", path.string()}};
+    record.artifacts.push_back({"source-image",
+                                isRaw ? "image/x-raw-srggb10p" : "image/x-portable-pixmap",
+                                path.string()});
+    vision::appendInspection(record, inspection, spec, "source-image");
+    if (inspection.strict.ok())
+        ai::appendClassification(record, ai::classify(*inspection.strict.analysis));
+    std::fprintf(stderr, "%s: %s\n", path.string().c_str(), vision::summarize(inspection).c_str());
+    std::printf("%s\n", observation::toJson(record).c_str());
+    return observation::validate(record).empty() ? 0 : 3;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -204,9 +604,20 @@ int main(int argc, char** argv) {
     if (args.size() == 3 && args[0] == "--scout-card") return renderScoutCard(args[1], args[2]);
     if (args.size() >= 2 && args.size() <= 3 && args[0] == "--scout-card-demo")
         return renderScoutCardDemo(args[1], args.size() == 3 ? args[2] : "bolt");
+    if (args.size() == 2 && args[0] == "--kiosk-session-demo")
+        return renderKioskSessionDemo(args[1]);
+    if (args.size() == 2 && args[0] == "--kiosk-depth-demo") return renderKioskDepthDemo(args[1]);
+    if (args.size() == 2 && args[0] == "--shell-demo") return renderShellDemo(args[1]);
+    if (args.size() == 2 && args[0] == "--analyze-yuyv") return analyzeYuyv(args[1]);
+    if (args.size() == 2 && args[0] == "--analyze") return analyzeCapture(args[1]);
     std::fprintf(stderr,
                  "usage: ui_preview --font-specimen OUT.ppm\n"
                  "       ui_preview --scout-card RECORD.json OUT.ppm\n"
-                 "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n");
+                 "       ui_preview --scout-card-demo OUT.ppm [bolt|nut]\n"
+                 "       ui_preview --kiosk-session-demo OUTDIR\n"
+                 "       ui_preview --kiosk-depth-demo OUTDIR\n"
+                 "       ui_preview --shell-demo OUTDIR\n"
+                 "       ui_preview --analyze-yuyv SOURCE.yuyv\n"
+                 "       ui_preview --analyze CAPTURE_DIR | source.ppm | raw.json\n");
     return 2;
 }

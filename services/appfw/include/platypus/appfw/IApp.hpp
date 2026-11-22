@@ -9,6 +9,7 @@
 #include "AppContext.hpp"
 
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -20,6 +21,9 @@ struct AppManifest {
     std::string version;  ///< semver
     bool requiresCamera = false;
     bool requiresSensors = false;
+    std::string tagline;   ///< one line under the name on the home carousel
+    std::string icon;      ///< icon key the shell knows how to draw
+    bool preview = false;  ///< not built yet: the card and the app say so
 };
 
 /// Lifecycle:  onStart -> (onFrame | onTouch | onButton)* -> onStop
@@ -43,7 +47,9 @@ class IApp {
     virtual void onButton(const hal::ButtonEvent& event) { (void)event; }
 };
 
-/// Factory signature for statically registered and future dynamic plugins.
-using AppFactory = std::unique_ptr<IApp> (*)();
+/// Factory for an app. A std::function so a composition root can register
+/// apps that capture the services it owns (camera, capture store, sensors);
+/// a future dlopen'd plugin's exported factory is wrapped into one.
+using AppFactory = std::function<std::unique_ptr<IApp>()>;
 
 }  // namespace platypus::appfw

@@ -2,29 +2,43 @@
 # third_party once vendoring policy is decided (ROADMAP: infra/test-framework).
 add_executable(platypus_tests
     test_app_registry.cpp
+    test_applets.cpp
+    test_bayer.cpp
     test_event_queue.cpp
+    test_export.cpp
     test_fastener_classifier.cpp
+    test_inspect.cpp
     test_kms_helpers.cpp
     test_linked_display.cpp
     test_mcu_framing.cpp
     test_observation.cpp
+    test_outline.cpp
     test_presentation_framing.cpp
     test_renderer.cpp
     test_scout_analyzer.cpp
     test_scout_capture.cpp
     test_scout_card.cpp
     test_scout_validation.cpp
-    test_settings_store.cpp)
+    test_session.cpp
+    test_settings_store.cpp
+    test_shell.cpp
+    test_tof.cpp)
 
 target_link_libraries(platypus_tests PRIVATE
     platypus::ai
+    platypus::camera_bayer
     platypus::app_engineering_scout
     platypus::appfw
     platypus::display_kms
+    platypus::export
     platypus::display_linked
     platypus::observation
     platypus::renderer
+    platypus::scout_kiosk_core
     platypus::scout_validation
+    platypus::session
+    platypus::shell
+    platypus::tof
     platypus::vision)
 
 platypus_set_warnings(platypus_tests)

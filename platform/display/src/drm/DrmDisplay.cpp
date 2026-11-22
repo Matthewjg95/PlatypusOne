@@ -14,6 +14,7 @@
 
 #include <cerrno>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -429,32 +430,43 @@ void DrmDisplay::startInput() {
             name == config_.buttonDeviceName) {
             buttonFd_ = ::open(node.c_str(), O_RDONLY | O_CLOEXEC | O_NONBLOCK);
             if (buttonFd_ >= 0) selection_.buttonDevice = node + " (" + name + ")";
-            continue;
-        }
-        if (touchFd_ < 0 && config_.enableTouch) {
-            const int fd = ::open(node.c_str(), O_RDONLY | O_CLOEXEC | O_NONBLOCK);
-            if (fd < 0) continue;
-            input_absinfo ax{};
-            input_absinfo ay{};
-            if (isTouchscreen(fd) && ::ioctl(fd, EVIOCGABS(ABS_X), &ax) == 0 &&
-                ::ioctl(fd, EVIOCGABS(ABS_Y), &ay) == 0) {
-                touchFd_ = fd;
-                touchMinX_ = ax.minimum;
-                touchMaxX_ = ax.maximum;
-                touchMinY_ = ay.minimum;
-                touchMaxY_ = ay.maximum;
-                selection_.touchDevice = node + " (" + name + ")";
-            } else {
-                ::close(fd);
-            }
         }
     }
-    if (touchFd_ < 0 && buttonFd_ < 0) return;
+    if (config_.enableTouch) selection_.touchDevice = openTouchscreen();
+    // With touch enabled the thread runs even before a touchscreen exists:
+    // the panel's controller often comes up seconds after the display (its
+    // driver finishes setup in the background), and the loop keeps looking.
+    if (touchFd_ < 0 && buttonFd_ < 0 && !config_.enableTouch) return;
 
     wakeFd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (wakeFd_ < 0) return;
     running_ = true;
     inputThread_ = std::thread([this] { inputLoop(); });
+}
+
+std::string DrmDisplay::openTouchscreen() {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator("/sys/class/input", ec)) {
+        const auto base = entry.path().filename().string();
+        if (base.rfind("event", 0) != 0) continue;
+        const std::string node = "/dev/input/" + base;
+        const int fd = ::open(node.c_str(), O_RDONLY | O_CLOEXEC | O_NONBLOCK);
+        if (fd < 0) continue;
+        input_absinfo ax{};
+        input_absinfo ay{};
+        if (isTouchscreen(fd) && ::ioctl(fd, EVIOCGABS(ABS_X), &ax) == 0 &&
+            ::ioctl(fd, EVIOCGABS(ABS_Y), &ay) == 0) {
+            touchMinX_ = ax.minimum;
+            touchMaxX_ = ax.maximum;
+            touchMinY_ = ay.minimum;
+            touchMaxY_ = ay.maximum;
+            touchFd_ = fd;
+            return node + " (" + evdevName(entry.path()) + ")";
+        }
+        ::close(fd);
+    }
+    return {};
 }
 
 void DrmDisplay::inputLoop() {
@@ -469,9 +481,20 @@ void DrmDisplay::inputLoop() {
 
     input_event events[64];
     while (running_) {
-        if (::poll(fds.data(), static_cast<nfds_t>(fds.size()), -1) < 0) {
+        // Until a touchscreen exists, wake every 2 s to look for one.
+        const bool seeking = touchFd_ < 0 && config_.enableTouch;
+        const int ready = ::poll(fds.data(), static_cast<nfds_t>(fds.size()), seeking ? 2000 : -1);
+        if (ready < 0) {
             if (errno == EINTR) continue;
             break;
+        }
+        if (ready == 0) {
+            const auto found = openTouchscreen();
+            if (!found.empty()) {
+                fds.push_back({touchFd_, POLLIN, 0});
+                std::fprintf(stderr, "display: touch %s appeared after start\n", found.c_str());
+            }
+            continue;
         }
         if (fds[0].revents & POLLIN) break;
 

@@ -31,11 +31,14 @@ add_subdirectory(platform/audio)
 
 add_subdirectory(services/renderer)
 add_subdirectory(services/geometry)
+add_subdirectory(services/export)
 add_subdirectory(services/filesystem)
 add_subdirectory(services/observation)
+add_subdirectory(services/session)
 add_subdirectory(services/vision)
 add_subdirectory(services/ai)
 add_subdirectory(services/appfw)
+add_subdirectory(services/shell)
 
 # App *libraries* build unconditionally (tests and tools link them); the
 # guard only gates app executables like the launcher.
@@ -51,8 +54,8 @@ add_subdirectory(tools/scout_measure)
 add_subdirectory(tools/ui_preview)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_subdirectory(tools/display_probe)
-    add_subdirectory(tools/scout_kiosk)
 endif()
+add_subdirectory(tools/scout_kiosk)
 
 if(PLATYPUS_BUILD_TESTS)
     enable_testing()

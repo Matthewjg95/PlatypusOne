@@ -146,6 +146,16 @@ hal::Result<CaptureResult> CaptureService::capture(hal::ICamera& camera,
     record.source.emplace_back("pixel_format", std::string(pixelFormatName(mode.format)));
     record.artifacts.push_back({"source-image", std::string(imageKindFor(mode.format)), imageName});
 
+    std::vector<AttachedFile> attached;
+    if (config.attach) attached = config.attach(frame.value());
+    for (const auto& f : attached) {
+        if (f.artifactId.empty() || f.fileName.empty() ||
+            f.fileName.find_first_of("/\\") != std::string::npos || f.fileName == imageName ||
+            f.fileName == "observation.json")
+            return Error::InvalidArgument;
+        record.artifacts.push_back({f.artifactId, f.kind, f.fileName});
+    }
+
     // Optional analysis, before validation: claims the caller appends are held
     // to the same contract as everything else, and a record the analyzer
     // corrupts is rejected rather than written.
@@ -167,6 +177,13 @@ hal::Result<CaptureResult> CaptureService::capture(hal::ICamera& camera,
     };
 
     if (!writeImage(imagePath, frame.value())) return abort();
+    for (const auto& f : attached) {
+        std::ofstream out(directory / f.fileName, std::ios::binary);
+        if (!out) return abort();
+        out.write(reinterpret_cast<const char*>(f.bytes.data()),
+                  static_cast<std::streamsize>(f.bytes.size()));
+        if (!out.good()) return abort();
+    }
 
     const std::string json = toJson(record);
     {

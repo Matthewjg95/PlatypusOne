@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 
 namespace {
@@ -123,27 +124,45 @@ void test_renderer_geometry() {
 }
 
 void test_app_registry();
+void test_applets();
+void test_bayer();
 void test_event_queue();
+void test_export();
 void test_fastener_classifier();
+void test_inspect();
 void test_kms_helpers();
 void test_linked_display();
 void test_mcu_framing();
 void test_observation();
+void test_outline();
 void test_presentation_framing();
 void test_scout_analyzer();
 void test_scout_capture();
 void test_scout_card();
 void test_scout_validation();
+void test_session();
 void test_settings_store();
+void test_shell();
+void test_tof();
 
 int main() {
+#ifdef _MSC_VER
+    // A failed assert prints and exits; no modal "abort() has been called"
+    // dialog blocking an unattended or scripted run.
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
     test_app_registry();
+    test_applets();
+    test_bayer();
     test_event_queue();
+    test_export();
     test_fastener_classifier();
+    test_inspect();
     test_kms_helpers();
     test_linked_display();
     test_mcu_framing();
     test_observation();
+    test_outline();
     test_presentation_framing();
     test_renderer();
     test_renderer_geometry();
@@ -151,7 +170,10 @@ int main() {
     test_scout_capture();
     test_scout_card();
     test_scout_validation();
+    test_session();
     test_settings_store();
+    test_shell();
+    test_tof();
     std::puts("All tests passed.");
     return 0;
 }

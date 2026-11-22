@@ -1,0 +1,17 @@
+# arduino-cli build profile: pins the core and every library version this
+# sketch was compiled against. Build with:
+#   arduino-cli compile --profile unoq firmware/tof_unoq_vl53l8cx
+profiles:
+  unoq:
+    fqbn: arduino:zephyr:unoq
+    platforms:
+      - platform: arduino:zephyr (1.0.0)
+    libraries:
+      - Arduino_RouterBridge (0.4.3)
+      - Arduino_RPClite (0.3.1)
+      - MsgPack (0.4.2)
+      - DebugLog (0.8.4)
+      - ArxContainer (0.7.0)
+      - ArxTypeTraits (0.3.2)
+      - STM32duino VL53L8CX (2.1.0)
+default_profile: unoq

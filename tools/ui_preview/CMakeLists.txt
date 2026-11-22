@@ -5,7 +5,10 @@ add_executable(ui_preview
 target_link_libraries(ui_preview PRIVATE
     platypus::ai
     platypus::app_engineering_scout
+    platypus::camera_bayer
     platypus::renderer
+    platypus::scout_kiosk_core
+    platypus::shell
     platypus::vision)
 
 platypus_set_warnings(ui_preview)

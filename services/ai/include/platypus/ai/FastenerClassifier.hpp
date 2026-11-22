@@ -25,8 +25,10 @@ namespace platypus::ai {
 
 enum class FastenerClass : std::uint8_t {
     Unknown = 0,
-    BoltOrScrew,  ///< rod-like silhouette; head style unresolved from above
-    NutOrWasher,  ///< compact silhouette with a bore; thickness unresolved
+    BoltOrScrew,  ///< rod-like silhouette with a head; head style unresolved from above
+    NutOrWasher,  ///< compact with a centred bore, outline between round and hex
+    Washer,       ///< round outline with a centred bore
+    Nut,          ///< hexagonal outline with a centred bore
 };
 
 [[nodiscard]] std::string_view to_string(FastenerClass value) noexcept;
@@ -36,19 +38,37 @@ struct NominalMatch {
     std::string designation;   ///< e.g. "M6"
     double referenceMm = 0.0;  ///< the table value the measurement matched
     double fitError = 0.0;     ///< relative error |measured - reference| / reference
-    std::string basis;         ///< "shaft_diameter" or "hex_across_flats"
-    double confidence = 0.0;   ///< 0..1, decays with fitError
+    std::string basis;         ///< "shaft_diameter", "hex_across_flats" or "bore_clearance"
+    /// Set when a size from the other standard (metric vs UNC) is equally
+    /// consistent with the measurement; designation then names both.
+    std::string alternative;
+    double confidence = 0.0;  ///< 0..1, decays with fitError
 };
 
 struct FastenerClassification {
     FastenerClass fastenerClass = FastenerClass::Unknown;
     double confidence = 0.0;              ///< 0..1; 0 when Unknown
     std::optional<NominalMatch> nominal;  ///< absent when no table entry fits
+    std::optional<double> shankWidthMm;   ///< bolts/screws: the shank, not the head
+    double endToShank = 0.0;              ///< bolts/screws: head width over shank width
+    std::optional<double> boreMm;         ///< nuts/washers: the centred hole's diameter
     std::string rationale;                ///< deterministic, human-readable why
 };
 
+/// Outline width along the part's length axis.
+struct WidthProfile {
+    double shankPx = 0.0;     ///< median width over the middle 60% of the length
+    double endToShank = 0.0;  ///< widest end (outer 12.5%) over the shank
+};
+[[nodiscard]] std::optional<WidthProfile> widthProfile(const geometry::Outline2& outline,
+                                                       double axisAngleRad);
+
 /// Classify one analyzed scene. Total and deterministic: every input yields a
-/// classification (possibly Unknown with the reason in rationale).
+/// classification (possibly Unknown with the reason in rationale). A class is
+/// claimed only on positive evidence for that family: a rod with a head for
+/// bolt/screw; a round or hex outline with one centred bore for nut/washer.
+/// Everything else (a PCB, a pen, a bracket) is Unknown: outside the library,
+/// never forced into the nearest fastener.
 [[nodiscard]] FastenerClassification classify(const vision::ScoutAnalysis& analysis);
 
 /// Append the classification to a record that already carries the analyzer's
@@ -56,12 +76,13 @@ struct FastenerClassification {
 ///   INFERRED   — fastener_class and, when matched, nominal_size; confidence,
 ///                provenance to the analyzer's claims, and method are always
 ///                present
-///   UNRESOLVED — the analyzer's "not attempted" placeholders for
-///                fastener_class / nominal_size are replaced by what genuinely
-///                remains open (bolt vs screw, nut vs washer, or the reason
-///                nothing could be inferred)
-/// plus a recommended observation when the remaining ambiguity has a concrete
-/// next step.
+///   UNRESOLVED — only the questions the inferred family raises: thread pitch
+///                and bolt vs screw for a bolt; thickness for a washer; height
+///                and the internal thread for a nut; nut vs washer when the
+///                outline is neither clearly round nor hex; for an unknown
+///                part, what it is not and its thickness. The analyzer raises
+///                none (docs/architecture/AI_PIPELINE.md).
+/// plus a recommended observation when a capture would answer one.
 void appendClassification(observation::EngineeringObservation& record,
                           const FastenerClassification& classification);
 
