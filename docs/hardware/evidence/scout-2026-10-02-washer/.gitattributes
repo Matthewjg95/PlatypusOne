@@ -1,0 +1,2 @@
+# Evidence is hashed byte-for-byte (manifest.json): never convert line endings.
+* -text

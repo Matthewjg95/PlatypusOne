@@ -1,0 +1,6 @@
+mm_per_pixel (on-device, area scale): 0.11090
+segmentation threshold: 105 (metal ~60, paper ~150)
+outer diameter: 18.61 mm (edge rms residual 0.272 mm)
+bore diameter:  8.58 mm (edge rms residual 0.206 mm)
+bore offset from outer centre: 0.15 mm
+6-fold harmonic of the outer edge: 0.43 % of radius

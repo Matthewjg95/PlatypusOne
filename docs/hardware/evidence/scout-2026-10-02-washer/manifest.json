@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "event": "Engineering Scout bench capture - flat washer",
+  "capture_date": "2026-10-02",
+  "archive_review_date": "2026-10-02",
+  "archive_status": "complete for scan-0053; binary hash and board HEAD unverified",
+  "ground_truth": {
+    "object": "flat steel washer",
+    "outer_diameter_mm": 19.12,
+    "bore_diameter_mm": 8.71,
+    "thickness_mm": null,
+    "method": "calipers",
+    "measured_by": "Matthew",
+    "date": "2026-10-02"
+  },
+  "source_identity": {
+    "kiosk_built_from_sha": "72cd885",
+    "branch": "claude/no-fastener-assumption",
+    "board_head_at_capture_verified": false,
+    "kiosk_binary_sha256": null
+  },
+  "related_captures_not_archived": [
+    "scan-0054",
+    "scan-0055 (same session; contents unverified; still on the board)"
+  ],
+  "artifacts": [
+    {
+      "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/scan-0053/observation.json",
+      "evidence_type": "on_device_record",
+      "sha256": "5e407236e70fe293b007cd7f086763a978d76bbfcfd197da477abb4bdaf41bdc",
+      "bytes": 4817,
+      "note": "Original kiosk record, byte-for-byte from the UNO Q (~/PlatypusOne/observations/scan-0053/)"
+    },
+    {
+      "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/scan-0053/source.yuyv",
+      "evidence_type": "on_device_raw_frame",
+      "sha256": "926bc77f82b5ca2fc393155d1125fc15fcf46ae20df412aa37f216902f607656",
+      "bytes": 614400,
+      "note": "Original 640x480 YUYV frame, byte-for-byte"
+    },
+    {
+      "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/scan-0053/source-view.png",
+      "evidence_type": "derived_view",
+      "sha256": "df8ceb07142f7e41eaa26f848b087c43ca25fde18656a631146163f0d914b4c5",
+      "bytes": 195744,
+      "note": "BT.601 conversion of source.yuyv for viewing only; not evidence of anything the frame does not contain"
+    },
+    {
+      "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/offline/washer_circle_fit.py",
+      "evidence_type": "offline_method",
+      "sha256": "e16acb9837e1ff7f679337b0ea05fcc8386b73b3aa42d3203e542da191b023d2",
+      "bytes": 3611,
+      "note": "Self-contained offline re-analysis script"
+    },
+    {
+      "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/offline/washer_circle_fit.out.txt",
+      "evidence_type": "offline_result",
+      "sha256": "101daf85bfa5853a8996ebb04a12ad1ff7ad6a74f768d8e475ec6e6b305937f8",
+      "bytes": 302,
+      "note": "Output of the script above on this frame"
+    },
+    {
+      "repository_path": "docs/hardware/evidence/scout-2026-10-02-washer/RUN_RECORD.md",
+      "evidence_type": "run_record",
+      "sha256": "63d5505d9469254dcd84b1d65afc510f7bbb0a58007c96f4da7bd96a9d00936e",
+      "bytes": 5405,
+      "note": "Filled run record"
+    }
+  ]
+}

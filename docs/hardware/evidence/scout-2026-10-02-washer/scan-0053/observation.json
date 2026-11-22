@@ -1,0 +1,196 @@
+{
+  "schema_version": "0.1",
+  "observation_id": "scan-0053",
+  "timestamp_utc": "2026-10-02T17:43:58Z",
+  "source": {
+    "app": "scout_kiosk",
+    "camera": "/dev/video10",
+    "camera_identity": "uvcvideo: Adesso CyberTrack H4: Adesso Cy",
+    "frame_width": "640",
+    "frame_height": "480",
+    "pixel_format": "yuyv"
+  },
+  "artifacts": [
+    {
+      "id": "source-image",
+      "kind": "application/x-raw-yuyv",
+      "path": "source.yuyv"
+    }
+  ],
+  "observed": [
+    {
+      "id": "sa-threshold",
+      "name": "binarization_threshold",
+      "value": 144,
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    },
+    {
+      "id": "sa-ref-area-px",
+      "name": "reference_area",
+      "value": 32523,
+      "unit": "px^2",
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    },
+    {
+      "id": "sa-ref-keystone",
+      "name": "reference_keystone",
+      "value": 0.028207034024350985,
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    },
+    {
+      "id": "sa-subj-area-px",
+      "name": "subject_area",
+      "value": 16841,
+      "unit": "px^2",
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    },
+    {
+      "id": "sa-subj-length-px",
+      "name": "subject_length",
+      "value": 169.3339484474031,
+      "unit": "px",
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    },
+    {
+      "id": "sa-subj-width-px",
+      "name": "subject_width",
+      "value": 163.24657575574628,
+      "unit": "px",
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    },
+    {
+      "id": "sa-subj-axis-rad",
+      "name": "subject_major_axis_angle",
+      "value": -1.2566370614359161,
+      "unit": "rad",
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    },
+    {
+      "id": "sa-subj-holes",
+      "name": "subject_hole_count",
+      "value": 1,
+      "provenance": [
+        "source-image"
+      ],
+      "method": "vision.scout_analyzer.v3"
+    }
+  ],
+  "derived": [
+    {
+      "id": "sa-mm-per-px",
+      "name": "mm_per_pixel",
+      "value": 0.11090080436229227,
+      "unit": "mm/px",
+      "provenance": [
+        "sa-ref-area-px"
+      ],
+      "method": "vision.scout_analyzer.v3; scale = reference_side_mm / sqrt(reference_area); reference_side_mm = 20"
+    },
+    {
+      "id": "sa-subj-length-mm",
+      "name": "subject_length",
+      "value": 18.779271088659936,
+      "unit": "mm",
+      "provenance": [
+        "sa-mm-per-px",
+        "sa-subj-length-px"
+      ],
+      "method": "vision.scout_analyzer.v3; length_px * mm_per_pixel"
+    },
+    {
+      "id": "sa-subj-width-mm",
+      "name": "subject_width",
+      "value": 18.104176560702143,
+      "unit": "mm",
+      "provenance": [
+        "sa-mm-per-px",
+        "sa-subj-width-px"
+      ],
+      "method": "vision.scout_analyzer.v3; width_px * mm_per_pixel"
+    },
+    {
+      "id": "sa-camera-tilt-deg",
+      "name": "camera_tilt",
+      "value": 8.82026273141346,
+      "unit": "deg",
+      "provenance": [
+        "sa-ref-area-px",
+        "sa-ref-keystone"
+      ],
+      "method": "vision.scout_analyzer.v3; acos of the singular-value ratio of the reference square's mean edge vectors; a lower bound, ~10 deg resolution at bench scale"
+    }
+  ],
+  "inferred": [
+    {
+      "id": "fc-class",
+      "name": "fastener_class",
+      "value": "nut_or_washer",
+      "confidence": 0.75,
+      "provenance": [
+        "sa-subj-length-mm",
+        "sa-subj-width-mm",
+        "sa-subj-holes"
+      ],
+      "method": "ai.fastener_classifier.v3; round/hex silhouette (aspect 1.04) with a centred bore"
+    },
+    {
+      "id": "fc-nominal",
+      "name": "nominal_size",
+      "value": "M12",
+      "confidence": 0.9,
+      "provenance": [
+        "fc-class",
+        "sa-subj-width-mm"
+      ],
+      "method": "ai.fastener_classifier.v3; nearest hex_across_flats table entry 18.00 mm, relative error 0.006"
+    }
+  ],
+  "unresolved": [
+    {
+      "name": "thread_pitch",
+      "reason": "a single top-down silhouette cannot resolve the thread profile"
+    },
+    {
+      "name": "nut_vs_washer",
+      "reason": "thickness is not visible in a top-down silhouette"
+    }
+  ],
+  "recommended_next_observations": [
+    {
+      "action": "capture a side-on view so the thread profile is visible against the background",
+      "resolves": [
+        "thread_pitch"
+      ]
+    },
+    {
+      "action": "capture a side profile to measure thickness and separate nut from washer",
+      "resolves": [
+        "nut_vs_washer"
+      ]
+    }
+  ],
+  "human_review": {
+    "state": "pending"
+  }
+}
