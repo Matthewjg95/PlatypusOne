@@ -50,7 +50,7 @@ extern "C" {
 #include <vl53l8cx_api.h>
 }
 
-#define SKETCH_VERSION "0.2.0"
+#define SKETCH_VERSION "0.2.1"
 
 namespace {
 
@@ -325,6 +325,7 @@ void bringUpPeripherals() {
     L.kv("internal_status", r.internalStatus);
     L.kv("err_reg", r.err);
     L.kv("upload_ms", r.uploadMs);
+    L.kv("reset_ack", r.resetAck ? 1 : 0);
     // Values READ BACK from the sensor, then what this sketch means by them.
     L.kv("acc_conf", r.accConf);
     L.kv("acc_range", r.accRange);

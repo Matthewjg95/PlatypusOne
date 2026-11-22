@@ -267,6 +267,22 @@ static void test_bmi270_bring_up() {
     CHECK(imu.read(s) && !s.tempValid);
 }
 
+static void test_bmi270_unacknowledged_reset_is_sent_once() {
+    FakeBmi270Dev dev;
+    FakeQwiicBus bus;
+    bus.devices = {&dev};
+    dev.expected = qwiic::bmi270::kConfigFile;
+    dev.expectedLen = qwiic::bmi270::kConfigSize;
+    dev.clockMs = &g_clock_ms;
+    dev.nackSoftReset = true;  // as seen on the bench 2026-11-22
+    Imu imu(bus, tickDelay);
+    const auto r = imu.begin(qwiic::bmi270::kConfigFile, qwiic::bmi270::kConfigSize, tickMillis);
+    CHECK(imu.ok() && r.stage == Imu::Stage::Ok);
+    CHECK(!r.resetAck);
+    CHECK(dev.softResets == 1);  // never retried
+    CHECK(imu.stats().failures == 0 && imu.stats().retries == 0);
+}
+
 static void test_bmi270_failures_are_reported_by_stage() {
     FakeBmi270Dev dev;
     FakeQwiicBus bus;
@@ -428,6 +444,7 @@ int main(int argc, char** argv) {
     test_button_begin_and_edges();
     test_button_absent_and_lost();
     test_bmi270_bring_up();
+    test_bmi270_unacknowledged_reset_is_sent_once();
     test_bmi270_failures_are_reported_by_stage();
     test_shared_bus_keeps_devices_apart();
 #ifdef TOF_WITH_ULD
