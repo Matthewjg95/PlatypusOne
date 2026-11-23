@@ -2,6 +2,7 @@
 
 #include <platypus/export/OutlineExport.hpp>
 #include <platypus/export/Png.hpp>
+#include <platypus/observation/Durable.hpp>
 #include <platypus/observation/Json.hpp>
 
 #include <algorithm>
@@ -15,28 +16,11 @@ namespace json = observation::json;
 
 namespace {
 
+// Durable: session.json is rewritten after every capture, and a power cut
+// must leave the previous version or the new one, never an empty file.
 bool writeAtomically(const std::filesystem::path& file, const void* data, std::size_t size,
                      std::string* error) {
-    const auto temp = file.string() + ".tmp";
-    {
-        std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-        if (!out) {
-            if (error) *error = "cannot write " + temp;
-            return false;
-        }
-        out.write(static_cast<const char*>(data), static_cast<std::streamsize>(size));
-        if (!out) {
-            if (error) *error = "write failed for " + temp;
-            return false;
-        }
-    }
-    std::error_code ec;
-    std::filesystem::rename(temp, file, ec);
-    if (ec) {
-        if (error) *error = "cannot move " + temp + " into place: " + ec.message();
-        return false;
-    }
-    return true;
+    return observation::writeFileDurably(file, data, size, error);
 }
 
 bool writeText(const std::filesystem::path& file, const std::string& text, std::string* error) {
