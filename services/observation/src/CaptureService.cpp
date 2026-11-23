@@ -1,5 +1,7 @@
 #include "platypus/observation/CaptureService.hpp"
 
+#include "platypus/observation/Durable.hpp"
+
 #include <cstdio>
 #include <ctime>
 #include <fstream>
@@ -163,8 +165,11 @@ hal::Result<CaptureResult> CaptureService::capture(hal::ICamera& camera,
 
     if (!validate(record).empty()) return Error::InvalidArgument;
 
-    // 3. Persist atomically enough for v0.1: create the directory, write both
-    //    files, and remove the whole directory on any failure.
+    // 3. Persist: create the directory, write the image and attachments and
+    //    force them to storage, then write observation.json durably (temp +
+    //    sync + rename + directory sync). A capture is only reported saved once
+    //    it would survive a power cut; a directory without observation.json is
+    //    an interrupted capture, never a record. Any failure removes it.
     if (!fs::create_directories(directory, ec) || ec) return Error::IoFailure;
 
     const fs::path imagePath = directory / imageName;
@@ -176,22 +181,21 @@ hal::Result<CaptureResult> CaptureService::capture(hal::ICamera& camera,
         return Error::IoFailure;
     };
 
-    if (!writeImage(imagePath, frame.value())) return abort();
+    if (!writeImage(imagePath, frame.value()) || !syncPath(imagePath)) return abort();
     for (const auto& f : attached) {
-        std::ofstream out(directory / f.fileName, std::ios::binary);
-        if (!out) return abort();
-        out.write(reinterpret_cast<const char*>(f.bytes.data()),
-                  static_cast<std::streamsize>(f.bytes.size()));
-        if (!out.good()) return abort();
+        const auto path = directory / f.fileName;
+        {
+            std::ofstream out(path, std::ios::binary);
+            if (!out) return abort();
+            out.write(reinterpret_cast<const char*>(f.bytes.data()),
+                      static_cast<std::streamsize>(f.bytes.size()));
+            if (!out.good()) return abort();
+        }
+        if (!syncPath(path)) return abort();
     }
 
     const std::string json = toJson(record);
-    {
-        std::ofstream out(recordPath, std::ios::binary);
-        if (!out) return abort();
-        out.write(json.data(), static_cast<std::streamsize>(json.size()));
-        if (!out.good()) return abort();
-    }
+    if (!writeFileDurably(recordPath, json.data(), json.size())) return abort();
 
     return CaptureResult{directory, imagePath, recordPath, std::move(record)};
 }

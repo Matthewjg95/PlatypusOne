@@ -223,7 +223,7 @@ assuming one tile per update.
 
 ## 7. Optional semantic extensions (non-normative)
 
-The [Tab5 prototype plan](../roadmap/TAB5_DISPLAY_PROTOTYPE.md) sketches
+The Tab5 prototype plan (archived, see [ARCHIVE.md](../../ARCHIVE.md)) sketches
 semantic messages — menu items, app state, measurement results, inference
 results. Those are **not** how the UI is delivered, and topics `0x0100–0x01FF`
 are reserved for them with two constraints:

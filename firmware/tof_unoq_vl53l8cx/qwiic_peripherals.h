@@ -60,6 +60,17 @@ class RegBus8 {
 
     uint8_t write8(uint8_t reg, uint8_t v) { return write(reg, &v, 1); }
 
+    // One attempt, no retry, and a NACK is not counted as a failure: for a
+    // command that resets the device, which may not acknowledge it and must
+    // never be sent twice in a row. Returns endTransmission()'s status.
+    uint8_t writeOnceNoRetry(uint8_t reg, uint8_t v) {
+        ++stats_.transactions;
+        bus_.beginTransmission(addr7_);
+        bus_.write(&reg, 1);
+        bus_.write(&v, 1);
+        return bus_.endTransmission();
+    }
+
     uint8_t read(uint8_t reg, uint8_t* out, size_t n) {
         if (n > kMaxReadChunk) return fail(reg, 3);
         uint8_t stage = 0;
@@ -304,6 +315,7 @@ class Bmi270 {
         uint8_t chipId = 0, internalStatus = 0, err = 0;
         uint8_t accConf = 0, accRange = 0, gyrConf = 0, gyrRange = 0, pwrCtrl = 0;
         uint32_t uploadMs = 0;
+        bool resetAck = false;  // whether the soft-reset write was acknowledged
     };
 
     // Chip ID, soft reset, the Bosch 8 KB config upload, then the
@@ -317,8 +329,13 @@ class Bmi270 {
         if (regs_.read8(bmi270::kRegChipId, r.chipId) != 0 || r.chipId != bmi270::kChipId) return r;
 
         r.stage = Stage::Reset;
-        if (regs_.write8(bmi270::kRegCmd, bmi270::kCmdSoftReset) != 0) return r;
+        // Bench 2026-11-22: retrying an unacknowledged reset reset the part
+        // three times mid-bus and corrupted the next ToF read. Send it once,
+        // wait, then prove the part is back by its chip ID.
+        r.resetAck = regs_.writeOnceNoRetry(bmi270::kRegCmd, bmi270::kCmdSoftReset) == 0;
         wait(2);  // bmi2_soft_reset: 2000 us
+        uint8_t again = 0;
+        if (regs_.read8(bmi270::kRegChipId, again) != 0 || again != bmi270::kChipId) return r;
         // After reset advanced power save is on: one write, then 450 us before the next.
         if (regs_.write8(bmi270::kRegPwrConf, 0x00) != 0) return r;
         wait(1);

@@ -2,7 +2,7 @@
 
 The concrete plan for linking the three boards on the bench, written
 2026-09-28 from the hardware actually in hand. It supersedes the bring-up
-procedure in [DSI_PANEL_CANDIDATES.md](DSI_PANEL_CANDIDATES.md), which assumed a
+procedure in DSI_PANEL_CANDIDATES.md (archived, see [ARCHIVE.md](../../ARCHIVE.md)), which assumed a
 different panel and a newer board image than the ones on the bench.
 
 **Current-state note, 2026-10-01:** #26/#27/#28 are merged; panel/touch

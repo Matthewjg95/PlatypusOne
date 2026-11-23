@@ -24,6 +24,7 @@ struct FakeDevice8 {
     uint8_t addr7 = 0;
     bool present = true;
     uint8_t ptr = 0;
+    bool nackLastWrite = false;  // set by writeRegs: the device did not ACK it
     // A transaction's bytes after the register byte.
     virtual void writeRegs(uint8_t reg, const uint8_t* data, size_t n) = 0;
     virtual uint8_t readReg(uint8_t reg) = 0;
@@ -71,6 +72,8 @@ struct FakeBmi270Dev : FakeDevice8 {
     uint32_t lastWriteMs = 0xFFFFFFFF;
     int apsViolations = 0;
     int initDataBursts = 0;
+    int softResets = 0;
+    bool nackSoftReset = false;  // a part that resets before acknowledging the command
     size_t maxInitBurst = 0;
 
     FakeBmi270Dev() {
@@ -104,6 +107,8 @@ struct FakeBmi270Dev : FakeDevice8 {
             const uint8_t r = static_cast<uint8_t>(reg + i);
             if (r == 0x7E && d[i] == 0xB6) {
                 reset();
+                ++softResets;
+                nackLastWrite = nackSoftReset;
                 return;
             }
             if (r == 0x00) continue;
@@ -147,11 +152,12 @@ class FakeQwiicBus {
         }
         FakeDevice8* d = find(addr_);
         if (!d) return 1;
+        d->nackLastWrite = false;
         if (tx_len_ >= 1) {
             d->ptr = tx_[0];
             if (tx_len_ > 1) d->writeRegs(tx_[0], tx_ + 1, tx_len_ - 1);
         }
-        return 0;
+        return d->nackLastWrite ? 2 : 0;
     }
     size_t requestFrom(uint8_t addr, size_t n) {
         rx_len_ = rx_pos_ = 0;

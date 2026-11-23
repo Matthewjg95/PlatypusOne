@@ -4,6 +4,7 @@
 
 #include <platypus/hal/testing/SyntheticScene.hpp>
 #include <platypus/observation/CaptureService.hpp>
+#include <platypus/observation/Durable.hpp>
 #include <platypus/observation/Observation.hpp>
 #include <platypus/vision/ScoutAnalyzer.hpp>
 
@@ -151,6 +152,19 @@ void test_capture_writes_attached_files() {
     for (const auto& a : out.record->artifacts)
         listed = listed || (a.id == "raw-frame" && a.path == "raw.raw10");
     assert(listed);
+    // Durable write: the record is complete and no temp file is left behind.
+    assert(fs::file_size(dir / "observation.json") > 0);
+    for (const auto& e : fs::directory_iterator(dir))
+        assert(e.path().extension() != ".tmp");
+
+    // writeFileDurably replaces content whole.
+    const auto f = root / "durable.txt";
+    assert(observation::writeFileDurably(f, "first", 5));
+    assert(observation::writeFileDurably(f, "second!", 7));
+    assert(fs::file_size(f) == 7 && !fs::exists(root / "durable.txt.tmp"));
+    std::string why;
+    assert(!observation::writeFileDurably(root / "no-such-dir" / "x.txt", "x", 1, &why));
+    assert(!why.empty());
 
     // A name that escapes the directory fails the whole capture, leaving nothing.
     observation::CaptureConfig bad;

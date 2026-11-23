@@ -1,5 +1,6 @@
 add_library(platypus_observation STATIC
     src/CaptureService.cpp
+    src/Durable.cpp
     src/Json.cpp
     src/Observation.cpp)
 add_library(platypus::observation ALIAS platypus_observation)
